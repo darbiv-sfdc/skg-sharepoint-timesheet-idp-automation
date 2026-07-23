@@ -38,7 +38,20 @@ http://www.mulesoft.org/schema/mule/idp-timesheet-130 http://www.mulesoft.org/sc
 		<choice doc:name="Timeout?" doc:id="b2000001-0007-4002-8002-idpsubchktmo">
 			<when expression="#[(vars.pollCount as Number) &gt;= (p('idp.action.max_checks') as Number)]">
 				<logger level="ERROR" doc:name="Log Poll Timeout" doc:id="b2000001-0008-4002-8002-idpsublogtmo"
-					message="#['[IDP-SUBSCRIBER][TIMEOUT] executionId=' ++ (vars.executionId default '') ++ ' file=' ++ (vars.fileName default '') ++ ' exceeded max_checks (' ++ p('idp.action.max_checks') ++ ')']" />
+					message="#[%dw 2.0
+output application/json
+var status = &quot;error&quot;
+var msg = &quot;IDP Subscriber - TIMEOUT: Execution exceeded max poll attempts (&quot; ++ p('idp.action.max_checks') ++ &quot;)&quot;
+---
+CustomLogMapper::logger({
+	correlationId: correlationId,
+	app: app,
+	mule: mule,
+	status: status,
+	message: msg,
+	(payload: {executionId: vars.executionId, fileName: vars.fileName, pollCount: vars.pollCount, maxChecks: p('idp.action.max_checks')}) if (p('log.level') == &quot;DEBUG&quot;),
+	env: p('mule.env')
+})]" />
 				<sharepoint:file-move doc:name="Move to Error (Timeout)" doc:id="b2000001-0009-4002-8002-idpsubmvtmo"
 					config-ref="Sharepoint_Sharepoint_online"
 					fileServerRelativeUrl="#[vars.processingUrl]"
@@ -75,11 +88,37 @@ http://www.mulesoft.org/schema/mule/idp-timesheet-130 http://www.mulesoft.org/sc
 							flag="1" />
 
 						<logger level="INFO" doc:name="Log Success" doc:id="b2000001-0010-4002-8002-idpsublogok"
-							message="#['[IDP-SUBSCRIBER] SUCCEEDED file=' ++ (vars.fileName default '') ++ ' -> idp-results-' ++ (vars.outputBaseName default '') ++ '.csv']" />
+							message="#[%dw 2.0
+output application/json
+var status = &quot;ok&quot;
+var msg = &quot;IDP Subscriber - SUCCESS: File processed successfully and CSV written to Output folder&quot;
+---
+CustomLogMapper::logger({
+	correlationId: correlationId,
+	app: app,
+	mule: mule,
+	status: status,
+	message: msg,
+	(payload: {fileName: vars.fileName, csvFile: 'idp-results-' ++ vars.outputBaseName ++ '.csv', executionId: vars.executionId}) if (p('log.level') == &quot;DEBUG&quot;),
+	env: p('mule.env')
+})]" />
 					</when>
 					<when expression="#[upper((payload.status default '')) == 'FAILED']">
 						<logger level="ERROR" doc:name="Log IDP Failed" doc:id="b2000001-0011-4002-8002-idpsublogfail"
-							message="#['[IDP-SUBSCRIBER][FAILED] IDP reported FAILED for executionId=' ++ (vars.executionId default '') ++ ' file=' ++ (vars.fileName default '')]" />
+							message="#[%dw 2.0
+output application/json
+var status = &quot;error&quot;
+var msg = &quot;IDP Subscriber - FAILED: IDP reported execution status as FAILED&quot;
+---
+CustomLogMapper::logger({
+	correlationId: correlationId,
+	app: app,
+	mule: mule,
+	status: status,
+	message: msg,
+	(payload: {executionId: vars.executionId, fileName: vars.fileName, idpStatus: payload.status}) if (p('log.level') == &quot;DEBUG&quot;),
+	env: p('mule.env')
+})]" />
 						<sharepoint:file-move doc:name="Move to Error (Failed)" doc:id="b2000001-0012-4002-8002-idpsubmvfail"
 							config-ref="Sharepoint_Sharepoint_online"
 							fileServerRelativeUrl="#[vars.processingUrl]"
@@ -89,7 +128,20 @@ http://www.mulesoft.org/schema/mule/idp-timesheet-130 http://www.mulesoft.org/sc
 					<otherwise>
 						<!-- Still processing: throttle, then re-publish with an incremented poll count -->
 						<logger level="DEBUG" doc:name="Log Still Processing" doc:id="b2000001-0013-4002-8002-idpsublogwait"
-							message="#['[IDP-SUBSCRIBER] status=' ++ (payload.status default 'UNKNOWN') ++ ' file=' ++ (vars.fileName default '') ++ ' pollCount=' ++ (vars.pollCount as String) ++ ' - requeueing']" />
+							message="#[%dw 2.0
+output application/json
+var status = &quot;ok&quot;
+var msg = &quot;IDP Subscriber - PROCESSING: Execution still in progress, requeueing for next poll cycle&quot;
+---
+CustomLogMapper::logger({
+	correlationId: correlationId,
+	app: app,
+	mule: mule,
+	status: status,
+	message: msg,
+	(payload: {executionId: vars.executionId, fileName: vars.fileName, idpStatus: payload.status, pollCount: vars.pollCount}) if (p('log.level') == &quot;DEBUG&quot;),
+	env: p('mule.env')
+})]" />
 						
 														<scripting:execute doc:name="Throttle (sleep)" doc:id="b878ad0a-02f0-4d78-bb8b-90121a4c2d25" engine="Groovy">
 			<scripting:code><![CDATA[sleep(${vm.poll.sleepMillis} as long)
@@ -118,7 +170,20 @@ output application/json
 		<error-handler>
 			<on-error-continue enableNotifications="true" logException="true" doc:name="Deflect Poison Message" doc:id="b2000001-0017-4002-8002-idpsuberr" type="ANY">
 				<logger level="ERROR" doc:name="Log Subscriber Failure" doc:id="b2000001-0018-4002-8002-idpsublogerr"
-					message="#[output text/plain --- '[IDP-SUBSCRIBER][ERROR] executionId=' ++ (vars.executionId default 'unknown') ++ ' file=' ++ (vars.fileName default 'unknown') ++ ' : ' ++ (error.description default '')]" />
+					message="#[%dw 2.0
+output application/json
+var status = &quot;error&quot;
+var msg = &quot;IDP Subscriber - ERROR: Unexpected error in subscriber flow&quot;
+---
+CustomLogMapper::logger({
+	correlationId: correlationId,
+	app: app,
+	mule: mule,
+	status: status,
+	message: msg,
+	(payload: {executionId: vars.executionId, fileName: vars.fileName, errorType: error.errorType.identifier, errorDescription: error.description}) if (p('log.level') == &quot;DEBUG&quot;),
+	env: p('mule.env')
+})]" />
 				<try doc:name="Best-Effort Move to Error" doc:id="b2000001-0019-4002-8002-idpsuberrtry">
 					<sharepoint:file-move doc:name="Move to Error" doc:id="b2000001-001a-4002-8002-idpsuberrmv"
 						config-ref="Sharepoint_Sharepoint_online"
@@ -128,7 +193,19 @@ output application/json
 					<error-handler>
 						<on-error-continue doc:name="Ignore Move Failure" doc:id="b2000001-001b-4002-8002-idpsuberrignore" type="ANY">
 							<logger level="WARN" doc:name="Log Move-to-Error Failure" doc:id="b2000001-001c-4002-8002-idpsublogerr2"
-								message="#['[IDP-SUBSCRIBER][WARN] Could not move file to Error folder: ' ++ (vars.fileName default 'unknown')]" />
+								message="#[%dw 2.0
+output application/json
+var status = &quot;warning&quot;
+var msg = &quot;IDP Subscriber - WARNING: Could not move failed file to Error folder: &quot; ++ (vars.fileName default 'unknown')
+---
+CustomLogMapper::logger({
+	correlationId: correlationId,
+	app: app,
+	mule: mule,
+	status: status,
+	message: msg,
+	env: p('mule.env')
+})]" />
 						</on-error-continue>
 					</error-handler>
 				</try>

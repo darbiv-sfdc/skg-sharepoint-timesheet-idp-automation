@@ -42,6 +42,8 @@ http://www.mulesoft.org/schema/mule/scripting http://www.mulesoft.org/schema/mul
     </flow>
 	<flow name="trigger-ingest-flow" doc:id="5b017f0c-8c07-4511-ac9b-9ef36127dc16" >
 		<http:listener doc:name="Listener" doc:id="2f613830-8eb1-4c9c-b392-9ec5f0d6f6ce" config-ref="HttpListenerConfig" path="/trigger-ingest"/>
+		<set-variable value="#[attributes.headers.'x-correlation-id' default correlationId]" doc:name="correlationId" doc:id="aa689db2-8262-47a1-a0a3-7cd8202983e3" variableName="correlationId"/>
+		<logger level="INFO" doc:name="Logger" doc:id="a2a3340d-24df-4f09-b151-d7287903fc60" message="#[%dw 2.0&#10;output application/json&#10;var logPayload = { &#10;			&quot;method&quot;: attributes.method,&#10;			&quot;endpoint&quot;: attributes.requestUri,&#10;			&quot;queryParams&quot;: if (!isEmpty(attributes.queryParams)) attributes.queryParams else '',&#10;            &quot;uriParams&quot;: if (!isEmpty(attributes.uriParams)) attributes.uriParams else '',&#10;			&quot;payload&quot;: if (attributes.method != &quot;GET&quot;) payload else ''&#10;            }&#10;&#10;var status = &quot;ok&quot;&#10;var msg = &quot;Trigger Ingest Flow - START&quot;&#10;---&#10;CustomLogMapper::logger(&#10;	{&#10;		correlationId: vars.correlationId,&#10;		app: app,&#10;		mule: mule,&#10;		status: status,&#10;		message: msg,&#10;		(payload: logPayload) if (p('log.level') == &quot;DEBUG&quot;),		 &#10;		env: p('mule.env')&#10;	}&#10;)]" />
 		<ee:transform doc:name="Transform Message" doc:id="1a98eb5d-36a7-4352-9ccb-086628c00390" >
 			<ee:message >
 				<ee:set-payload ><![CDATA[%dw 2.0

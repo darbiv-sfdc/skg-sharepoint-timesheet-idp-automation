@@ -25,15 +25,41 @@ http://www.mulesoft.org/schema/mule/idp-timesheet-130 http://www.mulesoft.org/sc
 		Per-file errors are isolated so one bad file does not abort the batch (poison-pill deflection).
 	-->
 	<sub-flow name="sharepoint-ingest-subflow" doc:id="e578e55b-c4fb-46c8-b914-a48ddaada13f">
-	
-			<logger level="INFO" doc:name="Log Ingest Start" doc:id="f36a4940-cad3-458c-98e9-f09265846650"
-			message="#['[IDP-INGEST] Scanning SharePoint folder: ' ++ p('sharepoint.path.source')]" />
+
+			<logger level="INFO" doc:name="Log Ingest Start" doc:id="f36a4940-cad3-458c-98e9-f09265846650" message="#[%dw 2.0
+output application/json
+var status = &quot;ok&quot;
+var msg = &quot;IDP Ingest - START - Scanning SharePoint folder: &quot; ++ p('sharepoint.path.source')
+---
+CustomLogMapper::logger({
+	correlationId: correlationId,
+	app: app,
+	mule: mule,
+	status: status,
+	message: msg,
+	env: p('mule.env')
+})]" />
 
 		<sharepoint:file-query doc:name="List Inbound Files" doc:id="055cb166-720c-4237-abe2-4b9af773598a" config-ref="Sharepoint_Sharepoint_online">
 			<sharepoint:query><![CDATA[#[p('sharepoint.path.source') ++ '?\$select=Name,ServerRelativeUrl,Length,TimeLastModified']]]></sharepoint:query>
 		</sharepoint:file-query>
 
-		<logger level="INFO" doc:name="Logger" doc:id="0657ff23-408f-4f21-88c7-397accbb3b9a" message="#[payload]"/>
+		<logger level="INFO" doc:name="Log Files Found" doc:id="0657ff23-408f-4f21-88c7-397accbb3b9a" message="#[%dw 2.0
+output application/json
+var fileCount = sizeOf(payload default [])
+var fileList = (payload default []) map $.Name
+var status = &quot;ok&quot;
+var msg = &quot;IDP Ingest - Files retrieved from SharePoint: &quot; ++ fileCount as String ++ &quot; files&quot;
+---
+CustomLogMapper::logger({
+	correlationId: correlationId,
+	app: app,
+	mule: mule,
+	status: status,
+	message: msg,
+	(payload: {fileCount: fileCount, files: fileList}) if (p('log.level') == &quot;DEBUG&quot;),
+	env: p('mule.env')
+})]"/>
 		<foreach doc:name="For Each PDF (sequential)" doc:id="2bc097e8-a194-4f11-a57f-13951ca8b9fd"
 			collection="#[payload default [] filter ((file) -> lower((file.Name default '')) endsWith ('.' ++ p('sharepoint.filter.extension')))]">
 
@@ -95,13 +121,37 @@ output application/json
 				<vm:publish doc:name="Publish to Tracking Queue" doc:id="180e5c7a-edda-4724-811d-b61284d78483"
 					config-ref="VM_Config" queueName="${vm.queue.name}" />
 
-				<logger level="INFO" doc:name="Log Submitted" doc:id="2c45f58f-eba1-4acd-9cac-a16162bfe53f"
-					message="#[output text/plain --- '[IDP-INGEST] Submitted ' ++ vars.fileName as String ++ ' -&gt; executionId=' ++ (vars.executionId default 'UNKNOWN')]" />
+				<logger level="INFO" doc:name="Log Submitted" doc:id="2c45f58f-eba1-4acd-9cac-a16162bfe53f" message="#[%dw 2.0
+output application/json
+var status = &quot;ok&quot;
+var msg = &quot;IDP Ingest - File submitted to IDP successfully: &quot; ++ vars.fileName
+---
+CustomLogMapper::logger({
+	correlationId: correlationId,
+	app: app,
+	mule: mule,
+	status: status,
+	message: msg,
+	(payload: {fileName: vars.fileName, executionId: vars.executionId, processingUrl: vars.processingUrl}) if (p('log.level') == &quot;DEBUG&quot;),
+	env: p('mule.env')
+})]" />
 
 				<error-handler>
 					<on-error-continue enableNotifications="true" logException="true" doc:name="Deflect Failed File" doc:id="14f7dc87-b25e-4a06-beb5-a6571603185d" type="ANY">
-						<logger level="ERROR" doc:name="Log Ingest Failure" doc:id="4ac6afda-f370-40fa-9ead-977125ac687c"
-							message="#[output text/plain --- '[IDP-INGEST][ERROR] Failed to process ' ++ (vars.fileName default 'unknown') ++ ' : ' ++ (error.description default '')]" />
+						<logger level="ERROR" doc:name="Log Ingest Failure" doc:id="4ac6afda-f370-40fa-9ead-977125ac687c" message="#[%dw 2.0
+output application/json
+var status = &quot;error&quot;
+var msg = &quot;IDP Ingest - FAILED to process file: &quot; ++ (vars.fileName default 'unknown')
+---
+CustomLogMapper::logger({
+	correlationId: correlationId,
+	app: app,
+	mule: mule,
+	status: status,
+	message: msg,
+	(payload: {fileName: vars.fileName, errorType: error.errorType.identifier, errorDescription: error.description}) if (p('log.level') == &quot;DEBUG&quot;),
+	env: p('mule.env')
+})]" />
 						<!-- Best-effort move to Error folder; source may be in Inbound or Processing depending on where it failed -->
 						<try doc:name="Best-Effort Move to Error" doc:id="0580fe6c-3c74-4942-88d3-a51e888af2ea">
 							<sharepoint:file-move doc:name="Move to Error" doc:id="d3c827a9-5346-4858-8c52-dfff9b59236d"
@@ -111,8 +161,19 @@ output application/json
 								flag="1" />
 							<error-handler>
 								<on-error-continue doc:name="Ignore Move Failure" doc:id="c6b2b92d-c55b-4130-9d4c-8c865488439d" type="ANY">
-									<logger level="WARN" doc:name="Log Move-to-Error Failure" doc:id="8c6ecd08-0a06-4631-9483-e13328a1ac3b"
-										message="#['[IDP-INGEST][WARN] Could not move failed file to Error folder: ' ++ (vars.fileName default 'unknown')]" />
+									<logger level="WARN" doc:name="Log Move-to-Error Failure" doc:id="8c6ecd08-0a06-4631-9483-e13328a1ac3b" message="#[%dw 2.0
+output application/json
+var status = &quot;warning&quot;
+var msg = &quot;IDP Ingest - WARNING: Could not move failed file to Error folder: &quot; ++ (vars.fileName default 'unknown')
+---
+CustomLogMapper::logger({
+	correlationId: correlationId,
+	app: app,
+	mule: mule,
+	status: status,
+	message: msg,
+	env: p('mule.env')
+})]" />
 								</on-error-continue>
 							</error-handler>
 						</try>

@@ -265,6 +265,44 @@ These constraints are defined in the Cursor rules and apply to all work in this 
 - Log format includes: `correlationId`, `status`, `message`, `payload` (DEBUG only)
 - Prefix log messages by flow context: `[IDP-INGEST]`, `[IDP-SUBSCRIBER]`
 
+**Logger Pattern for HTTP-triggered flows:**
+```xml
+<!-- 1. Set correlationId immediately after HTTP listener -->
+<set-variable value="#[attributes.headers.'x-correlation-id' default correlationId]" 
+              doc:name="correlationId" variableName="correlationId"/>
+
+<!-- 2. Log BEFORE any transforms (while attributes exists) -->
+<logger level="INFO" doc:name="Logger" message="#[%dw 2.0
+output application/json
+var logPayload = { 
+    &quot;method&quot;: attributes.method,
+    &quot;endpoint&quot;: attributes.requestUri,
+    &quot;queryParams&quot;: if (!isEmpty(attributes.queryParams)) attributes.queryParams else '',
+    &quot;uriParams&quot;: if (!isEmpty(attributes.uriParams)) attributes.uriParams else '',
+    &quot;payload&quot;: if (attributes.method != &quot;GET&quot;) payload else ''
+}
+var status = &quot;ok&quot;
+var msg = &quot;Flow Name - START&quot;
+---
+CustomLogMapper::logger({
+    correlationId: vars.correlationId,
+    app: app,
+    mule: mule,
+    status: status,
+    message: msg,
+    (payload: logPayload) if (p('log.level') == &quot;DEBUG&quot;),
+    env: p('mule.env')
+})]"/>
+
+<!-- 3. Then do transformations -->
+<ee:transform>...</ee:transform>
+```
+**Key points:**
+- Set `correlationId` variable first (from header or auto-generated)
+- Log **before** `<ee:transform>` to capture HTTP `attributes` (method, URI, params)
+- After transform, `attributes` is no longer available
+- See `trigger-ingest-flow` in `api.xml` for reference implementation
+
 ### Variable Naming
 - Execution tracking: `executionId`, `fileName`, `processingUrl`, `pollCount`
 - File operations: `sourceUrl`, `processingUrl`, `outputBaseName`
