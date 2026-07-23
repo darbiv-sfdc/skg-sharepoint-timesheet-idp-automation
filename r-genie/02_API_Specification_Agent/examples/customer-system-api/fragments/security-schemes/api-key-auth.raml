@@ -1,0 +1,13 @@
+#%RAML 1.0 SecurityScheme
+
+description: API Key authentication via header
+type: Pass Through
+describedBy:
+  headers:
+    X-API-Key:
+      type: string
+      description: API key for authentication
+      example: "sk_live_abc123xyz789"  # ⚠️ EXAMPLE ONLY - Replace with actual API key from secure storage
+  responses:
+    401:
+      description: Invalid or missing API key

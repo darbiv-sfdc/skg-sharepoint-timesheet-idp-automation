@@ -1,0 +1,764 @@
+---
+description: Cloud Success Architect Agent - Domain Guidance (Capability Patterns + Enterprise NFRs + Feasibility + Coverage + KPIs + Persona Refinement)
+author: Cheppali Shaik Sohail
+version: 1.7.1
+alwaysApply: false
+tags: [guidance, mulesoft, agentforce, accelerators, patterns, success-architect, enterprise-nfr, feasibility, coverage, kpi, persona-refinement, indexed-research, verbosity-discipline, salesforce-brand-palette]
+appliesTo: [solution-design, capability-mapping, brainstorming, feasibility-validation, coverage-matrix, kpi-definition, persona-stress-test]
+whenToUse:
+  - "Mapping customer pains to MuleSoft + Agentforce capabilities"
+  - "Selecting accelerators and reference architectures"
+  - "Tree of Thought brainstorming for solution options"
+  - "Phase 4A Feasibility, Phase 4B Coverage, Phase 4C KPI"
+  - "Phase 5 Adversarial Persona Refinement (persona library, question taxonomy, improvement decisions)"
+  - "Phase 7 NFR Compliance Matrix and Measurement & Observability Strategy"
+priority: HIGH
+---
+
+# GUIDANCE V1.5.0 — MuleSoft + Agentforce Capability Patterns + Enterprise Disciplines + Persona Refinement + Verbosity + Brand Palette
+
+> **Purpose**: Domain intelligence for the Cloud Success Architect agent — capability catalog, decision matrices, Tree of Thought brainstorming, few-shot examples, and evidence citation patterns.
+> **Full capability catalog**: `lib/docs/mulesoft-agentforce-capability-catalog.md`
+
+---
+
+## 1. DOMAIN AXIOMS (NON-NEGOTIABLE PRINCIPLES)
+
+1. **Composability wins** — loose coupling via APIs and events beats tight integration every time
+2. **API-led before Agent-led** — agents are only as good as the APIs and data they can reach; if API layer is weak, strengthen it first
+3. **Trust is a layer, not a feature** — Einstein Trust Layer, Flex Gateway policies, and MuleSoft's runtime controls are the trust substrate
+4. **Accelerators compress time-to-value** — prefer shipping an accelerator over hand-building; customize the accelerator, don't replace it
+5. **Data Cloud is the grounding fabric** — Agentforce gets dramatically better when Data Cloud is the retrieval source
+6. **Human-in-the-loop for high-stakes actions** — agents propose; humans approve destructive or customer-facing writes
+7. **Observability is design-time, not runtime** — plan MuleSoft Monitoring, Anypoint MQ metrics, and Agentforce traces into the architecture, not after
+
+---
+
+## 2. CAPABILITY CATALOG (QUICK REFERENCE)
+
+> Full details in `lib/docs/mulesoft-agentforce-capability-catalog.md`. This is the short-list the agent carries into brainstorming.
+
+### 2.1 MuleSoft Anypoint Platform
+
+| Capability | What It Solves | When to Recommend |
+|------------|----------------|-------------------|
+| **Anypoint Runtime Fabric / CloudHub 2.0** | Managed runtime, multi-region, Kubernetes-native | Customer needs elastic deployment, multi-region DR, or hybrid |
+| **API Manager + Flex Gateway** | API governance, runtime policies, any-gateway deployment | External APIs, partner APIs, strict policy enforcement |
+| **Anypoint Exchange** | Reusable asset catalog (APIs, connectors, templates) | Multi-team API reuse, federated delivery |
+| **Anypoint MQ** | Managed messaging, FIFO, event distribution | Event-driven patterns, decoupling, async workflows |
+| **DataGraph** | Unified GraphQL layer over APIs | Front-end teams needing single query surface |
+| **Anypoint Code Builder** | Cloud-native IDE + AI-assisted flow design | Modern dev experience, faster API development |
+| **Connectors (1000+)** | Pre-built integration to SaaS + on-prem | Accelerate any system-to-system integration |
+
+### 2.2 MuleSoft AI & Agentic
+
+| Capability | What It Solves | When to Recommend |
+|------------|----------------|-------------------|
+| **MuleSoft AI Chain** | Bring LLMs into flows — RAG, prompt orchestration, vector search | Intelligent automation inside integration flows |
+| **Topic Center** | Centralized topic/action/metadata registry for Agentforce actions | Customer building multi-action Agentforce agents |
+| **Intelligent Document Processing (IDP)** | Document parsing, extraction, classification | PDF / form / invoice processing at scale |
+| **MuleSoft for Agentforce (Agentforce Actions)** | Expose any API as an Agentforce action via zero-code wrapping | Customer wants Agentforce to act on legacy systems |
+
+### 2.3 Accelerators (Industry & Functional)
+
+| Accelerator | Target | Key Assets |
+|-------------|--------|------------|
+| **Accelerator for Salesforce Industries** | Industry clouds (Comms, Energy, Health, Insurance) | Pre-built APIs, connectors, data models |
+| **Accelerator for Healthcare** | Payer / provider / life sciences | HL7 FHIR APIs, eligibility, claims, patient 360 |
+| **Accelerator for Financial Services** | Banking, wealth, insurance | Customer 360, account aggregation, onboarding APIs |
+| **Accelerator for Retail** | Commerce, store ops, loyalty | Order management, inventory, customer profile |
+| **Accelerator for Utilities** | Metering, outage, customer service | CIS integration, meter-to-cash patterns |
+
+### 2.4 Agentforce Platform
+
+| Capability | What It Solves | When to Recommend |
+|------------|----------------|-------------------|
+| **Agent Builder** | Declarative agent authoring (topics + actions + guardrails) | Building purpose-built agents (service, sales, ops) |
+| **Atlas Reasoning Engine** | Multi-step reasoning, planning, tool selection | Complex agent tasks needing planning |
+| **Actions (Apex, Flow, MuleSoft, Prompt)** | What the agent can *do* | Every agent action inventory |
+| **Topics** | Scope + instructions that group related actions | Preventing drift, governance |
+| **Prompt Builder** | Reusable prompt templates bound to data | Templated content generation with data grounding |
+| **Einstein Trust Layer** | PII masking, toxicity, zero-retention, audit | Regulated industries, sensitive data |
+| **Data Cloud** | Unified customer data, identity resolution, calculated insights, vector retrieval | Grounding agent responses on real customer data |
+| **Agentforce for Service / Sales / Commerce / Marketing** | Pre-built agents per function | Fast-track adoption in a specific line of business |
+
+### 2.5 Adjacent Automation
+
+| Capability | What It Solves | When to Recommend |
+|------------|----------------|-------------------|
+| **MuleSoft Composer** | Low-code, admin-friendly integration | Business user–owned integrations |
+| **MuleSoft RPA** | Bot-driven process automation (UI + system) | Legacy UIs with no API |
+| **API Experience Hub** | Branded developer portal on Experience Cloud | Partner / ecosystem API programs |
+
+---
+
+## 3. DECISION MATRICES
+
+### 3.1 When API-Led vs Agent-Led vs Event-Driven?
+
+| Signal | API-Led Backbone | Agent-Led | Event-Driven |
+|--------|------------------|-----------|--------------|
+| Stable, reusable capabilities for many consumers | ✅ Strong fit | Secondary | Secondary |
+| Conversational or multi-step user tasks | Secondary | ✅ Strong fit | Secondary |
+| Real-time reactions to state changes across systems | Secondary | Secondary | ✅ Strong fit |
+| Partner / ecosystem exposure | ✅ Strong fit | — | Secondary |
+| Grounded generative responses | Supports | ✅ Strong fit | Supports |
+
+> **Guidance**: Most enterprise architectures layer all three. Recommend starting with whichever addresses the customer's *stated* top pain, then stage the rest.
+
+### 3.2 When to Recommend MuleSoft AI Chain vs Agentforce Agent Builder?
+
+| Need | MuleSoft AI Chain | Agentforce Agent Builder |
+|------|-------------------|--------------------------|
+| LLM inside an integration flow (batch, enrichment, classification) | ✅ | Secondary |
+| Conversational UX with a user | Secondary | ✅ |
+| Multi-system action orchestration with reasoning | Either | ✅ (with Atlas) |
+| RAG over documents at ingest time | ✅ | Via Data Cloud |
+| Centralized action catalog for agents | Supports via Topic Center | ✅ Consumes from Topic Center |
+
+### 3.3 When to Pull in an Accelerator?
+
+| Condition | Action |
+|-----------|--------|
+| Customer industry matches an accelerator (Healthcare, FinServ, Retail, Utilities, Salesforce Industries) | ✅ Lead with accelerator, customize 20%, build 20%, reuse 60% |
+| Customer has bespoke domain (manufacturing specialized, research, etc.) | Use accelerator connectors + patterns, build domain APIs |
+| Customer explicitly rejected accelerator pattern before | Respect decision, document alternative rationale in Supporting Doc |
+
+---
+
+## 4. EVIDENCE CITATION PATTERN
+
+Every capability recommendation MUST cite a customer fact from Phase 0–2.
+
+**Format:**
+```
+Recommend {capability} because you stated '{exact customer phrase}' in Phase {N}.
+```
+
+**Examples:**
+- `Recommend Flex Gateway at the edge because you stated "partner APIs must stay inside our DMZ" in Phase 1.`
+- `Recommend Data Cloud for grounding because you stated "agent hallucinations blocked our last pilot" in Phase 2.`
+- `Recommend Accelerator for Healthcare because you confirmed the HL7 FHIR requirement in Phase 0.`
+
+**If no customer fact supports the recommendation:**
+- Mark as `⚠️ ASSUMPTION: {recommendation} — no explicit customer signal, inferred from {industry / archetype}`
+
+---
+
+## 5. TREE OF THOUGHT BRAINSTORMING TEMPLATE
+
+Used in Phase 3. Present 3 distinct branches before converging.
+
+```markdown
+<thinking>
+Customer facts grounding this brainstorm:
+- Pain 1: {...}
+- Pain 2: {...}
+- Constraint: {...}
+- Success metric: {...}
+
+Branch A — "API-Led Backbone + Agentforce Layer"
+  - Core: Anypoint + API Manager + Flex Gateway
+  - Agentic: Agentforce Service Agent consuming MuleSoft actions via Topic Center
+  - Fits because: {cite facts}
+  - Risk: {...}
+  - Time-to-value: {weeks/months}
+  - Score: {x/10}
+
+Branch B — "Agent-First with MuleSoft AI Chain"
+  - Core: MuleSoft AI Chain in flows + lightweight API layer
+  - Agentic: Agentforce Agent Builder with MuleSoft AI Chain backends
+  - Fits because: {cite facts}
+  - Risk: {...}
+  - Score: {x/10}
+
+Branch C — "Event-Driven + Data Cloud Grounding"
+  - Core: Anypoint MQ + Data Cloud streaming + Flex Gateway
+  - Agentic: Agentforce reading from Data Cloud with vector retrieval
+  - Fits because: {cite facts}
+  - Risk: {...}
+  - Score: {x/10}
+
+Recommendation: Branch {X}
+Confidence: {HIGH/MEDIUM/LOW}
+Alternatives presented: All 3 to panel — they choose.
+</thinking>
+```
+
+---
+
+## 6. FEW-SHOT EXAMPLES
+
+### 6.1 Phase 1 Problem Deep-Dive
+
+❌ **BAD — generic question, no evidence anchor:**
+```
+What are your pain points?
+```
+
+✅ **GOOD — specific, evidence-anchored, persona-targeted:**
+```
+You mentioned API-led delivery has "stalled at 12 APIs" — which team owns those 12?
+Is the bottleneck in design, build, or governance? Asking because it changes whether
+we solve with Anypoint Code Builder (design/build acceleration) or API Experience Hub
+(partner-facing governance).
+```
+
+**Why**: Cites customer fact, narrows to actionable signal, signals solution shape without prescribing it.
+
+---
+
+### 6.2 Phase 3 Brainstorming
+
+❌ **BAD — single option, no alternatives, no tradeoffs:**
+```
+I recommend MuleSoft + Agentforce. You get API-led integration and AI agents.
+Here's the architecture diagram.
+```
+
+✅ **GOOD — 3 branches, tradeoffs, evidence:**
+```
+Before I converge, three ways to cut this:
+
+**Branch A — API-Led Backbone First:** Stabilize your 12 APIs on Runtime Fabric,
+add Flex Gateway at the edge (you said partner exposure is coming), then layer
+Agentforce Service Agent on top using MuleSoft actions via Topic Center.
+Fastest trust build. 6–9 months to agent go-live.
+
+**Branch B — Agent-First with AI Chain:** Deploy Agentforce Agent Builder now on
+Salesforce-native data, use MuleSoft AI Chain to orchestrate legacy reads.
+Faster to an agent demo (8–12 weeks), but postpones the API rationalization you
+said you need.
+
+**Branch C — Event-Driven with Data Cloud:** Put Anypoint MQ in the middle, flow
+customer events into Data Cloud, ground Agentforce in Data Cloud's vector store.
+Best long-term grounding story. Highest upfront lift.
+
+Tradeoff matrix attached. Which resonates — or should we hybridize?
+```
+
+**Why**: Offers real choice, cites facts, quantifies time-to-value, invites dialogue.
+
+---
+
+### 6.3 Phase 6 HLD Narrative — Tight, Panel-Ready (v1.5.0)
+
+❌ **BAD — third-person, generic, no "you":**
+```
+The customer is embarking on API-led transformation and will use MuleSoft
+to integrate their systems. Agentforce will provide AI capabilities.
+```
+
+❌ **BAD — marketing-prose flourishes (Critical Rule #15 violation):**
+```
+You are NorthStar — racing two clocks at once. The first clock: digital-native peers
+are reshaping shopper expectations in the agentic era. The second clock: your
+greenfield estate gives you no shortcuts...
+
+Three forces have converged in the last six months that change the math for you.
+First, the platform is mature. Second, the substrate handles your geography.
+Third, your accelerators do 60% of the work. The clock matters.
+```
+Why this is BAD: editorial framing ("racing two clocks", "three forces have converged", "the clock matters"), parallel-prose padding, no measured KPI in the framing, panel will skim and lose the actual decision.
+
+✅ **GOOD — "you" terms, tight, evidence-bound:**
+```
+You told us API-led has stalled at 12 APIs — and your VP Integration, Priya,
+flagged partner exposure as the next gate.
+
+Solution: Anypoint backbone + Flex Gateway at your DMZ + Agentforce Service Agent
+reading those APIs via Topic Center. Every agent action inherits your governance.
+
+W1 (90d): partner APIs live, 5 System APIs, Trust Layer always-on.
+W2 (180d): first Agentforce workflow in production on those APIs.
+W3 (365d): EU OZ + Multi-Agent Orchestration.
+```
+
+✅ **GOOD — "Why Now" tight format (replaces the "Three forces have converged" pattern):**
+```
+| Force | Status | Customer impact |
+|---|---|---|
+| MuleSoft for Agentforce GA | Vector v1.0 GA Jan 2026; Agent Fabric GA Q1 2026 | All Wave-1 components are GA — no Preview risk |
+| Hyperforce regional coverage | US-East-1 / EU OZ / APAC SE-2 + S-1 live | Phase residency to footprint without building sovereign cloud |
+| Retail Accelerator v3.2 | 6 packaged use cases match 5 of your 12 pains | 40-60% build reduction on Wave-1 |
+```
+
+**Why**: Tables compress 5 paragraphs to 5 rows. Names + specific facts + measured outcomes. Panel reads in 30 seconds. **Conciseness is example-anchored (v1.7.0):** benchmark length against `examples/retail-personalized-offerings_HLD.md` (~190 lines for a 4-capability use case); per-section structural budgets in `templates/HLD-template.md` are the binding constraint; total HLD line count is a soft signal with advisory threshold ~380 lines (2× retail example). Hard 250-line cap from v1.5.0/v1.6.0 is **superseded** — see Production Learning #1.2.
+
+---
+
+### 6.4 Phase 4A Feasibility Validation
+
+❌ **BAD — feasibility skipped or paper-stamped:**
+```
+All capabilities recommended are GA. Proceed to HLD.
+```
+
+✅ **GOOD — 8-dimension scoring per capability with verdicts:**
+```
+Phase 4A Feasibility — Topic Center:
+- GA Status: ⚠️ Preview per docs.mulesoft.com (research date 2026-05-02) — verify GA per release
+- Geography: ✅ US East available
+- Edition: ✅ Anypoint + Agentforce SKU (customer has both)
+- Footprint: ✅ pairs with existing Service Cloud
+- Timeline: ✅ phased after CloudHub 2.0 migration
+- Skill: ⚠️ new pattern for team — partner-augmentation flagged
+- Commercial: N/A
+- Data Residency: ✅ US
+Verdict: CONDITIONAL — Topic Center stays in scope but ⚠️ PREVIEW marker mandatory in HLD; tracked in Assumption Log with validation path = "confirm GA in next release notes"
+```
+
+**Why**: Every dimension cited; conditionals routed to Assumption Log with validation paths; preview features explicitly flagged. No silent assumptions.
+
+---
+
+### 6.5 Phase 4B Coverage Matrix
+
+❌ **BAD — unilateral coverage, no reverse check, no uncovered-pain detection:**
+```
+Components address the customer's needs. Proceeding to HLD.
+```
+
+✅ **GOOD — bidirectional matrix with explicit gap analysis:**
+```
+Phase 4B Coverage:
+Pain → Component:
+- P1 "claims status drives 35% of calls" → Agentforce Service + MuleSoft action via Topic Center + Healthcare Accelerator FHIR APIs ✅
+- P2 "Agentforce demo at board in 6 mo" → Phased rollout: Service @ 90d, Topic Center @ 120d ✅
+- P3 "PHI handling non-negotiable" → Einstein Trust Layer + Flex Gateway TLS + API Manager ✅
+Component → Pain:
+- CloudHub 2.0: addresses P1, P2, P3 (foundation) ✅
+- Data Cloud: addresses none in 90-day; 🎯 FUTURE-ENABLER for eligibility / PA agents in 180-day horizon
+Future-enabler ratio: 1/7 = 14% (under 20% project cap ✅)
+Uncovered pains: 0
+Solution-without-problem: 0
+```
+
+**Why**: Forces thinking about both directions. Catches the "we built something cool that doesn't address a stated pain" anti-pattern. Explicitly tags future-enablers so they aren't silently bloating the architecture.
+
+---
+
+### 6.6 Phase 4C KPI Definition
+
+❌ **BAD — vanity KPIs, no baselines, no instrumentation:**
+```
+Success Metrics:
+- Improved customer experience
+- Faster integration
+- Better AI capabilities
+```
+
+✅ **GOOD — 3-tier table with baselines + targets + windows + owners + instrumentation:**
+```
+Phase 4C KPIs:
+Business:
+- Service call deflection % | Baseline 0% | Target 30% (per Dr. Patel ambition) | 90-day rolling | VP Service Ops | Salesforce Reports
+- CSAT delta on deflected calls | Baseline TBD pre-launch | Target +5 pts | 90-day rolling | VP Business Apps | Salesforce CSAT survey
+Operational:
+- Agent containment rate | N/A baseline | Target ≥65% | 30-day rolling | Agentforce CoE | Agentforce Observability
+- Time-to-resolution (claims status) | 4 min today | Target <90 sec via agent | 30-day rolling | Service Ops | Service Cloud + Agentforce traces
+Technical:
+- Claims API success rate | 99.2% today | Target ≥99.9% | 30-day rolling | Integration CoE | Anypoint Monitoring
+- Agent action p95 latency | N/A baseline | Target <1.5 sec | 30-day rolling | Platform Eng | Agentforce Observability + Anypoint Monitoring
+Pre-launch baseline capture required: 4 of 6 KPIs → KPI_Baselines_v1.md
+```
+
+**Why**: Each KPI grounded in customer fact OR explicitly marked "TBD pre-launch baseline". Targets sourced from customer ambition, not invented. Instrumentation tool named per KPI — no hand-waving on how it'll be measured.
+
+---
+
+### 6.7 Phase 5 Persona Refinement
+
+❌ **BAD — no verification, no opportunity:**
+```
+CFO (Tier 4): "Three-year TCO?"
+Architect: "Cost-effective. Mid-range."     Verdict: KEEP.
+```
+
+✅ **GOOD — evidence-bound, verified, opportunity logged:**
+```
+CFO (Tier 4): "Three-year TCO incl. Flex credits, Agentforce conversations, Data Cloud rows — break-even month?"
+Architect (v1): "$X/yr Y1, $Y/yr steady-state; break-even month 14 from 30% call deflection."
+Verification: catalog §9 confirms cost model; Agentforce conversation pricing contract-dependent → Confidence MEDIUM; ⚠️ ASSUMPTION on Y1 volume.
+Verdict: ⚠️ IMPROVE — add consumption-aware design (async batching + topic guardrails). Logged as OPP-CFO-T4-1; phase_4_reentry: 4C (cost-control KPI added).
+```
+
+**Why**: Real number, real cross-ref, real confidence, logged opportunity that traces to catalog and triggers Phase 4C delta. This is the pattern Phase 5 enforces on every persona × tier.
+
+---
+
+## 7. ARCHITECTURE DIAGRAM CONVENTIONS (Mermaid)
+
+> **Rule:** Mermaid only — NO ASCII, NO PlantUML. **Every architecture diagram MUST apply the Salesforce brand classDef palette below.** Diagrams without palette FAIL the Phase 6 self-check (`@02_Mandatory_Stop_Points.mdc`).
+>
+> **Cross-reference:** harmonizes with `r-genie/01_Technical_Design_Agent/examples/05_mermaid_diagram_examples.md` (essential + optional diagram types, sequence diagram patterns, error-handling flows). When CSA produces low-level sequence diagrams (rare — only Phase 6 §7 Data Flows), use that agent's patterns: `autonumber`, `activate`/`deactivate`, `[(db)]`, `([start/end])`.
+
+### 7.1 Salesforce + MuleSoft + Agentforce Brand `classDef` Palette (MANDATORY)
+
+```
+classDef agentforce       fill:#7F3CFF,stroke:#5A1FBF,color:#fff,stroke-width:1px
+classDef einstein         fill:#032E61,stroke:#021F42,color:#fff,stroke-width:1px
+classDef serviceCloud     fill:#FF9A3C,stroke:#C66B1B,color:#000,stroke-width:1px
+classDef salesCloud       fill:#19A0C6,stroke:#0F6F8B,color:#fff,stroke-width:1px
+classDef marketingCloud   fill:#FF5C35,stroke:#C13E1F,color:#fff,stroke-width:1px
+classDef commerceCloud    fill:#FFB75D,stroke:#C68427,color:#000,stroke-width:1px
+classDef dataCloud        fill:#0070D2,stroke:#0050A0,color:#fff,stroke-width:1px
+classDef salesforceCore   fill:#00A1E0,stroke:#0079A8,color:#fff,stroke-width:1px
+classDef hyperforce       fill:#005EB8,stroke:#003E7A,color:#fff,stroke-width:1px
+classDef mulesoft         fill:#1A6CD7,stroke:#0F4A99,color:#fff,stroke-width:1px
+classDef mulesoftAI       fill:#005EB8,stroke:#003E7A,color:#fff,stroke-width:1px
+classDef tableau          fill:#1F77B4,stroke:#155989,color:#fff,stroke-width:1px
+classDef slack            fill:#4A154B,stroke:#2E0D2F,color:#fff,stroke-width:1px
+classDef heroku           fill:#430098,stroke:#2D0066,color:#fff,stroke-width:1px
+classDef systemsOfRecord  fill:#5E6E82,stroke:#3C4858,color:#fff,stroke-width:1px
+classDef customerInfra    fill:#3C4858,stroke:#1F2937,color:#fff,stroke-width:1px
+classDef engagement       fill:#F4F6F9,stroke:#9CA3AF,color:#000,stroke-width:1px
+classDef governance       fill:#0B5394,stroke:#063562,color:#fff,stroke-width:1px,stroke-dasharray:4 2
+```
+
+> **Palette source-of-truth:** Salesforce + MuleSoft + Agentforce 2026 product brand colors. Aligned with the Technical Design Agent's existing palette (`#00A1E0` for Salesforce, `#0070D2` cobalt for Data Cloud, `#FF9A3C` for Service Cloud orange) and extended for Agentforce (`#7F3CFF` purple) and substrate layers. Update via `/use-agent-tuner` only — do not improvise colors per HLD.
+
+### 7.2 Class Assignment Rules
+
+| Class | Use For |
+|-------|---------|
+| `agentforce` | Agent Builder, Atlas Reasoning, Topics, Actions, Topic Center, Agent Fabric, Agentforce Voice, Multi-Agent Orchestration, Subagents, AgentExchange, Agentforce Testing Center |
+| `einstein` | Einstein Trust Layer, Einstein Bots, Einstein 1, Prompt Builder |
+| `serviceCloud` | Service Cloud, agent-assist sidebar, Service Console |
+| `salesCloud` | Sales Cloud, Lead/Opportunity surfaces |
+| `marketingCloud` | Marketing Cloud, Journey Builder, Activations |
+| `commerceCloud` | Commerce Cloud, B2C/B2B Storefronts |
+| `dataCloud` | Data Cloud / Data 360, Calculated Insights, Customer 360 unified profile, Data Cloud Vector Retrieval |
+| `salesforceCore` | Salesforce Platform, Lightning, Custom Metadata, Flow, Apex |
+| `hyperforce` | Hyperforce Substrate, Operating Zones, regional infra notes |
+| `mulesoft` | Anypoint Platform, API Manager, Flex Gateway, CloudHub 2.0, Runtime Fabric, Anypoint MQ, DataGraph, Anypoint Code Builder, Anypoint Monitoring, Visualizer, Exchange, MuleSoft IDP, Composer, RPA |
+| `mulesoftAI` | MuleSoft AI Chain (Inference, Vector Connectors), LLM Gateway on Flex |
+| `tableau` | Tableau, Tableau CRM, Tableau Pulse |
+| `slack` | Slack workspaces, Slack-first Agentforce surfaces |
+| `heroku` | Heroku apps, Heroku Postgres |
+| `systemsOfRecord` | Customer-owned SoR (SAP, Oracle, Workday, ServiceNow, custom DBs, 3P SaaS) |
+| `customerInfra` | Customer-owned non-SoR (SIEM like Splunk/Datadog, IdP like Okta, NetSuite-the-platform, on-prem AD) |
+| `engagement` | Web, Mobile, Email, Chat surfaces, Storefront UIs (the channels users touch) |
+| `governance` | Trust/audit/governance overlays drawn as dotted boxes (Unified Audit Pipeline, Topic Center as governance, Code Scanners) |
+
+### 7.3 Standard Architecture Layout (Reference)
+
+Use the assignment skeleton in `templates/HLD-template.md` §5 (it embeds the full classDef block + commented class-assignment skeleton). Layers L→R: `engagement` → `agentforce`/`einstein` → `mulesoft`/`mulesoftAI` → `dataCloud` → `serviceCloud`/`salesCloud`/`systemsOfRecord`. Governance (Trust Layer, Audit Pipeline) overlay as `governance` (dotted-stroke). Customer non-SoR (SIEM, IdP) → `customerInfra`.
+
+### 7.4 Layering & Diagram Discipline
+
+- **Left→Right**: Users/Channels → Agentforce → MuleSoft → Data 360 → Systems of Record
+- **Governance overlays** (Trust Layer, Audit Pipeline, Topic Center as gov) → `governance` class (dotted-stroke)
+- **≤12 primary nodes** — high-level diagram. If you need >12, split into a Wave-1 diagram + a Wave-2 callout.
+- **Every node** assigned to a class via `class A,B,C agentforce` syntax — NO unclassified default-grey nodes.
+- **Every accelerator** gets a callout BELOW the diagram, not as a node (saves diagram real estate).
+- **Subgraph titles** include geography hint: e.g., `"Agentforce 360 (Hyperforce US-East-1)"`, `"MuleSoft Anypoint (CloudHub 2.0 · US)"`.
+- **Customer-owned components** always in `systemsOfRecord` or `customerInfra` class — visually distinct from vendor-supplied (CSA boundary clarity).
+
+### 7.5 Sequence Diagrams (Phase 6 §7 Data Flows — when needed)
+
+> Cross-reference: `r-genie/01_Technical_Design_Agent/examples/05_mermaid_diagram_examples.md` Essential 1.
+> Use `autonumber`, `activate`/`deactivate`, `alt`/`else`/`par` blocks. For brand consistency, set participant colors via `participant X as Agentforce Builder` + per-line `Note over X: ...` labels (Mermaid sequence diagrams don't support classDef the same way; rely on consistent participant naming).
+
+### 7.6 Mermaid Syntax & Layout Best Practices (v1.6.0)
+
+> **Adopted from** Boomi flow-map prompt §4 + MuleSoft API-Led HLD prompt §5 + retail HLD/diagrams worked examples (`examples/retail-personalized-offerings_*.md`). Phase 6 self-check enforces all 8 rules (`@02_Mandatory_Stop_Points.mdc`).
+
+| # | Rule | Why | Apply To |
+|---|------|-----|----------|
+| **D1** | Use `<br/>` (with closing slash) for line breaks. **Never** `<br>` (renders as literal text in some Mermaid renderers). **Never** `\n` (renders as literal text everywhere). | Renderer compatibility | Every node label, every arrow label |
+| **D2** | Prepend `%%{ init: { 'flowchart': { 'curve': 'linear' } } }%%` to every architecture diagram. For per-flow drill-downs, merge `'themeVariables': { 'fontSize': '16px' }` into the same init directive. | Straight lines = clearer architecture; larger font = readable drill-downs | Architecture (Phase 6 §5) and Data Flows (Phase 6 §7) |
+| **D3** | **Layout order discipline:** declare nodes in this order — (1) source/channel nodes → (2) subgraphs with components → (3) target/SoR nodes → (4) connections → (5) styles & class assignments. | Mermaid layout: declaration order = vertical placement; connection order = arrow routing. Disciplined order = deterministic layout. | Every architecture diagram |
+| **D4** | **Edge semantics:** solid `-->` = action / data flow / sync call · dashed `-.->` = governance overlay / grounding feed / response-return. Do not mix semantics on the same edge style. | Visual distinction between primary flow and supporting concerns | Every diagram |
+| **D5** | **Multi-target arrows:** when a Process/Experience API fans out to multiple System APIs, use **descriptive action labels** (`"File Retrieval"`, `"NAV Delivery"`, `"Decrement Inventory"`) on the P→S arrows — not duplicated flow IDs (which already appear on the inbound subscribe/inbound arrow). | Reduces visual clutter; each fan-out arrow visually distinct | Process API fan-out diagrams |
+| **D6** | **Async fire-and-forget:** Solace/event-triggered flows that don't return a response have **no** return arrow. Show one-way chain: `Source → Bus → E_API → S_API → Target` (no arrow back to Source). | Reflects actual semantics; avoids implying request-response | Cat-D async patterns |
+| **D7** | **Event-bus as explicit intermediary:** when Solace / Anypoint MQ / Kafka is the bus between Source and Experience API, draw it as an explicit node — never `Source → E_API` directly. Pattern: `Source -->\|"Publish"\| BUS -->\|"Subscribe<br/>flow IDs"\| E_API`. | Architectural truth: events flow through the bus | Event-driven diagrams |
+| **D8** | **No dangling System API / target nodes:** every `s-*-api` (or component representing a backend interface) MUST have an outbound arrow to its target system with a protocol label. The only exception is the async fire-and-forget terminal (D6). | Diagrams without target-side arrows are incomplete | Every System API in every diagram |
+
+### 7.7 Diagram Pattern Recipes
+
+#### 7.7.1 Architecture-HLD Recipe (Phase 6 §5)
+
+Reference: `examples/retail-personalized-offerings_HLD.md` §5.
+
+- **Layout:** Left-to-Right, ≤12 primary nodes
+- **Subgraphs as visual zones** with dashed borders (no fill): `style ZoneName fill:none,stroke:<class-stroke-color>,stroke-width:2px,stroke-dasharray:5 5` — one subgraph per architectural layer (e.g., `"User Engagement"` / `"Agentic Layer"` / `"API Gateway & Governance"` / `"Integration Layer (API-Led)"` / `"Backend Systems"`)
+- **Node shapes:** `[(...)]` for data stores · `([...])` for personas/channels (rounded) · `{{...}}` for gateways/policies (hexagon) · `[...]` for services/components (rect)
+- **Class assignment:** every node via `class A,B,C agentforce` syntax — full 18-class brand palette (§7.1) is canonical; a 4-class minimal subset (`sf` / `ms` / `backend` / `user`) is the **proven minimal recipe** when product-level distinction isn't needed (maps to `salesforceCore` / `mulesoft` / `systemsOfRecord` / `engagement` from §7.1)
+- **Edges:** action `-->`, governance/grounding `-.->`
+- **Mandatory follow-up:** "How this works for you" 5-bullet block immediately after the diagram (≤25 words/bullet, panel-friendly "you" voice)
+
+#### 7.7.2 Per-Flow Drill-Down Recipe (Phase 6 §7 Data Flows)
+
+Reference: `examples/retail-personalized-offerings_diagrams.md` (4 worked capability flows).
+
+- **One diagram per use-case capability** (cap at ≤4 diagrams per HLD; defer rest to Supporting Doc)
+- **Init directive:** merge `curve: linear` + `themeVariables.fontSize: 16px` into a single `%%{ init: ... }%%` block
+- **Subgraphs by logical zone** (Data Sources / MuleSoft API-Led / Salesforce Platform / Backend Systems)
+- **Numbered step labels on edges:** `"1. Asks for<br/>product advice"`, `"2. Triggers 'Check<br/>Inventory' Action"` — 1-7 step sequence per flow
+- **Mandatory follow-up:** "Strategy Summary" 3-4 bullet block after each diagram (architectural rationale, not narrative)
+
+#### 7.7.3 Async / Event-Bus Recipe
+
+- Apply rules **D6** + **D7** from §7.6
+- Show Solace / Anypoint MQ / Kafka as **explicit intermediary** node — class `mulesoft` if Anypoint MQ, else `customerInfra` if customer-owned Solace/Kafka
+- **No return arrow** for fire-and-forget patterns
+- For **pub/sub bidirectional** patterns, produce **two** diagrams: Publishers→Bus and Bus→Listeners (per MuleSoft API-Led HLD prompt §5.6)
+
+#### 7.7.4 Round-Trip Return-Path Recipe
+
+- Forward arrows: solid `-->`
+- Response/data-return arrows: dashed `-.->`
+- Group request → target → response-back arrows together before the next call chain (Mermaid layout hint)
+- Use **short labels** (`"File Data"`, `"Response"`) — not flow IDs
+
+### 7.8 Worked Examples Cross-Reference
+
+| Reference | Location | Pattern Demonstrated |
+|-----------|----------|----------------------|
+| Architecture HLD | `examples/retail-personalized-offerings_HLD.md` §5 | Recipe §7.7.1 — subgraph dashed-borders, 4-class minimal palette mapped to 18-class brand subset, action vs governance edges, "How this works for you" bullets |
+| Per-flow drill-downs | `examples/retail-personalized-offerings_diagrams.md` | Recipe §7.7.2 — 4 capability flows (Personalized Recommendations · Real-Time Inventory · Automated Order Fulfillment · Real-Time Customer Support), numbered step labels, font-size init, "Strategy Summary" bullets |
+| Sequence diagrams | `r-genie/01_Technical_Design_Agent/examples/05_mermaid_diagram_examples.md` Essential 1 | `autonumber` / `activate` / `deactivate` / `[(db)]` patterns for low-level sequence diagrams (Phase 6 §7) |
+
+---
+
+## 8. RISK REGISTER PATTERNS
+
+Standard risk categories the agent must consider for every solution:
+
+| Category | Example Risks |
+|----------|---------------|
+| **Technical** | Agentforce preview features not GA in target geo; Data Cloud ingestion quotas; API-led maturity gaps |
+| **Delivery** | Talent fit (Flex Gateway ops skills); parallel program dependencies; accelerator customization overrun |
+| **Organizational** | Change management for business agent adoption; CoE governance model; CxO attention continuity |
+| **Security / Compliance** | PII handling in prompts; data residency for Atlas reasoning; Einstein Trust Layer coverage |
+| **Commercial** | Consumption model shifts (Anypoint Flex credits, Agentforce conversations); unused entitlements |
+
+> The agent must populate 3–5 risks per category in the Supporting Doc Risk Register.
+
+---
+
+## 9. "YOUR ASK" PATTERNS
+
+Every HLD closes with a concrete ask. Good asks are:
+- **Decisional** (not generic) — e.g., "approve a 6-week discovery workshop"
+- **Time-boxed** — e.g., "by end of Q2"
+- **Role-assigned** — e.g., "VP Integration to nominate a tech lead"
+
+**Few-shot:**
+
+❌ **BAD:** "We'd love to partner with you on this journey."
+
+✅ **GOOD:**
+```
+Your ask of us today:
+1. Endorse a 6-week paid discovery — jointly scoped with your VP of Integration
+2. Nominate an Agentforce executive sponsor by {date}
+3. Authorize Data Cloud sandbox provisioning this week
+```
+
+---
+
+## 10. PROGRESSIVE DOCUMENTATION PATTERN (Pattern #20 — v2 in v1.7.0)
+
+> **v1.7.0 expansion (Production Learning #1.1):** Pattern #20 was originally scoped to Phases 6 and 7 only. v1.7.0 expands it across the **entire 9-phase workflow** — every phase that produces content writes to the corresponding `<!-- SECTION: X -->` marker BEFORE its checkpoint approval. This prevents context-window exhaustion (the failure mode from the healthcare-personalized-recommendations production run where all writes happened at Phase 5+).
+
+### 10.1 The Five Mechanics
+
+1. **Skeleton first (Phase 0):** create both `HLD.md` and `Supporting.md` from templates with `<!-- SECTION: X -->` placeholders preserved. Single `write_to_file` per file. Intake metadata (Customer Name / Panel / Date) filled in at skeleton time.
+2. **Per-phase write contract (Phases 1-5):** see `@00_Phase_Orchestration.mdc` "Progressive Documentation v2" section + each phase's "Artifact Writes" block. Phase 1 fills HLD §3 + Supporting §1.2. Phase 2A fills Supporting §3. Phase 2B fills HLD §2 + extends Supporting §3 + writes `research_log.md`. Phase 3 fills Supporting §2 ToT branches. Phase 4 prelim fills Supporting §2.3 component list. Phase 4A fills Supporting §3.5. Phase 4B fills HLD §6.5 + Supporting Appendix A. Phase 4C fills HLD §11 + Supporting §10 skeleton. Phase 5 appends deltas + writes Refinement_Log.
+3. **TDA "preview → approve → write" loop:** every write is preceded by (a) showing analytical content in chat at structural budget, (b) user approval at checkpoint, (c) `edit` to the marker, (d) re-read to verify content landed, (e) only then proceed to next phase.
+4. **Phase 6 consolidate-mode:** Phase 6 is NOT a from-scratch generation. It generates the **6 missing HLD sections** (§1, §4, §5, §6, §7, §8-§10) on top of the 4 already-written sections, then polishes the whole document. The architecture Mermaid + `diagrams.md` per-flow drill-downs are also Phase 6 outputs.
+5. **Phase 7 consolidate-mode:** Phase 7 fills the remaining Supporting sections (§1, §3 accelerator-matrix, §4, §4.5, §5, §6, §7, §8, §9) + finalizes KPI Baselines + optional Appendix C diagram overflow.
+
+### 10.2 Skeleton Placeholder Convention
+
+```html
+<!-- SECTION: executive-summary -->
+_(Phase 6 Step 2 — instructions + structural budget)_
+... placeholder content ...
+<!-- END SECTION -->
+```
+
+The agent `edit`s the entire SECTION block (markers and all) when writing — or targets specific lines within if doing incremental updates.
+
+### 10.3 Why Per-Phase Writes Beat "Wait Until Phase 6" (Production Learning #1.1)
+
+| Concern | Wait-until-Phase-6 (v1.6.0 and earlier) | Progressive v2 (v1.7.0) |
+|---|---|---|
+| Context window at Phase 6 | Build 250+ line HLD from chat memory — high regeneration cost | Polish 4 already-written sections + generate 6 new ones — low marginal cost |
+| Fidelity to Phase 1 quotes | Quotes paraphrased / dropped during late-phase regeneration | Quotes written verbatim at Phase 1 — persist through Phase 5 deltas |
+| Phase 5 OPP integration | OPPs applied to chat-only spec → late re-application risk | OPPs append directly to already-written HLD/Supporting sections — auditable |
+| Crash / session-end safety | Lose all Phases 0-5 work if session ends pre-Phase-6 | All durable on disk by Phase 5; resume is trivially safe |
+| RGV verification | "Did the HLD address all M pains?" — verified once at end | "Did Phase 4B coverage write produce ≥M rows in §6.5?" — verified continuously |
+
+### 10.4 The Phase 6 / Phase 7 Consolidate-Mode Discipline
+
+Phase 6 and Phase 7 are renamed from "HLD Generation" / "Supporting Doc Generation" → **"HLD Consolidate & Polish"** / **"Supporting Doc Consolidate & Polish"**. The agent's mental model shifts from *"draft 11 sections fresh"* to *"polish 4 written sections + generate 6 sections + apply diagram standards + final verbosity sweep"*. This is the architecturally cleaner alignment with how the section markers actually work (4 sections filled progressively → 6 generated cohesively at consolidation time → polish pass).
+
+### 10.5 What Stays in Chat (NOT Written)
+
+Some Phase artifacts are deliberately chat-only — they inform writes but don't persist:
+- The `<thinking>` block per phase (debugging/audit, not deliverable)
+- Confidence scoring deliberations (recorded in state, not in markdown)
+- RGV count checks (recorded in state, not in markdown)
+- Tree of Thought scratch (only the final recommendation persists to Supporting §2; rejected scratch stays in chat)
+- HITL clarification Q&A (only resolved answers persist; the back-and-forth stays in chat)
+
+Everything else is **persist-or-it-didn't-happen** after Phase 0.
+
+---
+
+## 11. QUALITY CHECKLIST (RUN BEFORE EACH CHECKPOINT)
+
+**Universal:**
+- [ ] `<thinking>` block produced; RGV counts match; cross-phase contradictions checked
+- [ ] Every recommendation cited with a customer fact OR marked `⚠️ ASSUMPTION`
+- [ ] Preview/beta marked `⚠️ PREVIEW` with date; alternatives presented (especially Phase 3)
+- [ ] Narrative in "you" terms (HLD); output sized for audience (HLD high-level / Supporting deep / Refinement Log auditable)
+- [ ] Phase 2 Live Research complete with `research_log.md` (URLs + dates); every capability traces to a research_log entry
+- [ ] **Verbosity (Critical Rule #15 — v1.7.0 example-anchored reform):** Per-section structural budgets met (§1 ≤80w, §2 ≤120w, §3 ≤25w/quote ×6, §4 table-only, §5 = 5 bullets ≤25w, §6 = 3-bullet ≤30w each)? No marketing-prose phrases (`clock`, `racing`, `converged`, `reshaping`, `compound`, `transformation`-without-KPI — `02_Mandatory_Stop_Points.mdc` Forbidden Phrases)? Refinement Log ≤ 500 lines (10 personas) — that frame-locked cap is retained? **Line count soft signal:** HLD length resembles `examples/retail-personalized-offerings_HLD.md` (~190 lines) for similar complexity? If HLD >380 lines (2× example), inspect — but pass on structural budgets alone if those are met.
+- [ ] **Brand Palette (Critical Rule #15):** every Mermaid architecture diagram has the `classDef` block from §7 + every node assigned to a class via `class A,B,C agentforce` syntax?
+
+**Phase 4A Feasibility:**
+- [ ] Every finalist capability scored on all 8 dimensions (no "skipped because not mentioned")?
+- [ ] Every cell has a citation (research_log entry, customer fact, capability catalog row, or `⚠️ ASSUMPTION`)?
+- [ ] Every NO-GO capability has a proposed alternative or explicit descope agreement?
+- [ ] Every CONDITIONAL has a validation path logged in Assumption Log?
+
+**Phase 4B Coverage:**
+- [ ] Bidirectional matrix built (pain → component AND component → pain)?
+- [ ] Coverage = M/M (every Phase 1 pain has ≥1 addressing component)?
+- [ ] Future-enabler ratio ≤ 20% (project standard cap)?
+- [ ] Every future-enabler has explicit next-horizon rationale?
+- [ ] No solution-without-problem components (or explicit justification)?
+
+**Phase 4C KPIs:**
+- [ ] 3-tier KPI table populated (Business / Operational / Technical)?
+- [ ] Every KPI has Baseline + Target + Window + Owner?
+- [ ] Every KPI has instrumentation tool named (no hand-waving)?
+- [ ] Targets traced to customer ambition (not invented)?
+- [ ] Pre-launch baseline capture list compiled for `KPI_Baselines_v1.md`?
+
+**Phase 5 Persona Refinement:**
+- [ ] All scheduled personas engaged (Phase-0 panel + industry overlay if applicable + 5 generic)?
+- [ ] 5 tiers per persona, no skipping; every IMPROVE has full Opportunity Schema; every DISCARD has deferral target?
+- [ ] Phase 4 delta re-validation triggered if components/capabilities/KPIs changed; v2 diff reconciles to v1?
+- [ ] Termination trigger captured (Normal / Max-rounds / `lock now` with rationale)?
+
+**Phase 6 HLD / Phase 7 Supporting Doc (combined):**
+- [ ] HLD §6.5 Coverage from Phase 4B+5; HLD §11 KPIs from Phase 4C+5 (3-tier with baselines+targets)?
+- [ ] Supporting §3.5 Feasibility (every 4A+5 entry with mitigations); §4.5 NFR (8 rows); §10 Measurement (1/KPI)?
+- [ ] Supporting Appendix A Coverage Full (100% of 4B+5 entries); Appendix B Refinement Summary cross-refs Refinement Log?
+- [ ] `KPI_Baselines_v1.md` exists for any TBD-baseline KPI?
+
+---
+
+## 12. RESEARCH SOURCES & 3-TIER PROTOCOL
+
+> **Full source matrix + Phase 2B 3-Tier Protocol + Routing Table + `research_log.md` template:** `lib/docs/research-sources-and-protocol.md`. Read before executing Phase 2B.
+
+**Tier 1 — Indexed `@Docs` (primary):** 18 indexed sources covering MuleSoft + Agentforce + Data 360 + Hyperforce + AgentExchange + Industry Cloud + Trailhead. Per-capability-area routing in lib doc §2.
+
+**Tier 2 — Live web (fallback):** Canonical URLs in lib doc §2 + §4 (one per Routing row). Used when indexed lookup is empty/stale.
+
+**Tier 3 — Baked-in catalog (last resort):** `lib/docs/mulesoft-agentforce-capability-catalog.md` — flag with `⚠️ STALE` marker; STOP and notify user.
+
+**Cardinal rules:** Always capture `source-mode` + URL + research date; prefer canonical docs over marketing for GA status; never cite blog posts alone for GA; apply Stale-Index Escape Hatch (>30d) for 2026 features (Agent Fabric / Agent Visualizer / LLM Gateway / Trusted Agent Identity / Hyperforce regional / AgentExchange roster).
+
+---
+
+## 13-16. ENTERPRISE VALIDATION PATTERNS (Summary + Cross-Reference)
+
+> **Detailed reference:** `lib/docs/enterprise-validation-patterns.md` — full tables, anti-patterns, RGV templates, KPI catalog. Sections numbered to match: §13 NFR Patterns, §14 Feasibility, §15 Coverage, §16 KPIs.
+
+| § | Topic | What It Covers | Used By |
+|---|-------|----------------|---------|
+| **13** | **Enterprise NFR Patterns** | 8 NFR categories with project defaults; per-industry compliance map; 3-tier gap handling | Phase 7 §4.5 NFR Compliance; Phase 4A Feasibility (Edition + Geography + Data Residency) |
+| **14** | **Feasibility Validation Patterns (Phase 4A)** | 8 mandatory dimensions; verdict decision tree (NO-GO / CONDITIONAL / GO); anti-patterns; RGV template | Phase 4A; Supporting Doc §3.5 |
+| **15** | **Coverage Matrix Pattern (Phase 4B)** | Bidirectional construction; severity cross-check; future-enabler discipline (≤20% cap); anti-patterns | Phase 4B; HLD §6.5; Supporting Doc Appendix A |
+| **16** | **KPI & Measurement Patterns (Phase 4C + Phase 7 §10)** | 3-tier hybrid framework; per-KPI 10-field template; 12 recurring KPIs with default instrumentation; anti-patterns | Phase 4C; HLD §11; Supporting Doc §10 + `KPI_Baselines_v1.md` |
+
+> **Read `lib/docs/enterprise-validation-patterns.md` BEFORE Phase 4A/4B/4C.** The patterns there are operational — the agent cannot execute the gates correctly from this summary alone.
+
+---
+
+## QUICK REFERENCE
+
+| Need | Section |
+|------|---------|
+| Domain axioms | §1 |
+| Capability catalog (short list) | §2 |
+| Decision matrices (API-led / Agent-led / Event-driven) | §3 |
+| Evidence citation pattern | §4 |
+| Tree of Thought brainstorming template | §5 |
+| Few-shot BAD/GOOD examples (incl. §6.4 Feasibility, §6.5 Coverage, §6.6 KPIs) | §6 |
+| Mermaid architecture diagram conventions | §7 |
+| Risk register patterns | §8 |
+| "Your Ask" patterns | §9 |
+| Progressive Documentation pattern | §10 |
+| Quality checklist (universal + per-phase) | §11 |
+| Research sources (canonical URLs) | §12 |
+| **Enterprise NFR + Feasibility + Coverage + KPI patterns** | **§13–§16** |
+| **Persona Library + 5-Tier Question Taxonomy + Improvement Decision Matrix (Phase 5)** | **§17–§19** |
+
+| Need | Reference |
+|------|-----------|
+| Main identity / RISEN | `@Cloud_Success_Architect.mdc` |
+| Phase workflow | `@00_Phase_Orchestration.mdc` |
+| Stop points | `@02_Mandatory_Stop_Points.mdc` |
+| Extended capability catalog (incl. §9 NFR Profile per Capability) | `lib/docs/mulesoft-agentforce-capability-catalog.md` |
+| Phase 5 Persona Refinement spec (full library, tiers, schema) | `lib/docs/phase-5-persona-refinement-spec.md` |
+| HLD template (incl. §6.5 Coverage + §11 KPIs) | `templates/HLD-template.md` |
+| Supporting Doc template (incl. §3.5 Feasibility + §4.5 NFR + §10 Measurement + Appendix A Coverage + Appendix B Refinement Summary) | `templates/Supporting-Doc-template.md` |
+| Refinement Log template (Phase 5 output) | `templates/Refinement-Log-template.md` |
+
+---
+
+## 17–19. PHASE 5 ADVERSARIAL PERSONA REFINEMENT (Summary + Cross-Reference)
+
+> **Authoritative spec** (full library, prompt templates, schema, decision tree, RGV, termination, Phase 4 delta rules): **`lib/docs/phase-5-persona-refinement-spec.md`**. Read before Phase 5.
+
+### §17 — Persona Library
+
+**Generic adversarial (always engaged, in order):**
+| Persona | Focus | Signature Concern |
+|---------|-------|-------------------|
+| **CFO** | TCO / ROI / payback | "Cost over 3 years and break-even month?" |
+| **CISO** | Security / data exposure | "Where is data and who reads it?" |
+| **Skeptic-Architect** | Buy-vs-build / lock-in | "Why MuleSoft+Agentforce vs. open-source?" |
+| **Vendor-Burned-Buyer** | Trust / past failures | "What stops this from being shelfware?" |
+| **Compliance-Officer** | Audit / retention / residency | "Show me the audit trail and erasure flow." |
+
+**Industry overlays** (auto-activated by `industryVertical`): Healthcare→CMIO | FinServ→CRO | Retail→VP Merchandising | Manufacturing→Plant Ops Director | Public Sector→Procurement/FedRAMP Officer. Spec §2.2.
+
+**Phase-0 panel** engaged FIRST in panel order; if Phase-0 captured name AND pain, Tier 1 MUST reference at least one.
+
+### §18 — 5-Tier Question Taxonomy
+
+| Tier | Definition | Example |
+|------|------------|---------|
+| 1 — Basic | Confirms understanding | "What does {component} do for us?" |
+| 2 — Intermediate | Probes a design choice | "Why {capability A} over {B}?" |
+| 3 — Advanced | Cross-cutting behavior | "What happens when {dep degrades}?" |
+| 4 — Expert | NFR / failure mode / scale | "At 10× volume, bottleneck and cost curve?" |
+| 5 — Adversarial | Worst-case / counter-narrative | "Strongest panel objection we don't address?" |
+
+> No tier skipped. Tier 5 MUST find a real gap or be marked `no-gap-found` with confidence.
+
+### §19 — Improvement Decision Matrix (Standard S7)
+
+| Verdict | When |
+|---------|------|
+| ✅ **KEEP** | best-in-class; Confidence HIGH; no superior alternative |
+| ⚠️ **IMPROVE** | Confidence ≥ MEDIUM AND (blocks 4B pain OR violates NFR default OR tightens 4C KPI) |
+| ❌ **DISCARD-WITH-NOTE** | Confidence LOW OR scope-creep OR cost > envelope → Risk Register / Roadmap H3 / Out-of-scope |
+
+---
+
+> 🧞‍♂️ R-GENIE Agent Framework by Cheppali Shaik Sohail
+> ✍️ Agent Author: Cheppali Shaik Sohail | v1.0.0 | 2026-04-23
+> 🔧 Tuned by Cheppali Shaik Sohail via R-GENIE Agent Tuner | v1.5.0 | 2026-05-06
+> 🔧 Tuned by Cheppali Shaik Sohail via R-GENIE Agent Tuner | v1.6.0 | 2026-05-12
+> 🔧 Tuned by Cheppali Shaik Sohail via R-GENIE Agent Tuner | v1.7.0 | 2026-05-12
+> 🔧 Tuned by Cheppali Shaik Sohail via R-GENIE Agent Tuner | v1.7.1 | 2026-05-13

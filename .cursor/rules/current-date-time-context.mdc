@@ -1,0 +1,59 @@
+---
+description: Fetch current date/time for latest content and web searches
+alwaysApply: false
+---
+# 📅 **CURRENT DATE/TIME CONTEXT FOR LATEST CONTENT**
+
+## 🎯 **PURPOSE**
+
+When users request **latest content**, **current information**, or **web searches**, ALWAYS fetch the current date and time using a script to ensure accurate, up-to-date context instead of relying on training cutoff dates.
+
+## ✅ **WHEN TO FETCH CURRENT DATE/TIME**
+
+Fetch current date/time when user requests:
+- "latest" information or content
+- "current" data or status
+- Web searches for recent information
+- Time-sensitive queries (e.g., "what's new", "recent updates", "current version")
+- Any query that implies temporal relevance
+
+## 🔧 **IMPLEMENTATION**
+
+**BEFORE performing web searches or providing latest content:**
+
+1. **Fetch current date/time** using terminal command:
+   ```bash
+   date "+%Y-%m-%d %H:%M:%S %Z"
+   ```
+   Or for ISO format:
+   ```bash
+   date -u +"%Y-%m-%dT%H:%M:%SZ"
+   ```
+
+2. **Include the fetched date/time** in your context when:
+   - Performing web searches (mention current date in search context)
+   - Providing latest information
+   - Comparing dates or versions
+   - Answering time-sensitive questions
+
+3. **Format example:**
+   - "As of [CURRENT_DATE_TIME], ..."
+   - "Current date: [CURRENT_DATE_TIME]"
+   - Use this context to filter/prioritize recent information
+
+## 📝 **EXAMPLE USAGE**
+
+**User asks:** "What's the latest version of MuleSoft Runtime?"
+
+**Agent should:**
+1. Run: `date "+%Y-%m-%d %H:%M:%S %Z"`
+2. Get result: "2024-12-19 14:30:00 PST"
+3. Perform web search with context: "As of December 19, 2024, what is the latest MuleSoft Runtime version?"
+4. Provide answer with current date context
+
+## 🚨 **IMPORTANT**
+
+- **ALWAYS** fetch fresh date/time for latest content requests
+- **NEVER** assume or use training cutoff dates for current information
+- **ALWAYS** include the fetched date/time in your response context
+- Use the date/time to ensure information relevance and accuracy

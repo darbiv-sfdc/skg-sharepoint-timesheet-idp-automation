@@ -1,0 +1,347 @@
+---
+description: Technical Design Guidance - Patterns, Diagrams, Mappings, Decisions
+author: Cheppali Shaik Sohail
+version: 2.0.0
+alwaysApply: false
+tags: [guidance, patterns, diagrams, mappings, decisions]
+appliesTo: [technical-design]
+whenToUse:
+  - "Phase 1-3 design work"
+  - "Reference for patterns and templates"
+priority: HIGH
+---
+
+# TECHNICAL DESIGN GUIDANCE
+
+> **Reference** for requirements, architecture, diagrams, and mappings
+
+---
+
+## 1. REQUIREMENTS ANALYSIS (Phase 1)
+
+### Extraction Tables
+
+**Functional Requirements:**
+| ID | Requirement | Trigger | Input | Output | Priority |
+|----|-------------|---------|-------|--------|----------|
+| FR-01 | {action} | {when} | {data} | {result} | HIGH/MED/LOW |
+
+**Non-Functional Requirements:**
+| Category | Requirement | Metric | Target |
+|----------|-------------|--------|--------|
+| Performance | Response time | 95th percentile | < 500ms |
+| Performance | Throughput | Records/min | 10,000+ |
+| Reliability | Uptime | Monthly % | 99.9% |
+
+**Integration Points:**
+| System | Role | Protocol | Auth | Format | Volume |
+|--------|------|----------|------|--------|--------|
+| {name} | Source/Target | REST/SOAP/JDBC | OAuth/Basic | JSON/XML | {count}/day |
+
+### Analysis Patterns
+
+**Scan for:** Action verbs (sync, transfer), System names (Salesforce, SAP), Quantities (1000 records, daily), Quality (secure, reliable)
+
+**Sample Data:** Identify field names, data types, nesting, date formats, null patterns
+
+### Conversation vs Document
+
+- **CONVERSATION**: Analysis, recommendations, questions, alternatives
+- **DOCUMENT**: Clean decisions, tables, diagrams (match `examples/` format)
+
+---
+
+## 2. ARCHITECTURE PATTERNS (Phase 2)
+
+> **🚨 CRITICAL**: Present options with recommendation, WAIT for user approval before designing
+
+### Architecture Decision Matrix
+
+| Scenario | Recommended Pattern | Alternative |
+|----------|---------------------|-------------|
+| Simple sync (A → B) | System API Only | - |
+| Sync with validation | System API Only | System + Process (if complex rules) |
+| Multi-system orchestration | System + Process | Full API-Led (if multi-channel) |
+| Multi-channel consumers | Full API-Led | System + Process (if limited reuse) |
+| Large batch processing | System API + Batch | System + Process (if orchestration needed) |
+
+### Pattern Descriptions (for Proposal)
+
+**Pattern 1: System API Only**
+- ✅ Minimal complexity, fastest to implement
+- ✅ Lowest resource consumption
+- ⚠️ Limited reusability, tight coupling
+- **Best for:** Point-to-point, data sync, simple proxies
+
+**Pattern 2: System + Process API**
+- ✅ Business logic separation, reusable system APIs
+- ⚠️ More components, slightly higher latency
+- **Best for:** Order processing, multi-system orchestration
+
+**Pattern 3: Full API-Led (3 Layers)**
+- ✅ Maximum reusability, consumer-specific optimization
+- ⚠️ Higher complexity, more development time
+- **Best for:** Enterprise platforms, multi-channel apps
+
+### Processing Strategy
+
+| Volume | Strategy | Justification |
+|--------|----------|---------------|
+| 1-100 records | Real-Time | Low latency, immediate response |
+| 100-1,000 | Real-Time or Batch | Depends on timing requirements |
+| 1,000-10,000 | Batch | Optimize for throughput |
+| 10,000+ | Batch with streaming | Memory efficiency, handle large files |
+
+### Connector Selection
+
+| System | Connector |
+|--------|-----------|
+| Salesforce | salesforce:* |
+| SAP | sap:* |
+| Oracle/MySQL/PostgreSQL | db:* |
+| REST API | http:request |
+| SOAP | wsc:consume |
+| File/SFTP | file:*/sftp:* |
+| Queue | anypoint-mq:*/jms:* |
+
+---
+
+## 3. DIAGRAM STRATEGY (Phase 2-3)
+
+> **Rule**: Mermaid ONLY - NO ASCII, NO PlantUML
+> **Placement**: Per template (see `design-template-guide.md`)
+
+### 3 Essential Diagrams
+
+| # | Diagram | Phase | Mermaid Type |
+|---|---------|-------|--------------|
+| 1 | Connector Pattern | Phase 2 | graph TB |
+| 2 | Integration Sequence | Phase 2 | sequenceDiagram |
+| 3 | Error Handling Flow | Phase 3 | flowchart TD |
+
+**Placement:** Diagrams are embedded contextually per template rules (NOT in standalone section).
+
+### Sequence Diagram Generation and Placement
+<!-- Integrated: 2026-01-04, Updated: 2026-01-10 -->
+
+Generate separate sequence diagram for each endpoint flow. Place each diagram immediately after its corresponding flow table (not in a separate section).
+
+```markdown
+❌ BAD - Combined diagram in separate section:
+#### POST /api/v1/products - Create Product
+[Flow table]
+#### PUT /api/v1/products/{productId} - Update Product
+[Flow table]
+### 3.2 Integration Sequence Diagram
+[Combined diagram covering all flows]
+
+✅ GOOD - Separate diagrams, contextual placement:
+#### POST /api/v1/products - Create Product
+[Flow table]
+**Sequence Diagram:**
+[POST sequence diagram]
+#### PUT /api/v1/products/{productId} - Update Product
+[Flow table]
+**Sequence Diagram:**
+[PUT sequence diagram]
+```
+
+**Why**: Each endpoint flow has unique sequence patterns. Separate diagrams placed contextually improve clarity, reduce cognitive load, and match example structure.
+
+### Diagram Syntax Examples
+
+**Connector Pattern (graph TB):**
+```mermaid
+graph TB
+    subgraph "MuleSoft"
+        Listener[HTTP Listener]
+        Transform[DataWeave Transform]
+        Connector[Target Connector]
+        Error[Error Handler]
+    end
+    Client[API Client] --> Listener
+    Listener --> Transform --> Connector
+    Connector --> Target[(Target System)]
+    Connector -.->|On Error| Error
+```
+
+**Integration Sequence (sequenceDiagram):**
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Client
+    participant MuleSoft as MuleSoft API
+    participant Target as Target System
+    Client->>MuleSoft: Request
+    activate MuleSoft
+    MuleSoft->>MuleSoft: Validate & Transform
+    MuleSoft->>Target: Forward Request
+    Target-->>MuleSoft: Response
+    MuleSoft-->>Client: Response
+    deactivate MuleSoft
+```
+
+**Error Handling Flow (flowchart TD):**
+```mermaid
+flowchart TD
+    Request[Request] --> Validate{Validate}
+    Validate -->|Valid| Process[Process]
+    Validate -->|Invalid| Error400[400 Bad Request]
+    Process --> External[External Call]
+    External -->|Success| Transform[Transform]
+    External -->|Timeout| Retry{Retry?}
+    Retry -->|Yes| External
+    Retry -->|Max| Fallback[Fallback/DLQ]
+    Transform --> Response[200 OK]
+```
+
+### Optional Diagrams (Supplementary)
+
+| # | Diagram | Type | When |
+|---|---------|------|------|
+| 4 | System Architecture | graph TB | Multi-system |
+| 5 | Business Process | flowchart TD | Stakeholder docs |
+| 6 | Data Flow | flowchart LR | Complex transforms |
+
+---
+
+## 4. FIELD MAPPING TABLES (Phase 3)
+
+> **CRITICAL**: Tables ONLY - NO DataWeave code blocks
+> **Placement**: Per template structure
+
+### Data Sample Request
+```
+🚨 MANDATORY: DATA SAMPLE REQUEST
+1. Source system output (JSON/XML/CSV)
+2. Target system expected format
+3. Lookup/reference data (if applicable)
+Reply: paste / file / skip
+```
+
+### Table Formatting Best Practice
+<!-- Integrated: 2026-01-04 -->
+
+**Problem**: Using HTML `<br>` tags in markdown table cells causes rendering failures in some markdown viewers, displaying tables as plain text with visible pipe characters.
+
+**Solution**: Replace HTML line breaks with commas or other plain text separators.
+
+```markdown
+❌ BAD - HTML breaks:
+| Step | Details |
+|------|---------|
+| **1** | Path: `/api/v1/products`<br>ClientID enforced |
+
+✅ GOOD - Plain text:
+| Step | Details |
+|------|---------|
+| **1** | Path: `/api/v1/products`, ClientID enforced |
+```
+
+**Why**: Ensures proper markdown rendering across all viewers and maintains professional document presentation.
+
+### Mapping Table Formats
+
+**Simple:**
+| Source Field | Target Field | Transformation | Notes |
+|--------------|--------------|----------------|-------|
+| `Account.Name` | `customer_name` | Direct | Required |
+
+**Complex:**
+| Source | Target | Logic | Example In | Example Out |
+|--------|--------|-------|------------|-------------|
+| `firstName + lastName` | `fullName` | Concat | "John", "Doe" | "John Doe" |
+
+**Null Handling:**
+| Field | Strategy | Default |
+|-------|----------|---------|
+| `middleName` | Skip if null | N/A |
+| `country` | Default value | "US" |
+
+**Validation:**
+| Field | Validation | Error |
+|-------|------------|-------|
+| `email` | Regex pattern | 400 Invalid email |
+
+---
+
+## 5. ERROR HANDLING STRATEGY (Phase 3)
+
+> **Placement**: Per template structure
+> **DLQ Strategy**: ONLY include if DLQ is actually used. DO NOT include "Not Applicable" sections.
+
+## 6. DECISION MATRICES
+
+### Error Handling Decisions
+| Error Type | Retry? | Fallback |
+|------------|--------|----------|
+| Validation (400) | No | Reject |
+| Auth (401/403) | No | Fail |
+| Rate Limit (429) | Yes (backoff) | Queue |
+| Timeout | Yes (3x) | DLQ |
+| Server Error (5xx) | Yes (backoff) | DLQ |
+
+### Retry Configuration
+| Severity | Max Retries | Backoff |
+|----------|-------------|---------|
+| Transient | 3 | 2x from 1s |
+| External | 5 | 2x from 5s |
+
+### CloudHub Sizing (Optional)
+| Use Case | vCore |
+|----------|-------|
+| Simple proxy | 0.1 |
+| Standard API | 0.2 |
+| Complex API | 0.5 |
+| Data integration | 1.0 |
+
+---
+
+## 7. PITFALLS CHECKLIST
+
+### Common Pitfalls
+| Category | Pitfall | Solution |
+|----------|---------|----------|
+| Architecture | Over-engineering | Match complexity to requirements |
+| Architecture | Under-engineering | Decompose when >50 processors |
+| Performance | HTTP in loops | Batch calls or parallel |
+| Performance | Full dataset in memory | Use streaming for >10MB |
+| Security | Hardcoded credentials | Use ${secure::*} |
+| Security | Logging PII | Sanitize logs |
+| Operations | No health check | Implement /health |
+
+---
+
+## 8. EVIDENCE-BOUND OUTPUTS
+
+Every design decision must cite its source from user-stated requirements:
+
+| Decision Type | Evidence Format |
+|---------------|----------------|
+| Architecture choice | "Selected {pattern} because user stated '{requirement}' in Phase 1" |
+| Connector selection | "Using {connector} per user's system: '{system details}'" |
+| Assumption | "⚠️ ASSUMPTION: {value} — User said '{vague answer}'" |
+| Gap entry | "GAP-{N}: Unable to confirm {detail} (asked {X} times)" |
+
+> If you cannot cite a source, flag as assumption.
+
+---
+
+## 9. PRE-SUBMISSION CHECKLIST
+- [ ] Pattern matches requirements
+- [ ] No sync calls in loops
+- [ ] Streaming for large data
+- [ ] No hardcoded credentials
+- [ ] Input validation present
+- [ ] Health check implemented
+- [ ] Retry/circuit breaker configured
+
+---
+
+## QUICK REFERENCE
+
+| Need | Reference |
+|------|-----------|
+| Phase workflow | `@01-01_Phase_Orchestration.mdc` |
+| Template config | `@01-00_Template_Configuration.mdc` |
+| Stop points | `@01-03_Mandatory_Stop_Points.mdc` |

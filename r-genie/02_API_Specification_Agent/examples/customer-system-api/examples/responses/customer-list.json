@@ -1,0 +1,28 @@
+{
+  "data": [
+    {
+      "id": "cust-12345abc",
+      "createdAt": "2024-01-15T10:30:00Z",
+      "updatedAt": "2024-01-15T10:30:00Z",
+      "firstName": "John",
+      "lastName": "Doe",
+      "email": "john.doe@example.com",
+      "status": "active"
+    },
+    {
+      "id": "cust-67890xyz",
+      "createdAt": "2024-01-14T09:00:00Z",
+      "updatedAt": "2024-01-14T09:00:00Z",
+      "firstName": "Jane",
+      "lastName": "Smith",
+      "email": "jane.smith@example.com",
+      "status": "active"
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "pageSize": 20,
+    "totalPages": 1,
+    "totalItems": 2
+  }
+}

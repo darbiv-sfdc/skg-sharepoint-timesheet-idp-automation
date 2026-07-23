@@ -1,0 +1,396 @@
+---
+description: Boomi Documentation Agent V4.0 - Phase Orchestration & Workflow State
+author: Cheppali Shaik Sohail
+version: 4.1.0
+priority: HIGH
+---
+
+# PHASE ORCHESTRATION & WORKFLOW STATE
+
+> 6-phase execution with per-section RGV loops and micro-checkpoints.
+> **Before starting:** READ `templates/documentation-style.yaml` and `examples/01_pricing_sync/` for format reference.
+> **RGV Loop:** Defined in `@01_Guidance.mdc §1`. Each phase below specifies WHAT to read/generate — the HOW is always the RGV loop.
+
+---
+
+## WORKFLOW STATE MACHINE
+
+```mermaid
+stateDiagram-v2
+    [*] --> P0: Start
+    P0 --> P1: Inventory complete
+    P1 --> P2: Flows documented
+    P2 --> P3: Mappings documented
+    P3 --> P4: Profiles & Functions documented
+    P4 --> P5: Connectors documented
+    P5 --> [*]: Zero data loss certified
+```
+
+---
+
+## PHASE DEFINITIONS
+
+| Phase | Name | RGV Per | Deliverable | Checkpoint |
+|-------|------|---------|-------------|------------|
+| 0 | Discovery & Planning | Each XML file | Sections 1-2, component-inventory.md | Component counts + reading plan |
+| 1 | Flow Documentation | Each process | Section 3, shape-configuration.md | Shape counts per process |
+| 2 | Mapping Documentation | Each map | Section 4 (ALL field mapping rows) | Mapping counts per map |
+| 3 | Profile & Function Docs | Each profile/function | function-reference.md, profile-structures.md | Field/step counts |
+| 4 | Connector & Cross-Ref Docs | Each connector/op/crossref | Section 5, connector-settings.md | Settings documented |
+| 5 | Validation & Certification | Each XML file | Sections 6-7, verification-checklist.md | Zero data loss cert |
+
+---
+
+## PHASE 0: DISCOVERY & PLANNING
+
+**Action:** READ each XML file directly, classify, count elements, build reading plan with counts.
+**Purpose:** Classification and inventory ONLY. Content generation happens in later phases via RGV.
+
+### Per XML File
+1. READ file using Read tool
+2. IDENTIFY type from `<bns:Component type="...">`
+3. EXTRACT: componentId, name, type, version, description, element counts
+4. RECORD in inventory with NUMERIC counts
+5. BUILD reading plan with element counts per file (see below)
+
+### Reading Plan with Counts (CRITICAL — Build During Phase 0)
+
+```
+Phase 1 needs:
+  - process_1.xml (14 shapes)
+  - process_2.xml (18 shapes)
+Phase 2 needs per map:
+  - map_1.xml (22 mappings) + source_profile.xml + target_profile.xml + function.xml
+  - map_2.xml (161 mappings) + source_profile.xml + target_profile.xml
+Phase 3 needs:
+  - profile_1.xml (49 fields), profile_2.xml (23 fields)
+  - function_1.xml (5 steps), function_2.xml (3 steps)
+Phase 4 needs:
+  - connector_1.xml, operation_1.xml, crossref_1.xml (7 rows)
+Phase 5 needs: ALL files (re-read for verification)
+```
+
+### Component Detection
+
+| XML Type | Category | Count Element | Key Attributes |
+|----------|----------|---------------|----------------|
+| `process` | Process | `<shape>` | allowSimultaneous, version |
+| `transform.map` | Map | `<Mapping>` | optimizeExecutionOrder |
+| `transform.function` | Function | `<Step>` | positions, cacheEnabled |
+| `connector-settings` | Connector | - | All settings |
+| `connector-action` | Operation | - | mode, batchSize |
+| `crossref` | Cross Reference | `<Row>` | Columns + data |
+| `profile.*` | Profile | `<DataElement>` | ALL fields, types |
+
+### Flexible Input Location
+
+Accept exports from any user-provided location (`@exports/uuid/`, `project/input_boomi/`, etc.).
+
+### File Actions
+1. EXTRACT `{flow_number}` from process name (e.g., `HNK_US_PRC_13020_...` → `13020`)
+2. EXTRACT `{flow_name}` = number + short name (e.g., `13020_PRICE_LIST`)
+3. `mkdir: project/output_boomi/{flow_number}/supporting-docs/`
+4. CREATE: `boomi_design_{flow_name}.md` (Sections 1-2)
+5. CREATE: `supporting-docs/component-inventory.md`
+6. CREATE: `.boomi-state.json`
+
+---
+
+## PHASE 1: FLOW DOCUMENTATION
+
+**Action:** For EACH process XML, apply the RGV loop (`@01_Guidance.mdc §1`).
+
+### Per Process — RGV Loop
+1. **RE-READ** process XML using Read tool (fresh — do NOT rely on Phase 0 context)
+2. **INVENTORY:** Count `<shape>` elements → COMMIT: "This process has N shapes"
+3. EXTRACT process attributes: `allowSimultaneous`, `version`, `enableUserLog`
+4. FOR EACH `<shape>`: Extract ALL attributes + complete `<configuration>` content + `<dragpoints>`
+5. **GENERATE** Section 3.x content immediately (diagrams + step-by-step with N rows)
+6. **VERIFY:** Count steps in generated table = N shapes
+7. If mismatch → RE-READ, find missing shape, fix BEFORE proceeding
+8. **CHECKPOINT:** `✅ 3.x: {ProcessName} — N/N shapes`
+9. Write section to file, then move to next process
+
+### Main Document Section 3 Order
+
+```markdown
+### 3.x Process: {Name}
+
+**Process ID:** `{uuid}`
+**Source File:** `{uuid}.xml`
+**Description:** {text}
+**Allow Simultaneous:** true/false
+
+#### Flow Diagram (flowchart TD)
+#### Sequence Diagram (sequenceDiagram autonumber)
+#### Step-by-Step Execution (table — ALL shapes, NEVER summarize)
+#### Shape Configuration Details (reference to supporting doc)
+```
+
+**⚠️ NO verification count blocks in main document.** Counts go to `verification-checklist.md`.
+
+### File Actions
+1. APPEND: Section 3 to main document
+2. CREATE: `supporting-docs/shape-configuration.md`
+3. UPDATE: `.boomi-state.json` (current_phase: 1, status per process, micro-checkpoints)
+
+---
+
+## PHASE 2: MAPPING DOCUMENTATION
+
+**Action:** For EACH map, apply the RGV loop with **grouped reads** (`@01_Guidance.mdc §1-2`). This is the MOST CRITICAL phase — field mapping accuracy depends on it.
+
+### Per Map — RGV Loop with Grouped Reads
+1. **RE-READ** map XML → note source/target profile IDs, function references
+2. **INVENTORY:** Count `<Mapping>` elements → COMMIT: "This map has N mappings. I will generate exactly N rows."
+3. **RE-READ** source profile XML (for source field paths)
+4. **RE-READ** target profile XML (for target field paths)
+5. **RE-READ** each referenced function XML (for transformation details)
+6. **GENERATE** Section 4.x Field Mappings table with exactly N rows
+7. **VERIFY:** Count rows in generated table = N
+8. If mismatch → RE-READ map XML, find missing mapping, fix BEFORE proceeding
+9. **CHECKPOINT:** `✅ 4.x: {MapName} — N/N mappings`
+10. Write section to file, then move to next map
+
+**Phase 2 generates ONLY Section 4 (Field Mappings) in the main document.** Profile/function/connector supporting docs are generated in Phases 3-4.
+
+### Main Document Section 4 Order
+
+```markdown
+### 4.x Map: {Name}
+**Map ID:** `{uuid}`
+**Source Profile:** `{uuid}` ({name} - {type})
+**Target Profile:** `{uuid}` ({name} - {type})
+
+#### Field Mappings (ALL rows — NEVER summarize)
+#### Transformation Functions (reference to function-reference.md)
+#### Default Values
+```
+
+**⚠️ ALL mapping rows MUST appear in the Field Mappings table — NEVER abbreviate or summarize.**
+
+### File Actions
+1. APPEND: Section 4 to main document
+2. UPDATE: `.boomi-state.json` (current_phase: 2, status per map, micro-checkpoints)
+
+---
+
+## PHASE 3: PROFILE & FUNCTION DOCUMENTATION
+
+**Action:** For EACH profile and EACH function, apply the RGV loop (`@01_Guidance.mdc §1`).
+
+### Per Profile — RGV Loop
+1. **RE-READ** profile XML using Read tool
+2. **INVENTORY:** Count `<DataElement>` fields → COMMIT: "This profile has N fields"
+3. EXTRACT type (JSON/XML/FlatFile), strict mode
+4. **GENERATE** profile structure with ALL N fields (mapped AND unmapped)
+5. Build complete structure tree
+6. **VERIFY:** Count documented fields = N
+7. If mismatch → RE-READ, find missing field, fix
+8. **CHECKPOINT:** `✅ Profile: {Name} — N/N fields`
+
+### Per Function — RGV Loop
+1. **RE-READ** function XML using Read tool
+2. **INVENTORY:** Count `<Step>` elements, Inputs, Outputs → COMMIT to counts
+3. EXTRACT componentId, name, description
+4. Extract ALL Inputs/Outputs with key, name, dataType
+5. Extract ALL Steps with position, stepType, cacheEnabled, StepInputs/Outputs
+6. Extract COMPLETE script code (never truncate)
+7. **GENERATE** function documentation
+8. **VERIFY:** Step count, input count, output count all match
+9. **CHECKPOINT:** `✅ Function: {Name} — N/N steps`
+
+### File Actions
+1. CREATE: `supporting-docs/function-reference.md`
+2. CREATE: `supporting-docs/profile-structures.md`
+3. UPDATE: `.boomi-state.json` (current_phase: 3, status per profile/function, micro-checkpoints)
+
+---
+
+## PHASE 4: CONNECTOR & CROSS-REF DOCUMENTATION
+
+**Action:** For EACH connector, operation, and cross-reference, apply the RGV loop (`@01_Guidance.mdc §1`).
+
+### Per Connector — RGV Loop
+1. **RE-READ** connector XML → ALL settings (URL, credentials=[ENCRYPTED], VPN, host)
+2. **GENERATE** connector settings documentation
+3. **VERIFY:** All settings captured
+
+### Per Operation — RGV Loop
+1. **RE-READ** operation XML → mode, batchSize, batchCount, maxConcurrentExecutions, destination
+2. **GENERATE** operation documentation
+3. **VERIFY:** All operation settings captured
+
+### Per Cross-Reference — RGV Loop
+1. **RE-READ** crossref XML → column definitions + ALL row data (not just "N rows")
+2. **INVENTORY:** Count rows → COMMIT: "This cross-ref has N rows"
+3. **GENERATE** cross-reference documentation with ALL N rows
+4. **VERIFY:** Documented rows = N
+5. **CHECKPOINT:** `✅ CrossRef: {Name} — N/N rows`
+
+### File Actions
+1. APPEND: Section 5 to main document
+2. CREATE: `supporting-docs/connector-settings.md`
+3. UPDATE: `.boomi-state.json` (current_phase: 4, status per connector/crossref, micro-checkpoints)
+
+---
+
+## PHASE 5: VALIDATION & CERTIFICATION
+
+**Action:** RE-READ EVERY XML file for file-by-file verification + Gap Analysis.
+
+### Detect Referenced-but-Missing Components
+Scan process/operation/shape XML for IDs referencing components NOT in export:
+- `parameter-profile`, `requestProfileId`, `responseProfileId`
+- `operationId` in start shape, `docCache` in doccacheload, `processRouteId` in processroute
+- `connectionId`, `mapId` (verify existence)
+
+### Per XML File (MUST RE-READ each file)
+1. RE-READ file using Read tool (fresh context for verification)
+2. COUNT elements in XML, COMPARE to documented count
+3. CHECK for missed attributes: position, cacheEnabled, allowSimultaneous, mode
+4. COMPARE against micro-checkpoint counts from Phases 1-4
+5. If ANY mismatch: RE-READ again, find the missing element, update documentation
+
+### File Actions
+1. APPEND: Section 6 (Gap Analysis) to main document
+2. APPEND: Section 7 (Validation reference) to main document
+3. CREATE: `supporting-docs/verification-checklist.md` (includes all counts, file-by-file, certification)
+4. UPDATE: `component-inventory.md` (add Gap Analysis if gaps exist)
+5. UPDATE: `.boomi-state.json` (status: COMPLETED)
+
+---
+
+## CHECKPOINT FORMATS
+
+### Micro-Checkpoint (per section — Phases 1-4)
+```
+  ✅ 3.1: HNK_US_PRC_12730 — 18/18 shapes
+  ✅ 4.1: HNK_US_MAP_JSON_XML — 22/22 mappings
+  ✅ Profile: JSON_Response — 49/49 fields
+  ✅ Function: UDF_ProductID — 3/3 steps
+  ✅ CrossRef: XOMI_Lookup — 7/7 rows
+```
+
+### Phase Checkpoint (per phase)
+```
+╭──────────────────────────────────────────────────────────────╮
+│ ✅ PHASE {n} COMPLETE: {Phase Name}                          │
+├──────────────────────────────────────────────────────────────┤
+│ {Summary metrics with micro-checkpoint rollup}                │
+│ 💾 State saved to .boomi-state.json                           │
+│ → Proceeding automatically to Phase {n+1}...                  │
+╰──────────────────────────────────────────────────────────────╯
+```
+
+**CRITICAL:** After EVERY phase checkpoint, UPDATE `.boomi-state.json` with:
+- `current_phase` incremented
+- Phase status set to `"done"`
+- Micro-checkpoint counts recorded in `checkpoints` array
+
+---
+
+## STATE FILE FORMAT
+
+**RULE:** UPDATE `.boomi-state.json` after EVERY phase completion. This enables resume on interruption.
+
+```json
+{
+  "flow_number": "{number}",
+  "flow_name": "{name}",
+  "input_folder": "{path}",
+  "status": "IN_PROGRESS|COMPLETED",
+  "current_phase": 2,
+  "last_updated": "2026-02-21T10:30:00Z",
+  "phases": {
+    "0": {
+      "status": "done",
+      "components": 11,
+      "reading_plan": {
+        "processes": 1,
+        "maps": 2,
+        "profiles": 4,
+        "functions": 2,
+        "connectors": 3,
+        "operations": 2,
+        "crossrefs": 1
+      }
+    },
+    "1": {
+      "status": "done",
+      "checkpoints": [
+        "✅ 3.1: HNK_US_PRC_12730 — 18/18 shapes"
+      ]
+    },
+    "2": {
+      "status": "done",
+      "checkpoints": [
+        "✅ 4.1: HNK_US_MAP_JSON_XML — 22/22 mappings",
+        "✅ 4.2: HNK_US_MAP_XML_JSON — 161/161 mappings"
+      ]
+    },
+    "3": {
+      "status": "in_progress",
+      "checkpoints": [
+        "✅ Profile: JSON_Response — 49/49 fields",
+        "✅ Function: UDF_ProductID — 3/3 steps"
+      ]
+    },
+    "4": { "status": "pending" },
+    "5": { "status": "pending" }
+  }
+}
+```
+
+---
+
+## ERROR RECOVERY
+
+| Situation | Action |
+|-----------|--------|
+| Missed attribute | RE-READ XML, extract missing (RGV step 5) |
+| Count mismatch | STOP, RE-READ, find missing, fix before proceeding |
+| Unknown type | Document with all attributes + ⚠️ flag |
+| Stale context | RE-READ XML fresh — never generate from memory |
+
+---
+
+## QUICK REFERENCE
+
+| Need | Reference |
+|------|-----------|
+| Main entry | `@Boomi_Documentation.mdc` |
+| RGV loop pattern (DRY) | `@01_Guidance.mdc` §1 |
+| Extraction patterns | `@01_Guidance.mdc` |
+| Anti-patterns & rules | `@02_Mandatory_Stop_Points.mdc` |
+| Template formats | `lib/docs/template-configuration.md` |
+| Detailed docs | `lib/docs/` |
+
+---
+
+**Version:** 4.1.0 | April 2026 | 6-Phase RGV Architecture + LLM Gap Countermeasures
+
+---
+
+## `<thinking>` BLOCK (MANDATORY Before Every Phase/Section Output)
+
+```
+<thinking>
+1. Key inputs received: [list XML files read for this section]
+2. Decisions I am making: [element classification, extraction strategy]
+3. Evidence from source: [cite specific XML element names, attributes, counts]
+4. Risks/gaps identified: [what could be missed, what is ambiguous]
+5. Confidence: HIGH / MEDIUM / LOW [with justification]
+6. Production learnings applicable: [check Production_Learnings.md]
+</thinking>
+```
+
+---
+
+## CONFIDENCE CALIBRATION
+
+| Confidence | When to Use | Action |
+|------------|------------|--------|
+| **HIGH** | Clear XML structure, all elements present | Proceed with extraction |
+| **MEDIUM** | Unusual XML structure, ambiguous elements | Flag assumptions, note in verification |
+| **LOW** | Missing XML data, contradictory elements | **STOP** — flag as gap, document what IS present |

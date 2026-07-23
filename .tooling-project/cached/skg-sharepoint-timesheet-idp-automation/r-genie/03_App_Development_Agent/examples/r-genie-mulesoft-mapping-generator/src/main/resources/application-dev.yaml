@@ -1,0 +1,108 @@
+# R-Genie MuleSoft Mapping Generator - Development Configuration
+# Copy this file to application-secure.yaml and add your actual API keys
+
+# Server Configuration
+http:
+  listener:
+    host: "0.0.0.0"
+    port: "8081"
+    
+# API Configuration
+api:
+  # Gemini LLM Provider Configuration (Only provider supported)
+  llm:
+    gemini:
+      apiKey: "${gemini.api.key:REPLACE_WITH_YOUR_GEMINI_API_KEY}"
+      baseUrl: "https://generativelanguage.googleapis.com/v1beta"
+      timeout: "90000"
+
+# File Configuration
+file:
+  output:
+    defaultDirectory: "${user.home}/Downloads"
+    workingDirectory: "${user.home}/Downloads"
+    allowedExtensions: "xlsx,xls"
+    maxFileSize: "50MB"
+  upload:
+    tempDirectory: "${java.io.tmpdir}/r-genie-uploads"
+    maxFileSize: "10MB"
+    allowedTypes: "application/json,application/xml,text/plain,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
+
+# Generation Modes Configuration (Simplified to Latest Gemini 2.5 Models)
+generation:
+  modes:
+    fast:
+      name: "⚡ Fast"
+      description: "Fast generation with Gemini 2.5 Flash - optimal speed and efficiency"
+      timeout: "90000"
+      models:
+        gemini: "gemini-2.5-flash"
+      settings:
+        temperature: "0.3"
+        maxTokens: "8000"
+        priority: "speed"
+    pro:
+      name: "🧠 Pro"
+      description: "Advanced reasoning with Gemini 2.5 Pro - maximum capability and thinking"
+      timeout: "300000"
+      models:
+        gemini: "gemini-2.5-pro"
+      settings:
+        temperature: "0.1"
+        maxTokens: "32000"
+        priority: "reasoning"
+
+# Application Configuration
+app:
+  name: "R-Genie MuleSoft Mapping Generator"
+  version: "1.0.0"
+  debug: "true"
+  
+# Logging Configuration
+logging:
+  level:
+    root: "INFO"
+    com.rgenie: "DEBUG"
+    org.mule: "WARN"
+  pattern: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+
+# Excel Generation Settings
+excel:
+  generation:
+    defaultSheetName: "Mapping Sheet"
+    includeTimestamp: "true"
+    includeMetadata: "true"
+    maxRows: "10000"
+    compression: "true"
+  templates:
+    defaultTemplate: "standard-mapping-template"
+    customTemplatesPath: "templates/excel"
+
+# Validation Settings
+validation:
+  input:
+    maxSize: "1MB"
+    requiredFields: ["inputData", "expectedOutput"]
+  output:
+    validateJson: "true"
+    validateXml: "true"
+    maxNestingLevel: "10"
+
+# Cache Configuration
+cache:
+  enabled: "true"
+  ttl: "3600" # 1 hour in seconds
+  maxSize: "100"
+
+# Security Configuration
+security:
+  cors:
+    enabled: "true"
+    allowedOrigins: "*"
+    allowedMethods: "GET,POST,PUT,DELETE,OPTIONS"
+    allowedHeaders: "Content-Type,Authorization,X-Requested-With"
+  csrf:
+    enabled: "false" # Disabled for API usage
+  headers:
+    frameOptions: "DENY"
+    contentTypeOptions: "nosniff"

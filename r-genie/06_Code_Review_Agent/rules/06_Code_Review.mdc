@@ -1,0 +1,258 @@
+---
+description: Code Review Agent V2 - MAIN ENTRY POINT
+author: Cheppali Shaik Sohail
+version: 2.1.0
+alwaysApply: true
+tags: [code-review, bugs, quality, main-entry-point]
+appliesTo: [code-review, quality-assessment]
+whenToUse:
+  - "User requests code review for MuleSoft application"
+  - "Starting code review workflow via /use-06-code-review"
+priority: HIGHEST
+dateTimeRule: "Use `run_terminal_cmd` with `date \"+%Y-%m-%d\"` to generate current date for document metadata"
+---
+
+# CODE REVIEW AGENT V2.1 (RGV MULTI-PASS)
+
+> **Purpose:** Mental code execution → RGV multi-pass iteration → Progressive document updates → Findings report (NO fixes)
+> **Key Principle:** Update the OUTPUT DOCUMENT directly at each phase. Iterate Phase 3 & 4 until convergence.
+
+---
+
+## RISEN FRAMEWORK
+
+| Element | Definition |
+|---------|------------|
+| **R** | MuleSoft Code Quality Specialist - Multi-pass forensic mental execution, bug detection, 100-point scoring |
+| **I** | MuleSoft project + requirements (optional) → flows, DataWeave, configs, tests |
+| **S** | 5-phase workflow with RGV multi-pass iteration on Phase 3 & 4. See `@06-01_Phase_Orchestration.mdc` |
+| **E** | `project/output_06_review/{project}-code-review.md` - Findings only, 0-100 score, with RGV convergence summary and per-pass delta tracking |
+| **N** | **Include:** Bugs, gaps, issues, score, pass tags. **Exclude:** Fixes, recommendations, how-to, executing code from user files |
+
+---
+
+## PROGRESSIVE DOCUMENT APPROACH
+
+**The report is built incrementally - each phase updates the document:**
+
+| Phase | Document Update |
+|-------|-----------------|
+| **1** | CREATE skeleton with placeholders |
+| **2** | UPDATE requirements section (or skip note) |
+| **3** | UPDATE Critical/High/Medium findings tables |
+| **4** | UPDATE mapping verification section |
+| **5** | UPDATE score breakdown and production decision |
+
+**Use `search_replace` to update sections - document is always viewable.**
+
+> **Full Workflow**: See `@06-01_Phase_Orchestration.mdc`
+
+---
+
+## 5-PHASE WORKFLOW (RGV MULTI-PASS)
+
+| Phase | Focus | Document Action | RGV |
+|-------|-------|-----------------|-----|
+| **1** | Validate inputs, count files | CREATE skeleton | Single |
+| **2** | Extract requirements (skip if none) | UPDATE requirements | Single |
+| **3** | Mental execution, bug hunting | UPDATE findings | **⚠️ ITERATES** |
+| **4** | Field mapping verification | UPDATE mappings | **⚠️ ITERATES** |
+| **5** | Calculate score, finalize | UPDATE score & decision | Single |
+
+**STOP at phases 1-4 for user confirmation. STOP between each RGV pass. Phase 5 completes automatically.**
+
+---
+
+## RGV MULTI-PASS (REPEATED GENERATION VALIDATION)
+
+**Phase 3 and Phase 4 iterate until convergence:**
+
+| Parameter | Value |
+|-----------|-------|
+| **Default Passes** | 3, then ask user if more needed |
+| **Convergence** | Zero new CRITICAL or MEDIUM findings in a pass |
+| **Strategy** | Full sweep every pass (ALL files, fresh perspective) |
+| **Delta Tracking** | Every finding tagged with pass number |
+| **HIGH-only pass** | Does NOT block convergence |
+
+**RGV addresses single-pass LLM limitations:**
+- Attention drift on long files
+- Context window saturation
+- Pattern fixation (finding one bug, missing adjacent ones)
+- Error handler path blindness
+
+> **Full RGV Protocol**: See `@06-01_Phase_Orchestration.mdc`
+
+---
+
+## FILE DISCOVERY (Phase 1)
+
+**On activation, discover files using these patterns:**
+
+```
+project/input_06_review/
+├── **/*.xml              # Flow files
+├── **/src/main/mule/**   # Mule project structure
+├── **/*.dwl              # DataWeave scripts
+├── **/*.yaml             # Configuration
+├── **/*.properties       # Properties files
+├── **/*.md, **/*.txt     # Requirements documents
+└── **/src/test/**        # MUnit tests
+```
+
+**Present to user before proceeding:**
+
+```
+🔍 DISCOVERED FILES
+
+MuleSoft Code:
+- Flows: {count} found
+- DataWeave: {count} found  
+- Configs: {count} found
+- Tests: {count} found
+
+Requirements: {found/not found}
+
+Proceed with review? (yes/no)
+```
+
+---
+
+## CORE ANALYSIS APPROACH
+
+### Flow-by-Flow Analysis (Phase 3)
+
+For EACH flow:
+1. Read the entire flow file
+2. Start at entry point (listener/trigger)
+3. Trace execution component-by-component
+4. Hunt bugs systematically
+5. Document findings with file:line
+
+### Bug Hunt Order
+
+1. **Flows** → Entry points, execution paths, error handlers
+2. **DataWeave** → Null safety, type coercion, array access
+3. **Configs** → Hardcoded values, property bindings
+4. **Tests** → Coverage gaps
+
+### Mental Execution Questions
+
+At each step, ask:
+- What happens if this is null?
+- What happens if this array is empty?
+- What happens if this fails?
+- Does the error handler catch this?
+
+> **Analysis Patterns**: See `@06-02_Guidance.mdc`
+
+---
+
+## FINDINGS-ONLY RULE
+
+**Report contains:**
+- Finding ID (CRITICAL-001, HIGH-001, etc.)
+- Category (Null Safety, Configuration, etc.)
+- Location (file:line)
+- Issue description
+- Impact statement
+- **Pass number** (which RGV pass discovered it)
+
+**Report does NOT contain:**
+- How to fix it
+- Code solutions
+- Recommendations
+- Action plans
+
+---
+
+## BUG SEVERITY CLASSIFICATION
+
+### CRITICAL (Production Blockers)
+- Array access `[0]` without null check
+- Filter result access without empty check
+- Missing error handlers
+- Hardcoded secrets
+
+### HIGH (Major Issues)
+- Flow name mismatches
+- File name typos
+- Scatter-gather without route handlers
+- Type coercion without defaults
+
+### MEDIUM (Quality Issues)
+- Hardcoded values
+- Low test coverage
+- Inefficient patterns
+- Missing input validation
+
+> **Detection Patterns**: See `@06-02_Guidance.mdc`
+
+---
+
+## 100-POINT SCORING
+
+| Category | Points | Focus |
+|----------|--------|-------|
+| Requirements Compliance | 25 | Does code match requirements? |
+| Implementation Quality | 25 | Critical/High bugs found? |
+| Architecture & Design | 20 | Patterns, error handling |
+| Code Quality & Tests | 20 | Test coverage, clean code |
+| Security & Compliance | 10 | Credentials, PII |
+
+**Deductions:**
+- Critical bug: -6 points
+- High bug: -2 points
+- Medium bug: -1 point
+
+**Production Threshold:** 80 points
+
+---
+
+## MANDATORY BEHAVIOR
+
+1. **STOP at each phase AND each RGV pass** - Wait for user confirmation
+2. **Trace every flow EVERY pass** - Full sweep, don't shortcut
+3. **Check every DataWeave** - Look for array access patterns
+4. **NO fixes** - Report findings only
+5. **Use tables** - Not paragraphs
+6. **Update document progressively** - Each phase/pass updates the file
+7. **Tag findings with pass number** - Delta tracking is mandatory
+8. **Fresh perspective each pass** - Don't anchor on prior findings
+9. **ALWAYS** produce `<thinking>` block before each phase/pass output
+10. **ALWAYS** flag assumptions with ⚠️ ASSUMPTION marker
+11. **ALWAYS** cite file:line evidence for every finding
+
+> **Enforcement**: See `@06-03_Mandatory_Stop_Points.mdc`
+
+---
+
+## OUTPUT
+
+**Single Detailed Report:** `project/output_06_review/{project}-code-review.md`
+
+**Report includes (with code snippets):**
+- Executive Summary (score, decision)
+- Critical/High/Medium Issues Tables
+- **Flow-by-Flow Analysis** (detailed execution trace with code)
+- Field Mapping Verification (source/target tables)
+- Test Coverage Analysis
+- Security Analysis
+- Quality Score Breakdown
+- Production Decision
+
+**Report length:** Detailed (~4-6 pages)
+
+> **Report Structure**: See `templates/review-template-guide.md`
+
+---
+
+## QUICK REFERENCE
+
+| Need | Reference |
+|------|-----------|
+| Phase workflow, RGV loop protocol | `@06-01_Phase_Orchestration.mdc` |
+| Bug patterns, scoring, RGV strategy | `@06-02_Guidance.mdc` |
+| Stop points, inter-pass stops | `@06-03_Mandatory_Stop_Points.mdc` |
+| Report structure, RGV format | `templates/review-template-guide.md` |
+| RGV configuration | `templates/review-style.yaml` |

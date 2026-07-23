@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:scripting="http://www.mulesoft.org/schema/mule/scripting" xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/scripting http://www.mulesoft.org/schema/mule/scripting/current/mule-scripting.xsd">
+	
+		<sub-flow name="save-input-subflow" doc:id="e61c5ebb-05ea-43a1-a53b-5a5702fd37f9" >
+		<set-variable value="#[attributes.relativePath]" doc:name="path-name" doc:id="33e24018-5286-412a-82de-2a614015e6fb" variableName="pathName"/>
+		<set-variable value="#[payload]" doc:name="input-payload" doc:id="4e79da4a-ef50-4aca-92a4-e6c6ff0c2cb1" variableName="inputPayload"/>
+		<set-variable value="#[attributes]" doc:name="input-attributes" doc:id="e278d7cb-b146-4f4f-b29b-ca04aacd5e71" variableName="inputAttributes"/>
+	</sub-flow>
+	<sub-flow name="clear-input-subflow" doc:id="e13a05c0-bdc0-4d41-aa2d-42bb56eb3d64" >
+		<remove-variable doc:name="input-payload" doc:id="04e4c7d6-8f85-44be-9a99-e2c704f347bb" variableName="inputPayload"/>
+		<remove-variable doc:name="input-attributes" doc:id="6244b746-9fb2-497c-8ab0-be8c05c5d3d5" variableName="inputAttributes"/>
+	</sub-flow>	
+	
+	</mule>

@@ -1,0 +1,56 @@
+http:
+  port: "8081"
+  private: 
+    port: "8091"
+https:
+  port: "8082"
+api: 
+  id: "2699159"
+
+# Salesforce Configuration
+salesforce:
+  tokenUrl: "https://storm-a4363164690256.my.salesforce.com/services/oauth2/token"
+
+#IDP Configuration
+idp:
+    host: "idp-rt.eu-central-1.eu1.anypoint.mulesoft.com"
+    port: "443"
+    protocol: "HTTPS"
+    action:
+        id: "idp-skg-salaries-pjc"
+        version: "1.0.0"
+        max_checks: "20"
+
+#SharePoint Folder Structure
+sharepoint:
+    site:
+        url: "https://skgtechoffice.sharepoint.com/sites/MulesoftProjectSite"
+        # Server-relative root of the site (prefix for absolute file paths used by file-move / file-add / file-get-content)
+        serverRelativePath: "/sites/MulesoftProjectSite"
+    path:
+        source: "Shared Documents/Manual Uploads/Inbound"
+        processing: "Shared Documents/Manual Uploads/Processing"
+        output: "Shared Documents/Manual Uploads/Output"
+        processed: "Shared Documents/Manual Uploads/Processed"
+        error: "Shared Documents/Manual Uploads/Error"
+    filter:
+        extension: "pdf"
+
+#Scheduler
+scheduler:
+    cron: "0 0 0/1 * * ?"
+
+#VM Persistent Queue
+vm:
+    queue:
+        name: "idp-timesheet-queue"
+    poll:
+        sleepMillis: "30000"
+
+
+anypoint:
+    clientId: "7341fdfed4da4e9b9a9edec484d3c97d"
+    clientSecret: "A6de5f71E8884083BD77b6bFbcd3fd31"
+
+log:
+  level: "DEBUG"

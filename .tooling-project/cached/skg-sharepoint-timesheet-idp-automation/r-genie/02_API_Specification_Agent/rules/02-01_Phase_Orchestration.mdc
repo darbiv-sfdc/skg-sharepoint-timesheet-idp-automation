@@ -1,0 +1,246 @@
+---
+description: Phase Orchestration & Workflow State Management (RAML & OAS)
+author: Cheppali Shaik Sohail
+version: 2.1.0
+alwaysApply: false
+tags: [phase, orchestration, workflow, checkpoints, raml, openapi]
+appliesTo: [api-specification, workflow]
+whenToUse:
+  - "Managing phase transitions"
+  - "Tracking workflow state"
+priority: HIGH
+---
+
+# PHASE ORCHESTRATION V2
+
+> **Purpose**: Manage 5-phase workflow (0-4) with user checkpoints
+> **Enforcement**: See `@02-08_Mandatory_Stop_Points.mdc`
+
+---
+
+## PHASE SPECIFICATION
+
+### **PHASE 0: Initialization** (2 min)
+
+**Tasks:**
+1. Detect workspace and project structure
+2. Discover technical design documents
+3. Check for existing state file
+4. Initialize state tracking
+
+**Output:** Auto-proceed to Phase 1 (or STOP if input unclear)
+
+---
+
+### **PHASE 1: Requirements Analysis** (15 min)
+
+**Tasks:**
+1. **ASK FORMAT PREFERENCE (RAML or OpenAPI)**
+2. Parse technical design documents
+3. Extract API endpoint requirements
+4. Identify data models and schemas
+5. Determine API layer (Experience/Process/System)
+6. Identify security requirements
+
+**Rules to Load:** `@02-02_Guidance.mdc`
+
+**FORMAT SELECTION MESSAGE:**
+```
+🔧 FORMAT SELECTION
+Which specification format do you prefer?
+1. RAML 1.0 (MuleSoft native, fragment architecture)
+2. OpenAPI 3.0 (Industry standard, wider tooling)
+→ Select format (1/2):
+```
+
+**STOP MESSAGE:**
+```
+🛑 PHASE 1 CHECKPOINT
+Format: {RAML 1.0 | OpenAPI 3.0}
+API Layer: {layer_type}
+Endpoints: {count}
+Security: {scheme}
+→ Confirm requirements? (yes/modify)
+```
+
+---
+
+### **PHASE 2: Specification Design** (20 min)
+
+**Tasks (RAML):**
+1. Generate RAML header and metadata
+2. Design resource hierarchy
+3. Create data type definitions (fragments/libraries)
+4. Design traits (fragments/traits)
+5. Configure security schemes (via !include)
+
+**Tasks (OpenAPI):**
+1. Generate OpenAPI header (openapi: 3.0.3)
+2. Design paths and operations
+3. Create schemas (components/schemas)
+4. Design parameters (components/parameters)
+5. Configure security schemes (components/securitySchemes)
+
+**Rules to Load:** `@02-02_Guidance.mdc`
+
+**STOP MESSAGE:**
+```
+🛑 PHASE 2 CHECKPOINT
+Format: {RAML | OpenAPI}
+Main File: {filename}
+Components: {count}
+→ Approve design? (yes/modify)
+```
+
+---
+
+### **PHASE 3: Quality Enhancement** (25 min)
+
+**Tasks:**
+1. Run 105-point quality assessment
+2. Add comprehensive examples (externalized)
+3. Add enterprise patterns (correlation ID, health)
+4. Apply RFC 7807 error formatting
+5. Validate fragment dependencies
+
+**Rules to Load:** `@02-02_Guidance.mdc`
+
+**STOP MESSAGE:**
+```
+🛑 PHASE 3 CHECKPOINT
+Quality Score: {score}/105
+Status: {PRODUCTION_READY | NEEDS_WORK}
+→ Apply recommendations? (all/select/skip)
+```
+
+---
+
+### **PHASE 4: Validation & Delivery** (10 min)
+
+**Tasks:**
+1. Validate specification syntax (RAML or OpenAPI)
+2. Verify all component imports/references
+3. Generate metadata file
+4. Package final deliverable
+
+**FINAL MESSAGE:**
+```
+✅ PHASE 4 COMPLETE
+📄 Output: project/output_02_api/{api-name}.{raml|yaml}
+📊 Quality Score: {score}/105
+→ Generate files? (yes/different-path)
+```
+
+---
+
+## STATE FILE
+
+**Location:** `project/output_02_api/.api-spec-state.json`
+
+```json
+{
+  "workflowId": "api-spec-{timestamp}",
+  "currentPhase": "REQUIREMENTS",
+  "status": "IN_PROGRESS",
+  "apiSpecification": { "name": "", "layer": "", "format": "RAML|OAS", "version": "v1" },
+  "phases": {
+    "phase0": { "status": "COMPLETED" },
+    "phase1": { "status": "IN_PROGRESS", "endpoints": [], "securityScheme": "" }
+  }
+}
+```
+
+**On Activation:**
+1. Check for existing state file
+2. If exists → offer Resume / Start Fresh / Restart from phase
+3. If not → create new state, start Phase 0
+
+---
+
+## ERROR RECOVERY
+
+| Situation | Action |
+|-----------|--------|
+| Phase fails | Save state, inform user, offer: retry / restart phase / abort |
+| User disconnects | State preserved, resume on next activation |
+| RAML validation fails | Stay in phase, show errors, request fixes |
+| Restart from phase N | Load state, reset phases N+ to NOT_STARTED, continue |
+
+---
+
+## PHASE TRANSITIONS
+
+| From | To | Requires |
+|------|-----|----------|
+| 0 | 1 | Files discovered (auto) |
+| 1 | 2 | User confirms format + endpoints + layer |
+| 2 | 3 | User approves RAML design |
+| 3 | 4 | Quality score ≥85, user confirms |
+| 4 | Done | User confirms delivery |
+
+**Rule:** NEVER advance without user confirmation (except Phase 0→1).
+
+---
+
+## PHASE EXECUTION RULES
+
+**Before each phase:**
+- Verify previous phase completed and approved
+- Load relevant guidance for this phase
+- Produce a `<thinking>` block (see template below)
+
+**During each phase:**
+- Follow phase-specific tasks
+- Apply RGV cycle for phases that produce output (Phases 1-4)
+- Assess Confidence before presenting checkpoint
+
+**After each phase:**
+- Present checkpoint, STOP and WAIT
+- Update state file on approval
+
+### `<thinking>` Block (MANDATORY Before Every Phase Output)
+
+```
+<thinking>
+1. Key inputs received: [list data/answers for this phase]
+2. Decisions I am making: [choice, strategy, rationale]
+3. Evidence from source: [cite specific customer/user answers or design doc facts]
+4. Risks/gaps identified: [what could go wrong, what is missing]
+5. Confidence: HIGH / MEDIUM / LOW [with justification]
+6. Production learnings applicable: [check 02_Production_Learnings.md]
+</thinking>
+```
+
+---
+
+## CONFIDENCE CALIBRATION
+
+| Confidence | When to Use | Action |
+|------------|------------|--------|
+| **HIGH** | Clear requirements, proven pattern | Proceed with recommendation |
+| **MEDIUM** | Partial info, reasonable inference | Flag assumptions, recommend user validation |
+| **LOW** | Vague input, multiple interpretations | **STOP** — request clarification before proceeding |
+
+---
+
+## RGV (READ-GENERATE-VERIFY) PATTERN
+
+Apply for Phases 1-4 (phases that produce specification content):
+
+```
+1. READ: [source material] → Expected: [count/list]
+2. GENERATE: [output artifacts] → Expected: [count/list]
+3. VERIFY: "Processed {X}/{Y} items from source"
+4. FIX: Any gaps before presenting checkpoint to user
+```
+
+> If X ≠ Y, do NOT present the checkpoint. Fix the gap first.
+
+### Phase-Specific RGV
+
+| Phase | READ | GENERATE | VERIFY |
+|-------|------|----------|--------|
+| Phase 1 | Design doc endpoints + requirements | Endpoint list, layer, security scheme | All endpoints captured? |
+| Phase 2 | Approved endpoints + data models | RAML/OAS resources, schemas, fragments | All endpoints in spec? All models defined? |
+| Phase 3 | Quality criteria (105 points) | Enhanced spec, examples, enterprise patterns | Score ≥85? All RFC 7807 properties? |
+| Phase 4 | Complete spec + all fragments | Validated package, metadata | All imports resolve? All files present? |

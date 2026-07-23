@@ -1,0 +1,33 @@
+{
+  "// R-GENIE Workspace": "HIDDEN — R-GENIE files invisible + readonly",
+  // "files.exclude": {
+  //   "**/.git": true,
+  //   "**/.svn": true,
+  //   "**/.hg": true,
+  //   "**/.DS_Store": true,
+  //   "**/Thumbs.db": true,
+  //   ".mule": true,
+  //   "**/.vscode/**": true,
+  //   "**/.cursor/**": true,
+  //   "**/.windsurf/**": true,
+  //   "**/r-genie/**": true,
+  //   "**/docs/**": true,
+  //   "**/.cursorignore": true,
+  //   "**/.windsurfignore": true,
+  //   "**/.gitignore": true,
+  //   "**/LICENSE.md": true,
+  //   "**/R-Genie_Framework.jpg": true,
+  //   "**/install-r-genie.sh": true,
+  //   "**/project/**": false
+  // },
+  "files.readonlyInclude": {
+    "**/r-genie/**": true,
+    "**/.cursor/**": true,
+    "**/.windsurf/**": true,
+    "**/docs/**": true,
+    "**/LICENSE.md": true,
+    "**/R-Genie_Framework.jpg": true,
+    "**/install-r-genie.sh": true,
+    "**/README.md": true
+  }
+}

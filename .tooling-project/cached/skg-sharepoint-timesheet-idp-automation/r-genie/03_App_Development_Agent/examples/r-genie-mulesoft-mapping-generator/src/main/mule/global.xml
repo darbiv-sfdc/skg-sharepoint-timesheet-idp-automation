@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mule xmlns:file="http://www.mulesoft.org/schema/mule/file"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http" 
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns="http://www.mulesoft.org/schema/mule/core" 
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" 
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+	xsi:schemaLocation="
+		http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+		http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+		http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+		http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/file/current/mule-file.xsd">
+
+	<!-- =============================================== -->
+	<!-- GLOBAL CONFIGURATIONS                          -->
+	<!-- =============================================== -->
+	
+	<!-- Application Configuration Properties -->
+	<configuration-properties doc:name="Configuration properties" doc:id="config-props" file="application-dev.yaml" />
+	<configuration-properties doc:name="Secure Configuration properties" doc:id="secure-config-props" 
+		file="application-secure.yaml" />
+
+	<!-- HTTP Listener Configuration -->
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="HTTP_Listener_config">
+		<http:listener-connection host="${http.listener.host}" port="${http.listener.port}" />
+	</http:listener-config>
+	
+	<!-- Gemini API HTTP Request Configuration (Only Provider) -->
+	<http:request-config name="Gemini_HTTP_Request_config" doc:name="Gemini HTTP Request config" doc:id="Gemini_HTTP_Request_config">
+		<http:request-connection 
+			host="generativelanguage.googleapis.com" 
+			port="443" 
+			protocol="HTTPS" />
+	</http:request-config>
+
+	<!-- File Configuration -->
+	<file:config name="File_Config" doc:name="File Config" doc:id="File_Config">
+		<file:connection workingDir="${file.output.workingDirectory}" />
+	</file:config>
+
+
+
+	<!-- =============================================== -->
+	<!-- GLOBAL PROPERTIES AND VARIABLES                -->
+	<!-- =============================================== -->
+	
+	<global-property doc:name="Application Name" name="app.name" value="R-Genie MuleSoft Mapping Generator" />
+	<global-property doc:name="Application Version" name="app.version" value="1.0.0" />
+	<global-property doc:name="API Version" name="api.version" value="v1" />
+	
+	<!-- Generation Mode Mappings -->
+	<configuration-properties doc:name="Generation Mode Config" doc:id="generation-mode-config" file="generation-modes.yaml" />
+	
+	<!-- =============================================== -->
+	<!-- SHARED COMPONENTS                               -->
+	<!-- =============================================== -->
+	
+	<!-- Standard Success Response Template -->
+	
+	<!-- Standard Error Response Template -->
+	
+	<!-- Request Correlation and Logging -->
+	
+	<!-- Response Cleanup and Logging -->
+	
+	<!-- Health Check Subflow -->
+</mule>

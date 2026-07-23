@@ -1,0 +1,374 @@
+---
+description: Phase Orchestration & Workflow State Management
+author: Cheppali Shaik Sohail
+version: 2.1.0
+alwaysApply: false
+tags: [phase, orchestration, workflow, checkpoints]
+appliesTo: [munit, workflow]
+whenToUse:
+  - "Managing phase transitions"
+  - "Tracking workflow state"
+priority: HIGH
+---
+
+# PHASE ORCHESTRATION V2
+
+> **Purpose**: Manage 10-phase Think-First workflow
+> **Enforcement**: See `@04-02_Mandatory_Stop_Points.mdc`
+> **Patterns**: See `@04-01_Guidance.mdc`
+
+---
+
+## CRITICAL OUTPUT RULE
+
+**⚠️ ANALYSIS PHASES (0-3): Display IN CONVERSATION, NOT as files**
+
+| Phase | Content Type | Output Location |
+|-------|--------------|------------------|
+| 0-3 | Discovery, Analysis, Scenarios | **IN CONVERSATION** (console) |
+| 4+ | Test data, MUnit tests, configs | **FILES** in output directory |
+
+**Anti-Pattern (FORBIDDEN):**
+```
+❌ Creating PHASE_1_FLOW_DISCOVERY.md
+❌ Creating PHASE_2_LOGIC_ANALYSIS.md
+❌ Writing analysis content to files
+```
+
+**Required Pattern:**
+```
+✅ Display flow discovery summary IN CHAT
+✅ Display logic analysis IN CHAT
+✅ Display scenario design IN CHAT
+✅ Only create FILES for actual test code (Phase 5+)
+```
+
+---
+
+## PHASE 0: Project Setup (10-20s)
+
+**Tasks:**
+1. Detect project in `project/input_04_munit/`
+2. Validate structure (pom.xml, src/main/mule exist)
+3. Copy project to `project/output_04_munit/`
+
+**Output:** Display summary **IN CONVERSATION** (no files)
+
+**Checkpoint (show in chat):**
+```
+✅ PHASE 0 COMPLETE
+   • Project: {name} copied to output/
+   • Flows: {count} | Connectors: {list}
+→ Reply "proceed" to discover flows
+```
+
+---
+
+## PHASE 1: Flow Discovery (15-30s)
+
+**Tasks:**
+1. Read all flow XML files
+2. Classify: BUSINESS | UTILITY | SIMPLE
+3. Extract all doc:ids by processor type
+
+**Output:** Display discovery **IN CONVERSATION** (no files)
+
+**Checkpoint (show in chat):**
+```
+✅ PHASE 1 COMPLETE
+
+📋 FLOWS DISCOVERED:
+| Flow Name | Type | Processors | doc:ids |
+|-----------|------|------------|----------|
+| {name} | BUSINESS | {count} | {count} |
+
+📦 CONNECTORS: {list}
+📄 DATAWEAVE: {count} transformations
+
+→ Reply "proceed" to analyze flow logic
+```
+
+---
+
+## PHASE 2: Flow Logic Analysis (20-40s) 🚨 STOP POINT
+
+**Purpose:** Deeply understand what each flow does BEFORE designing tests.
+
+**⚠️ OUTPUT: Display analysis IN CONVERSATION (NOT as files)**
+
+**Tasks:** For each business flow, analyze:
+1. **Transforms**: What variables are set? What is the mapping logic?
+2. **Choices**: What conditions trigger each branch?
+3. **Foreach**: What collection? What happens per iteration?
+4. **Error Handlers**: How are errors processed?
+
+**Present IN CHAT (not files):**
+```
+🔍 PHASE 2 - LOGIC ANALYSIS (REQUIRES REVIEW)
+
+## FLOW: {flow-name}
+
+### Transform 1 (doc:id {id}):
+- Sets: `vars.{name}` = {logic description}
+- Input: {input type}
+- Output: {output type}
+
+### Choice Logic:
+| Condition | Branch | Action |
+|-----------|--------|--------|
+| {condition} | When | {action} |
+| else | Otherwise | {action} |
+
+### Error Handler:
+- Catches: {type}
+- Action: {error-processing}
+
+---
+→ Reply "correct" if understanding is accurate
+→ Reply "fix: {corrections}" if changes needed
+
+Waiting for your review...
+```
+
+**🚨 Do NOT proceed until user confirms logic is correct**
+**🚨 Do NOT create analysis files - display IN CONVERSATION**
+
+---
+
+## PHASE 3: Test Scenario Design (15-30s) 🚨 STOP POINT
+
+**Purpose:** Design specific test scenarios with expected outcomes BEFORE generating code.
+
+**⚠️ OUTPUT: Display scenarios IN CONVERSATION (NOT as files)**
+
+**Tasks:** For each business flow, design:
+1. **Happy Path**: Input → Expected output + variable values
+2. **Error Paths**: What triggers errors? Expected error handling?
+3. **Branch Paths**: Scenarios for each choice branch
+4. **Edge Cases**: Partial failures, empty collections, etc.
+
+**Present IN CHAT (not files):**
+```
+📋 PHASE 3 - SCENARIO DESIGN (REQUIRES APPROVAL)
+
+## Test Scenarios for {flow-name}
+
+### SCENARIO 1: {name}
+| Aspect | Details |
+|--------|----------|
+| **Input** | {description} |
+| **Mocks** | {connectors to mock} |
+| **Expected** | `vars.{name}` == {value} |
+| **Verify** | {branch} taken, {connector} called N times |
+
+### SCENARIO 2: {name}
+| Aspect | Details |
+|--------|----------|
+| **Input** | {description} |
+| **Expected** | {outcome} |
+
+---
+→ Reply "approved" to generate tests
+→ Reply "add: {scenario}" for additional scenarios
+
+Waiting for your approval...
+```
+
+**🚨 Do NOT generate tests until user approves scenarios**
+**🚨 Do NOT create scenario files - display IN CONVERSATION**
+
+---
+
+## PHASE 4: Test Data Generation (10-20s)
+
+**Tasks:**
+1. Generate test data files based on approved scenarios
+2. Create input files for each scenario
+3. Create expected output files for assertions
+
+**Checkpoint:**
+```
+✅ PHASE 4 COMPLETE
+   • Test data files: {count}
+→ Continuing to MUnit generation...
+```
+
+---
+
+## PHASE 5: MUnit Generation (30-60s) 🚨 STOP POINT
+
+**Tasks:**
+1. Generate MUnit tests FROM approved scenarios
+2. Each test tied to a specific scenario
+3. Strong assertions based on expected outcomes
+4. Behavior verification patterns included
+
+**Generation Rules:**
+- Test name matches scenario name
+- Assertions verify exact expected values
+- Branch tests use verify-call with times
+- Spies capture and verify transform outputs
+
+**Checkpoint:**
+```
+✅ PHASE 5 COMPLETE
+   • Test files: {count} | Tests: {count}
+   • Scenarios covered: {list}
+→ Reply "proceed" to validate
+```
+
+---
+
+## PHASE 6: Proactive Validation (10-30s)
+
+**Tasks:**
+1. Schema violations check
+2. Salesforce ArrayList pattern check
+3. Security scan (no credentials)
+4. Auto-fix issues found
+
+**Checkpoint:**
+```
+✅ PHASE 6 COMPLETE
+   • Schema: PASSED | Security: PASSED
+→ Continuing to credentials...
+```
+
+---
+
+## PHASE 7: Credentials (User) 🚨 STOP POINT
+
+**Tasks:**
+1. Identify required properties
+2. Prompt user for configuration
+
+**Checkpoint:**
+```
+🔐 PHASE 7 - CREDENTIALS REQUIRED
+   • Properties needed: {list}
+→ "ready" | "skip" | "provide: key=value"
+```
+
+---
+
+## PHASE 8: Maven Validation (1-10 min, max 10 iterations)
+
+**Loop:**
+1. Run Maven → Parse errors
+2. Diagnose using `@04-01_Guidance.mdc` patterns
+3. Fix, validate, apply
+4. Repeat until all pass
+
+**Checkpoint:**
+```
+✅ PHASE 8 COMPLETE
+   • Tests: {passing}/{total} ✅
+   • Iterations: {count}
+→ Continuing to optimization...
+```
+
+---
+
+## PHASE 9: Coverage + Behavior Optimization (1-5 min, max 5 iterations) 🚨 STOP POINT
+
+**Tasks:**
+1. Read coverage report → Calculate coverage %
+2. Analyze behavior score (see scoring in main rule)
+3. If below targets: Add spies, branch tests, assertions
+4. Run Maven, measure delta
+
+**Targets:**
+| Metric | Target |
+|--------|--------|
+| Coverage | 85%+ |
+| Behavior Score | 70+ |
+
+**Checkpoint:**
+```
+✅ PHASE 9 COMPLETE
+   • Coverage: {percent}% (Target: 85%+)
+   • Behavior Score: {score} (Target: 70+)
+→ Reply "proceed" for summary
+```
+
+---
+
+## PHASE 10: Summary (10-15s)
+
+**Output:**
+```
+═══════════════════════════════════════════
+🎉 MUNIT GENERATION COMPLETE
+═══════════════════════════════════════════
+• Flows: {total} | Tests: {count}
+• Coverage: {percent}% | Behavior: {score}
+• Scenarios Implemented: {list}
+═══════════════════════════════════════════
+```
+
+---
+
+## STATE MANAGEMENT
+
+```json
+{
+  "currentPhase": 0,
+  "flowLogic": {},
+  "scenarios": [],
+  "behaviorScore": 0
+}
+```
+
+**Rules:**
+- Previous phase must complete before next
+- User must confirm at STOP points (Phases 2, 3, 5, 7, 9)
+
+---
+
+## `<thinking>` BLOCK (MANDATORY Before Every Phase Output)
+
+```
+<thinking>
+1. Key inputs received: [list data/answers for this phase]
+2. Decisions I am making: [test strategy, mock choices, scenario design rationale]
+3. Evidence from source: [cite specific flow XML facts, doc:ids, connector types]
+4. Risks/gaps identified: [what could go wrong, what is missing]
+5. Confidence: HIGH / MEDIUM / LOW [with justification]
+6. Production learnings applicable: [check 04_Production_Learnings.md]
+</thinking>
+```
+
+---
+
+## CONFIDENCE CALIBRATION
+
+| Confidence | When to Use | Action |
+|------------|------------|--------|
+| **HIGH** | Clear flow logic, proven mock pattern | Proceed with recommendation |
+| **MEDIUM** | Partial info, reasonable inference | Flag assumptions, recommend user validation |
+| **LOW** | Vague flow logic, multiple interpretations | **STOP** — request clarification before proceeding |
+
+---
+
+## RGV (READ-GENERATE-VERIFY) PATTERN
+
+Apply for phases that produce output:
+
+```
+1. READ: [source material] → Expected: [count/list]
+2. GENERATE: [output artifacts] → Expected: [count/list]
+3. VERIFY: "Processed {X}/{Y} items from source"
+4. FIX: Any gaps before presenting checkpoint to user
+```
+
+> If X ≠ Y, do NOT present the checkpoint. Fix the gap first.
+
+### Phase-Specific RGV
+
+| Phase | READ | GENERATE | VERIFY |
+|-------|------|----------|--------|
+| Phase 1 | Flow XML files | Flow classification + doc:ids | All flows classified? All doc:ids extracted? |
+| Phase 2 | Classified flows | Logic analysis per flow | All business flows analyzed? |
+| Phase 3 | Analyzed logic | Test scenarios | All branches/paths covered? |
+| Phase 5 | Approved scenarios | MUnit test files | All scenarios have tests? |
+| Phase 9 | Coverage report | Optimization improvements | Coverage >= 85%? Behavior >= 70? |

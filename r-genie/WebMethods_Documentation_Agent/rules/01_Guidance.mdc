@@ -1,0 +1,670 @@
+---
+version: 1.0.0
+author: MuleSoft PS EMEA
+watermark: "R-GENIE-CS150893"
+alwaysApply: false
+priority: HIGH
+---
+
+# Guidance — webMethods Documentation Agent (09)
+
+RGV loop (DRY source), artifact extraction patterns, and few-shot examples for webMethods AS-IS specification generation.
+
+---
+
+## SECTION 1: RGV LOOP (DRY — Single Source of Truth)
+
+Every section in Phases 1-5 MUST follow this exact loop. Referenced from `@00_Phase_Orchestration.mdc`.
+
+```
+FOR EACH section to generate:
+  1. RE-READ  — Fresh Read tool call on ALL relevant artifact files for this section
+  2. INVENTORY — Count target elements in artifact, list names, COMMIT to count N
+                 State: "This {artifact} has N {elements}. I will generate exactly N items."
+  3. GENERATE — Produce section content (must contain exactly N items)
+  4. VERIFY  — Count generated items, compare to N
+  5. FIX     — If mismatch → RE-READ artifact, find missing, fix BEFORE proceeding
+  6. CHECKPOINT — Emit micro-checkpoint: ✅ {section}: {Name} — N/N {elements}
+```
+
+**Rules:**
+- If VERIFY shows X ≠ N → do NOT proceed. RE-READ and FIX first.
+- Each section is an **ATOMIC UNIT** — complete one before starting the next.
+- Never generate from memory or stale Phase 0 context — always RE-READ fresh.
+- For related artifacts (e.g., FLOW + its NDF signatures), read ALL related files together before generating.
+
+---
+
+## SECTION 2: ARTIFACT CLASSIFICATION PATTERNS
+
+### NDF Subtype Classification
+
+NDF files (`node.ndf`) represent different object types. Classify from XML content:
+
+| Attribute/Pattern | Subtype | Extraction Focus |
+|-------------------|---------|------------------|
+| `svc_type="flow"` | Flow Service | Input/output signature, runtime flags, service references |
+| `svc_type="java"` | Java Service | Method reference, input/output signature |
+| `rec_fields` present, no `svc_type` | DocType | ALL field definitions (name, type, required/optional, constraints) |
+| `parentWsd` present | Web-Service Connector | WSDL reference, operation bindings, endpoint |
+| `svc_type="adapter"` or adapter references | Adapter Service | Backend operation, connection template, query behavior |
+| Schema elements present | Schema | Structure definition, validation constraints |
+| `svc_type="flow"` + `allowedHTTPMethods` array | REST Resource Handler | Input signature (`$resourceID`, `$path`), allowed HTTP methods, pipeline config |
+| `rec_fields` + `schemaType` + `schemaDomain` (no `svc_type`) | Schema-derived DocType | ALL fields with `field_xmlns` + `field_content_type.internalType="reference"`, schema metadata |
+| Located in `triggers/` folder | Trigger | Subscription source, filter expression, called services, concurrent execution limits |
+
+**Rule:** Never assume NDF subtype from file path alone. Always read content and classify from attributes.
+
+### Extensionless File Detection
+
+Some webMethods artifacts lack standard extensions:
+
+| File Pattern | Likely Type | Detection Method |
+|-------------|-------------|-----------------|
+| `wsdl0` (no extension) | WSDL | Read first 50 lines — look for `<wsdl:definitions` or `<definitions` |
+| UUID-named files | API Gateway policy/action | Read content — look for policy/action XML structures |
+| Files without extension in `ws/` folders | WSDL or service descriptor | Read content to determine |
+
+**Rule:** Never skip a file because it lacks a recognized extension. Read content to classify.
+
+### File Extension to Artifact Type Mapping
+
+| Extension | Primary Type | Notes |
+|-----------|-------------|-------|
+| `flow.xml` | FLOW | Always a Flow Service definition |
+| `node.ndf` | NDF | Classify subtype from content |
+| `node.idf` | IDF | Namespace/folder descriptor |
+| `*_nodesACL.xml` | ACL | Access control definitions |
+| `.wsdl`, `.wsd` | WSDL | Standard WSDL files |
+| `.xsd` | XSD | XML Schema |
+| `.java` | JAVA | Java Service implementation |
+| `.acdl` | API Gateway | API Gateway export |
+| `ExportReport.json` | API Gateway | Export metadata |
+| `manifest.v3` | Config | Package manifest |
+| `.properties` | Config | Runtime properties |
+| `.json` (non-ExportReport) | Config | Configuration data |
+| `.yaml`, `.yml` | Config | Configuration data |
+| `.cnf`, `.frg` | Config | Legacy configuration |
+| `.bak` | Backup | Note as duplicate, do not prioritize |
+| `java.frag` | JAVA (fragment) | Base64-encoded Java service source — decode to read logic; compiled class in `code/classes/` |
+| `apigateway.cnf` | Config (API GW) | API Gateway exposure config in `ns/` folder — endpoint routing and policy |
+| `node.ndf` in `triggers/` | TRIGGER | Pub/sub trigger node — subscription filters and called services |
+
+### Duplicate Detection & Deduplication
+
+Some webMethods projects contain duplicate artifact structures. Detect and handle:
+
+| Pattern | Detection | Handling |
+|---------|-----------|---------|
+| `schemasWithoutPrefixes/` folder | Contains same docType NDFs as `schema/` but field names lack `tns:` prefix | Note as duplicate, document in inventory but do NOT double-count fields in certification |
+| `.bak` files alongside `flow.xml` | `flow.xml.bak` = backup of `flow.xml` | Note as backup duplicate, process only `flow.xml` |
+| `useDigest` WS connector variants | `ws/.../serviceName_useDigest_/` mirrors `ws/.../serviceName_/` | Document both variants, note authentication difference |
+
+**Rule:** Always inventory duplicate structures in component-inventory.md, but only count primary artifacts in certification totals.
+
+### Custom ACL Name Detection
+
+Projects may use custom ACL names beyond the standard `Anonymous`, `Internal`, `Default`:
+
+| Custom ACL | Meaning | Runtime Impact |
+|-----------|---------|---------------|
+| Project-specific names (e.g., `PscWS`) | Role-based access control | Externally callable but role-restricted — document the ACL name and note it requires configured role |
+
+**Rule:** Do not assume all externally callable services use `Anonymous` ACL. Document the actual ACL name and derive runtime impact accordingly.
+
+### java.frag Detection
+
+Some Java services use `java.frag` instead of `.java` as their source file:
+
+| Signal | Meaning |
+|--------|---------|
+| `java.frag` file present alongside `node.ndf` (no `flow.xml`) | Java service with base64-encoded source fragment |
+| No `flow.xml` in same folder | Confirms Java implementation, not a flow service |
+
+**Rule:** When `java.frag` is found, note it as base64-encoded. Decode the content to extract logic. The compiled class lives in `code/classes/<JavaPackage>/`. If decoding is not possible, document the service name, its NDF signature, and flag: `⚠️ java.frag — base64-encoded source, manual decode required`.
+
+---
+
+### Multi-Package Project Detection
+
+When a project folder contains multiple sub-packages:
+
+1. **IDENTIFY** main orchestrator package vs sub-packages from folder structure and cross-package invocations
+2. **PROCESS** each package through the full phase pipeline
+3. **TRACK** cross-package dependencies (service invocations that target services in other packages)
+4. **SYNTHESIZE** cross-package call chain in Phase 5
+5. **DOCUMENT** each package's artifacts separately in component inventory, with a summary rollup
+
+---
+
+## SECTION 3: EXTRACTION PATTERNS BY ARTIFACT TYPE
+
+### 3.1 FLOW Extraction
+
+**Source:** `flow.xml`
+
+**Elements to extract per flow step:**
+
+| Element | What to Capture | Example |
+|---------|----------------|---------|
+| Step type | MAP, INVOKE, BRANCH, SEQUENCE, LOOP, EXIT, REPEAT, TRY/CATCH | `INVOKE` |
+| Step name/label | User-assigned name or service path | `pub.utils:lookupPartner` |
+| Properties | Configured values (ignore coordinates/position) | `service="pub.utils:lookupPartner"` |
+| Condition | Branch expression in natural language | "If /invoice/type equals 'CREDIT'" |
+| Previous step(s) | Which step(s) feed into this one | `MAP step 2` |
+| Next step(s) | Output terminals and targets | `success → INVOKE step 4, failure → EXIT` |
+| Pipeline impact | Variables read, created, updated, dropped | `Reads: /invoice/id; Creates: /response/status` |
+| Invoked service | Fully qualified service name | `pub.myPackage.services:processOrder` |
+
+**Control flow semantics to preserve:**
+- SEQUENCE: ordered execution, exit-on conditions
+- BRANCH: switch/if-else with expression evaluation
+- LOOP: iteration with input array and loop variable
+- TRY/CATCH: exception handling with catch targets
+- EXIT: signal exit from containing flow/loop with exit-from label
+- REPEAT: retry with count/interval/condition
+
+### MAP Sub-Operations
+
+Within a MAP or INVOKE step, extract each sub-operation individually:
+
+| Operation | What It Does | What to Capture |
+|-----------|-------------|-----------------|
+| `mapcopy` | Copies data from one pipeline variable to another | Source variable path → Target variable path |
+| `mapdelete` | Removes a variable from the pipeline | Variable name being dropped |
+| `mapset` | Assigns a constant, literal, or expression to a pipeline variable | Target field name + assigned value or expression |
+| `mapmove` | Moves data (copy + delete source) | Source variable → Target variable; source is removed |
+| `mapinsert` | Inserts a new element into a list/array in the pipeline | Target array path + inserted value |
+
+### MAP Modes (within INVOKE steps)
+
+MAP blocks inside INVOKE steps have a `mode` attribute that defines their role:
+
+| Mode | Context | What It Does | Extraction Focus |
+|------|---------|-------------|-----------------|
+| `mode="input"` | Inside INVOKE | Maps pipeline variables into the invoked service’s input (`sig_in` from NDF) | Source pipeline var → service input field |
+| `mode="output"` | Inside INVOKE | Maps the invoked service’s output (`sig_out`) back into pipeline variables | Service output field → target pipeline var |
+| `mode="standalone"` | Inside INVOKE | Independent pipeline manipulation within the INVOKE, not tied to formal sig_in/sig_out | Intermediate transformations before/after formal I/O |
+| `mode="invokeinput"` | Transformer in MAP | Input mapping for a service call embedded inside a MAP step | Source → embedded service input |
+| `mode="invokeoutput"` | Transformer in MAP | Output mapping for a service call embedded inside a MAP step | Embedded service output → pipeline target |
+
+### mapsource / maptarget
+
+| Element | What to Capture |
+|---------|----------------|
+| `<mapsource>` | The pipeline variable or inline record structure providing the data (source of the mapping) |
+| `<maptarget>` | The destination field — typically the `sig_in` or `sig_out` structure defined in the invoked service’s `node.ndf` |
+
+**Transformer Rule:** A Transformer is a service invocation embedded inside a MAP step (shown as an inline call in Designer). In `flow.xml` it appears as `mode="invokeinput"` and `mode="invokeoutput"` blocks. Document it as an embedded service call: service name, input mappings (invokeinput), and output mappings (invokeoutput).
+
+### 3.2 NDF Extraction
+
+**Source:** `node.ndf`
+
+**Per subtype — key elements:**
+
+| Subtype | Key Elements |
+|---------|-------------|
+| Flow Service | `svc_type`, `svc_subtype`, input signature fields, output signature fields, `stateless`, `caching`, `prefetch`, auditing flags |
+| DocType | ALL `rec_fields` (name, type, nillable, optional, dimensions, constraints), `rec_ref` references |
+| Web-Service Connector | `parentWsd`, operation name, endpoint URL, `use_provider_settings`, `svc_in`, `svc_out` |
+| Adapter Service | adapter type, connection template, operation type (select/insert/update/delete/procedure), query/statement details |
+| Response Service | linked operation, response structure reference |
+
+**Rule:** Extract ALL fields from DocType NDF — mapped AND unmapped. Never skip fields that appear unused.
+
+**irtnode_property Rule:** If `svc_subtype` is unknown or adapter type details are sparse, base64-decode the `irtnode_property` attribute. It contains serialized adapter metadata including: adapter type (e.g., `JDBCAdapter`), connection template name, operation type, table/column definitions, query parameters, and output field mappings. Document all decoded fields as part of the Adapter Service extraction.
+
+### 3.3 IDF Extraction
+
+**Source:** `node.idf`
+
+**Elements:**
+- `node_nsName` — namespace path
+- `node_type` — folder type (package, folder, service folder, etc.)
+- `is_public` — visibility flag
+- Child artifact references
+
+**Use:** Reconstruct hierarchy tree for the package. Map which services are public vs internal.
+
+### 3.4 ACL Extraction
+
+**Source:** `*_nodesACL.xml`
+
+**Elements per node mapping:**
+
+| Element | What to Capture |
+|---------|----------------|
+| Node path | Fully qualified service/folder path |
+| executeACL | ACL name controlling execution rights |
+| readACL | ACL name controlling read rights |
+| writeACL | ACL name controlling write rights |
+| listACL | ACL name controlling list/browse rights |
+
+**Derive runtime impact:**
+- Services with `executeACL=Anonymous` → externally callable
+- Services with restrictive ACL → internal-only or role-restricted
+- Folders with ACL inheritance → child services inherit unless overridden
+
+### 3.5 WSDL Extraction
+
+**Source:** `.wsdl`, `.wsd`, extensionless `wsdl0`
+
+**Elements:**
+
+| Element | What to Capture |
+|---------|----------------|
+| Target namespace | `targetNamespace` attribute |
+| Service name | `<wsdl:service name="...">` |
+| Port type | `<wsdl:portType>` with operation list |
+| Operations | name, input message, output message, fault messages |
+| Messages | name, part definitions, element/type references |
+| Types/Schema | Inline or imported schema definitions |
+| Binding | Style (document/rpc), transport, SOAP action per operation |
+| Endpoint | `<wsdl:port>` location URL |
+
+### 3.6 JAVA Extraction
+
+**Source:** `.java` or `java.frag` (base64-encoded)
+
+**Note on `java.frag`:** This file contains base64-encoded Java source. Decode the content before extracting logic. The compiled `.class` file resides in `code/classes/<JavaPackage>/`. If decoding is not feasible, document the service name and NDF signature, then flag: `⚠️ java.frag — base64-encoded source, manual decode required for full logic extraction`.
+
+**Elements:**
+
+| Element | What to Capture |
+|---------|----------------|
+| Class/method names | Public methods implementing service logic |
+| IData handling | `IDataCursor` get/put operations — variables read and written |
+| Service invocations | `Service.doInvoke()` calls with fully qualified service names |
+| External calls | HTTP/DB/file operations, library usage |
+| SQL/queries | Tables, columns, conditions in natural language |
+| Transformations | Input→output field mapping logic |
+| Error handling | Try/catch patterns (brief unless business-critical) |
+
+### 3.7 REST Resource Handler Extraction
+
+**Source:** `restServices/_post/flow.xml` + `restServices/_post/node.ndf`
+
+REST resource handlers use HTTP method folder conventions (`_post`, `_get`, `_put`, `_delete`):
+
+| Element | What to Capture |
+|---------|----------------|
+| HTTP method | Folder name convention (`_post` = POST) |
+| allowedHTTPMethods | Array from NDF — all HTTP methods this handler accepts |
+| Framework delegation | INVOKE target (typically `frmkcommon.restUtil:*` or similar framework utility) |
+| MAPSET operations | Pre-INVOKE: request/response docType names, namespace declarations, operation routing |
+| MAPDELETE operations | Post-INVOKE: pipeline cleanup of internal variables |
+| Input signature | `$resourceID`, `$path`, `node` — standard REST resource handler fields |
+
+**Rule:** REST resource handlers often delegate to external framework services not present in the project. Flag these as GAP entries.
+
+### 3.8 Schema-Derived DocType Extraction
+
+**Source:** `schema/docTypeRef_tns_*/node.ndf`
+
+Schema-derived DocTypes have additional metadata beyond standard DocTypes:
+
+| Element | What to Capture |
+|---------|----------------|
+| schemaType | `xmlns` + `ncName` — the XSD type this DocType represents |
+| schemaDomain | Which schema domain this type belongs to (e.g., request vs response) |
+| originURI | Source XSD file path (for traceability) |
+| field_xmlns | Per-field XML namespace qualifiers |
+| field_content_type | `internalType`, `targetNames` array — type references |
+| form_qualified | Whether fields use qualified form (namespace-prefixed) |
+
+**Rule:** Extract schema metadata (schemaType, schemaDomain, originURI) in addition to standard DocType fields. This metadata is critical for understanding the XSD-to-DocType mapping.
+
+### 3.9 Multi-Package Orchestration Pattern
+
+When processing orchestration projects with sub-packages:
+
+| Component | Extraction Focus |
+|-----------|-----------------|
+| Orchestrator flow | Identify etape (step) service invocations and their sequence |
+| Etape services | Map each etape to its target sub-package service |
+| Sub-package services | Process independently with full RGV, noting cross-package entry points |
+| Cross-package invocations | Document as dependencies; flag missing sub-package services as GAPs if not provided |
+
+**Rule:** For each etape → sub-package invocation, verify the target service exists in the provided sub-package. If not, flag as GAP with the fully qualified service name.
+
+### 3.10 Supporting Artifact Extraction
+
+**Config/manifest/policy files — extract only:**
+- Package name, version, startup/shutdown services
+- API endpoint exposure and routing
+- Policy enforcement (throttling, authentication, authorization)
+- Deployment-relevant settings
+- **Do NOT** over-index on governance metadata unless runtime-impacting
+
+### 3.11 Trigger Extraction
+
+**Source:** `ns/<FolderStructure>/triggers/<TriggerName>/node.ndf`
+
+Triggers define publish/subscribe entry points. They fire when a subscribed document type or message is published to the IS messaging system.
+
+**Elements to extract:**
+
+| Element | What to Capture |
+|---------|----------------|
+| Trigger name | Node/service name from NDF or folder path |
+| Subscription type | Document type or messaging provider being subscribed to |
+| Filter expression | Conditions controlling when the trigger fires (field conditions, XPath) |
+| Called services | Fully qualified service names invoked when the trigger activates |
+| Concurrent limit | Max concurrent executions if specified |
+| Enabled/disabled | Runtime activation state (`is_stateful`, `enabled` flags) |
+| Suspend on error | Whether trigger suspends on service failure |
+
+**Rule:** For each trigger, document the subscription source, filter expression, and the full service call chain it initiates. Triggers represent asynchronous entry points — flag them clearly in Section 2 (Architecture) and Section 7 (Synthesis) as async integration paths.
+
+---
+
+## SECTION 4: TREE OF THOUGHT (Ambiguous Decisions)
+
+For decisions with multiple valid interpretations during artifact analysis, evaluate branches:
+
+```
+<thinking>
+Branch A: [Interpretation] — fits because [artifact evidence]. Risk: [risk].
+Branch B: [Interpretation] — fits because [artifact evidence]. Risk: [risk].
+Best path: [chosen] — Confidence: {HIGH/MEDIUM/LOW}
+</thinking>
+```
+
+**Common ambiguous decisions in webMethods specification:**
+- **NDF subtype** borderline → evaluate attributes; if unclear, document all attributes and flag
+- **Service role** — entry point vs utility vs adapter call → check ACL exposure + call patterns
+- **WSDL detection** — extensionless file → read content to confirm
+- **Field mapping direction** — source vs target unclear → trace through FLOW MAP steps
+- **Multi-package boundaries** — shared utility services → document cross-package dependencies
+
+---
+
+## SECTION 5: EVIDENCE-BOUND OUTPUTS
+
+Every extraction decision must cite its source:
+
+| Decision Type | Evidence Format |
+|---------------|----------------|
+| Element count | "Counted {N} `<INVOKE>` steps in `{path}/flow.xml`" |
+| Attribute value | "Extracted `svc_type=flow` from `{path}/node.ndf`" |
+| Classification | "Classified as docType — `rec_fields` present, no `svc_type` in `{path}/node.ndf`" |
+| Missing data | "⚠️ ASSUMPTION: {value} — Attribute `{attr}` not found in `{path}/node.ndf`" |
+| Gap entry | "GAP: Service `{name}` invoked in `{flow}` but not present in scanned project" |
+| Not derivable | "Not derivable from provided artifacts" |
+
+> If you cannot cite an artifact file and element, flag as assumption. Never present inferences as confirmed extractions.
+
+---
+
+## SECTION 6: FEW-SHOT EXAMPLES
+
+### Flow Step Documentation
+
+❌ **BAD — Vague:**
+```markdown
+Step 3: Invokes a service to look up data
+```
+
+✅ **GOOD — Complete:**
+```markdown
+| Step | Type | Name | Description | Properties | Previous | Next | Pipeline Impact |
+|------|------|------|-------------|------------|----------|------|----------------|
+| 3 | INVOKE | pub.partner:lookupPartner | Invokes partner lookup service using partnerId from pipeline | `service="pub.partner:lookupPartner"` | MAP step 2 | BRANCH step 4 (success) | Reads: `/request/partnerId`; Creates: `/partnerDetails/*` |
+```
+
+**Why:** Includes type, fully qualified service name, properties, connectivity, and pipeline effects.
+
+### NDF Classification
+
+❌ **BAD — Assumed from path:**
+```markdown
+node.ndf in services folder → must be a Flow Service
+```
+
+✅ **GOOD — Classified from content:**
+```markdown
+**Type:** DocType (NDF)
+**Evidence:** `rec_fields` element present with 8 field definitions; no `svc_type` attribute found.
+**Fields:** 8 (3 required, 5 optional)
+```
+
+**Why:** Classification is evidence-based, not assumed from folder structure.
+
+### Mapping Tables
+
+❌ **BAD — Summarized:**
+```markdown
+Key mappings (showing 3 of 15):
+| Source | Target |
+| /request/id | /response/id |
+| (12 more follow same pattern...) |
+```
+
+✅ **GOOD — Complete:**
+```markdown
+#### Field Mappings — pub.transform:mapOrderRequest
+
+| # | Source Field | Source Path | Target Field | Target Path | Type | Notes |
+|---|-------------|-------------|--------------|-------------|------|-------|
+| 1 | id | /request/id | orderId | /order/orderId | Direct | |
+| 2 | customerName | /request/customer/name | custName | /order/custName | Direct | |
+...
+| 15 | statusCode | /request/status | orderStatus | /order/orderStatus | Conditional | Needs verification |
+```
+
+**Why:** ALL 15 mappings documented individually. Never abbreviate or summarize.
+
+### ACL Analysis
+
+❌ **BAD — Generic:**
+```markdown
+ACL file defines permissions for services.
+```
+
+✅ **GOOD — Specific:**
+```markdown
+| Node | executeACL | readACL | writeACL | listACL | Runtime Impact |
+|------|-----------|---------|----------|---------|---------------|
+| pub.services:processOrder | Internal | Internal | Internal | Internal | Internal-only — not externally callable |
+| pub.services.pub:submitOrder | Anonymous | Anonymous | Internal | Anonymous | Externally callable — exposed endpoint |
+```
+
+**Why:** Per-node mapping with derived runtime impact.
+
+### Cross-Artifact Synthesis — Call Chain
+
+❌ **BAD — Flat list:**
+```markdown
+Services used: serviceA, serviceB, serviceC
+```
+
+✅ **GOOD — Ordered graph:**
+```markdown
+#### End-to-End Call Chain
+
+```mermaid
+graph TD
+    A[pub:receiveOrder<br/>Entry - SOAP endpoint] --> B[pub.transform:mapRequest<br/>MAP - Input transformation]
+    B --> C[pub.partner:lookupPartner<br/>INVOKE - Partner DB lookup]
+    C --> D{pub.routing:routeOrder<br/>BRANCH - Route by region}
+    D -->|EU| E[pub.eu:processEU<br/>INVOKE - EU processing]
+    D -->|US| F[pub.us:processUS<br/>INVOKE - US processing]
+    E --> G[pub.response:buildResponse<br/>MAP - Response transformation]
+    F --> G
+```
+
+**Why:** Shows execution order, branching, and service roles with fully qualified names.
+
+### Extensionless WSDL Detection
+
+❌ **BAD — Skipped:**
+```markdown
+File `wsdl0` has no recognized extension — skipping.
+```
+
+✅ **GOOD — Content-inspected:**
+```markdown
+**File:** `ws/visualiserPartenaire/wsdl0`
+**Detection:** Extensionless file. Content inspection: `<wsdl:definitions>` root element found.
+**Classified as:** WSDL
+**Target namespace:** `http://example.com/visualiserPartenaire`
+**Operations:** 3 (getPartenaire, updatePartenaire, deletePartenaire)
+```
+
+**Why:** Content-based classification catches extensionless artifacts that would otherwise be missed.
+
+### REST Resource Handler Documentation
+
+❌ **BAD — Generic:**
+```markdown
+REST service handler found in restServices/_post.
+```
+
+✅ **GOOD — Structured extraction:**
+```markdown
+### Flow: restServices._post (REST Resource Handler)
+
+**Source:** `ns/.../restServices/_post/flow.xml`
+**Pattern:** REST resource definition — uses `_post` folder convention for HTTP POST method handler.
+
+**Input MAP — 7 MAPSET operations:**
+
+| # | Target Field | Set Value | Purpose |
+|---|-------------|-----------|---------|
+| 1 | /documentTypeNameRequete | pkg.schema:requestDocType | Request schema docType reference |
+| 2 | /documentTypeNameReponse | pkg.schema:responseDocType | Response schema docType reference |
+| 3 | /serviceOperation | pkg.services.pub:mainService | Target operation service |
+...
+
+> ⚠️ GAP: `frmkcommon.restUtil:postXmlService` — external framework dependency, not in scanned project.
+```
+
+**Why:** Documents framework delegation, all MAPSET configurations, and flags external dependencies.
+
+### Schema-Derived DocType Documentation
+
+❌ **BAD — Fields only:**
+```markdown
+DocType BornesElecType has 2 fields: BorneInferieure, BorneSuperieure.
+```
+
+✅ **GOOD — With schema metadata:**
+```markdown
+**Type:** DocType (NDF) — Schema-derived
+**Evidence:** `rec_fields` present, `schemaType`, `schemaDomain`, no `svc_type`
+
+| # | Field Name | Type | Nillable | Namespace | Content Type Reference |
+|---|-----------|------|----------|-----------|----------------------|
+| 1 | tns:BorneInferieure | string | false | http://...v2 | typeStringMin1Max13 |
+| 2 | tns:BorneSuperieure | string | false | http://...v2 | typeStringMin1Max13 |
+
+**Schema Metadata:**
+| Property | Value |
+|----------|-------|
+| schemaType.xmlns | http://...v2 |
+| schemaType.ncName | BornesElecType |
+| schemaDomain | visualiserResponse |
+| originURI | file:///...xsd |
+```
+
+**Why:** Schema metadata is essential for understanding XSD-to-DocType lineage.
+
+### Custom ACL Documentation
+
+❌ **BAD — Standard assumption:**
+```markdown
+| Node | executeACL | Runtime Impact |
+| ws:service | PscWS | Externally callable |
+```
+
+✅ **GOOD — Custom ACL noted:**
+```markdown
+| Node | executeACL | readACL | Runtime Impact |
+| ws:service | **PscWS** | **PscWS** | **Custom ACL** — externally callable with PscWS role (project-specific, not Anonymous) |
+| restServices:_post | **PscWS** | **PscWS** | **Custom ACL** — REST endpoint requires PscWS role |
+```
+
+**Why:** Custom ACL names have different security implications than Anonymous. Always bold and note "Custom ACL".
+
+---
+
+## SECTION 7: ARCHITECTURE COMPLIANCE CHECKLIST
+
+### Pre-Certification Validation (Run before Phase 6)
+
+- [ ] All artifact files in project folder were scanned and classified
+- [ ] Extensionless files were content-inspected (not skipped)
+- [ ] All NDF files were subtype-classified from content (not assumed from path)
+- [ ] All flow steps documented with full properties and connectivity
+- [ ] All NDF signatures include ALL fields (not just "key" fields)
+- [ ] All mapping tables are complete (no summarization)
+- [ ] All ACL entries include runtime impact derivation
+- [ ] Cross-artifact synthesis includes call chain, contracts, mappings, dependencies
+- [ ] Every extraction cites source file and element
+- [ ] Missing artifacts explicitly stated as "Not present in provided artifacts"
+- [ ] Unresolvable references flagged as GAP entries
+- [ ] Duplicate structures (schemasWithoutPrefixes, .bak files) noted but not double-counted
+- [ ] Custom ACL names identified and runtime impact documented
+- [ ] Multi-package projects: all sub-packages processed, cross-package dependencies tracked
+- [ ] REST resource handlers: framework delegation documented, external services flagged as GAP
+- [ ] Schema-derived DocTypes: schema metadata (schemaType, schemaDomain, originURI) extracted
+- [ ] Micro-checkpoint counts match across all phases
+- [ ] webMethods documentation hyperlinks included for major concepts
+- [ ] `java.frag` files detected and noted as base64-encoded (not skipped or treated as `.java`)
+- [ ] MAP sub-operations (mapcopy/mapset/mapdelete/mapmove/mapinsert) documented per MAP step with source/target
+- [ ] MAP modes (input/output/standalone/invokeinput/invokeoutput) identified and documented for INVOKE steps
+- [ ] Transformer patterns (service call inside MAP step) identified and documented as embedded service calls
+- [ ] Trigger nodes in `ns/.../triggers/` folders scanned, classified, and extraction performed (§3.11)
+- [ ] `irtnode_property` base64-decoded for adapter services where `svc_subtype` is unclear or adapter details are sparse
+
+---
+
+## SECTION 8: WEBMETHODS DOCUMENTATION LINKS
+
+Use these as base URLs for hyperlinks in generated specifications:
+
+| Concept | Documentation URL Pattern |
+|---------|--------------------------|
+| Flow Services | `https://documentation.softwareag.com/webmethods/integration_server/` |
+| Flow Steps (MAP/INVOKE/BRANCH/etc.) | Link to relevant IS Built-In Services or Flow Service Development guide |
+| Pipeline | Integration Server pipeline concepts |
+| Document Types | IS document type reference |
+| Web Service Connectors | IS web service provider/consumer guide |
+| ACL/Security | IS security and ACL concepts |
+| Adapter Services | webMethods adapter documentation |
+| Java Services | IS Java service development guide |
+
+> **Note:** Exact URLs may vary by product version. Use the most relevant official Software AG / webMethods documentation page. If exact URL is not derivable, use the concept name as descriptive link text.
+
+---
+
+## QUICK REFERENCE
+
+| Need | Section |
+|------|---------|
+| RGV loop (DRY) | Section 1 |
+| Artifact classification | Section 2 |
+| Extraction patterns by type | Section 3 |
+| Tree of Thought | Section 4 |
+| Evidence-Bound outputs | Section 5 |
+| Few-shot examples | Section 6 |
+| Compliance checklist | Section 7 |
+| Documentation links | Section 8 |
+
+| Need | Reference |
+|------|-----------|
+| Main entry | `@WebMethods_Documentation.mdc` |
+| Phase workflow | `@00_Phase_Orchestration.mdc` |
+| Anti-patterns & rules | `@02_Mandatory_Stop_Points.mdc` |
+
+---
+
+**Version:** 1.0.0 | April 2026 | RGV Loop (DRY Source) + Artifact Extraction Patterns + LLM Gap Countermeasures
+
+---
+
+> 🧞‍♂️ R-GENIE Agent Framework by Cheppali Shaik Sohail
+> ✍️ Agent Author: MuleSoft PS EMEA | v1.0.0 | 2026-04-13
+
+> 🔧 Tuned by Sheroze Joomun via R-GENIE Agent Tuner | 2026-04-20

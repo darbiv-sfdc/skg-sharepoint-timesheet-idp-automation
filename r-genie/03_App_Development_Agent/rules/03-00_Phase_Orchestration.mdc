@@ -1,0 +1,206 @@
+---
+description: App Development Agent V2 - Phase Orchestration
+author: Cheppali Shaik Sohail
+version: 2.1.0
+alwaysApply: false
+tags: [phase, orchestration, workflow, checkpoints]
+appliesTo: [app-development, phase-management]
+whenToUse:
+  - "Managing phase transitions"
+  - "Tracking workflow state"
+priority: HIGH
+---
+
+# PHASE ORCHESTRATION & WORKFLOW STATE
+
+> **Core Principle**: Phases execute in strict sequence with validated checkpoints and user confirmation.
+
+---
+
+## WORKFLOW STATE MACHINE
+
+```mermaid
+stateDiagram-v2
+    [*] --> PHASE_0: Start
+    PHASE_0 --> PHASE_1: User Confirms
+    PHASE_1 --> PHASE_2: User Approves
+    PHASE_2 --> PHASE_3: User Approves
+    PHASE_3 --> PHASE_35: Build Success
+    PHASE_35 --> PHASE_4: Credentials Set
+    PHASE_4 --> PHASE_5: User Approves
+    PHASE_5 --> [*]: Delivered
+```
+
+---
+
+## PHASE DEFINITIONS
+
+| Phase | Name | Deliverable | Checkpoint |
+|-------|------|-------------|------------|
+| **0** | Requirements Analysis | Requirements summary | 🛑 Confirm understanding |
+| **1** | Design Analysis | Implementation plan | 🛑 Approve plan |
+| **2** | Application Generation | Generated project structure | 🛑 Approve structure |
+| **3** | Build Optimization | Successful Maven build | 🛑 Confirm build |
+| **3.5** | Secure Properties | Encrypted credentials | 🛑 Confirm credentials |
+| **4** | Deployment Preparation | Deployment config | 🛑 Approve deployment |
+| **5** | Final Validation | Quality certification | 🛑 Final delivery |
+
+---
+
+## STATE FILE FORMAT
+
+**Location**: `project/output_03_app/.app-dev-state.json`
+
+```json
+{
+  "projectName": "string",
+  "currentPhase": 0-5,
+  "phaseStatus": "IN_PROGRESS|CHECKPOINT|COMPLETED",
+  "timestamp": "ISO-8601",
+  "iterations": { "phase0": 0, "phase1": 0, ... }
+}
+```
+
+---
+
+## PHASE EXECUTION RULES
+
+### Before Each Phase
+1. Check state file for resume capability
+2. Verify previous phase completed
+3. Load phase-specific guidance from `@03-01_Guidance.mdc`
+
+### During Each Phase
+1. Execute phase work
+2. Track progress in state file
+3. Handle errors with retry logic
+
+### After Each Phase
+1. Update state file to CHECKPOINT
+2. Present summary to user
+3. **🛑 STOP AND WAIT** for user confirmation
+4. Only proceed on explicit approval
+
+---
+
+## PHASE-SPECIFIC GUIDANCE
+
+### Phase 0-1: Requirements & Design
+- Analyze input files (design docs, API specs, templates)
+- Detect project type: REST_API, SOAP_API, BATCH, INTEGRATION
+- Identify connectors, endpoints, transformations
+- Assess complexity: SIMPLE, MEDIUM, HIGH
+
+### Phase 2: Generation
+- Create project structure per `@03-01_Guidance.mdc`
+- Generate flows, global configs, error handlers
+- Reference `lib/docs/component-reference.md`
+
+### Phase 3: Build
+- Run `mvn clean package -DskipTests`
+- Fix errors per `lib/docs/error-patterns.md`
+- Max 5 fix iterations
+
+### Phase 3.5: Secure Properties
+- Identify sensitive values
+- Create encrypted properties
+- Generate environment configs (dev, sit, uat, prd)
+
+### Phase 4: Deployment
+- Configure CloudHub settings
+- Validate deployment readiness
+- Generate deployment instructions
+
+### Phase 5: Validation
+- Quality checklist verification
+- Documentation completeness
+- Final delivery
+
+---
+
+## CHECKPOINT PROTOCOL
+
+> **Enforcement**: See `@03-02_Mandatory_Stop_Points.mdc`
+
+At each checkpoint:
+```
+1. STOP all generative work
+2. PRESENT phase summary clearly
+3. WAIT for explicit user response
+4. ONLY THEN proceed based on input
+```
+
+---
+
+## RESUME CAPABILITY
+
+If state file exists:
+```
+🧞‍♂️ "I found an existing session for {projectName}!"
+    Current Phase: {currentPhase} ({phaseStatus})
+    
+    Options:
+    1. RESUME from current phase
+    2. RESTART from Phase 0
+    3. START NEW project
+```
+
+---
+
+## QUICK REFERENCE
+
+| Need | Reference |
+|------|-----------|
+| Main entry | `@03_App_Development.mdc` |
+| Patterns & components | `@03-01_Guidance.mdc` |
+| Stop points | `@03-02_Mandatory_Stop_Points.mdc` |
+
+---
+
+## `<thinking>` BLOCK (MANDATORY Before Every Phase Output)
+
+```
+<thinking>
+1. Key inputs received: [list data/answers for this phase]
+2. Decisions I am making: [choice, strategy, rationale]
+3. Evidence from source: [cite specific design doc facts or user answers]
+4. Risks/gaps identified: [what could go wrong, what is missing]
+5. Confidence: HIGH / MEDIUM / LOW [with justification]
+6. Production learnings applicable: [check 03_Production_Learnings.md]
+</thinking>
+```
+
+---
+
+## CONFIDENCE CALIBRATION
+
+| Confidence | When to Use | Action |
+|------------|------------|--------|
+| **HIGH** | Clear design doc, proven pattern | Proceed with recommendation |
+| **MEDIUM** | Partial info, reasonable inference | Flag assumptions, recommend user validation |
+| **LOW** | Vague input, multiple interpretations | **STOP** — request clarification before proceeding |
+
+---
+
+## RGV (READ-GENERATE-VERIFY) PATTERN
+
+Apply for phases that produce output:
+
+```
+1. READ: [source material] → Expected: [count/list]
+2. GENERATE: [output artifacts] → Expected: [count/list]
+3. VERIFY: "Processed {X}/{Y} items from source"
+4. FIX: Any gaps before presenting checkpoint to user
+```
+
+> If X ≠ Y, do NOT present the checkpoint. Fix the gap first.
+
+### Phase-Specific RGV
+
+| Phase | READ | GENERATE | VERIFY |
+|-------|------|----------|--------|
+| Phase 0 | Input files (design docs, specs) | Requirements summary | All inputs analyzed? |
+| Phase 1 | Design doc endpoints + flows | Implementation plan | All endpoints planned? |
+| Phase 2 | Approved plan + connectors | Flow XMLs, configs, pom.xml | All flows generated? All deps in pom? |
+| Phase 3 | Build output + errors | Fixed files | Build passes? |
+| Phase 4 | Deployment requirements | CloudHub config, env files | All environments covered? |

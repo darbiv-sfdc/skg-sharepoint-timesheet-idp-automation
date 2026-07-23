@@ -1,0 +1,213 @@
+---
+description: README Guidance - RISEN, Extraction, Mermaid Diagrams
+author: Cheppali Shaik Sohail
+version: 2.1.0
+alwaysApply: false
+tags: [guidance, risen, extraction, mermaid]
+appliesTo: [readme-generation]
+whenToUse:
+  - "Phase 2-4 README work"
+  - "Reference for patterns"
+priority: HIGH
+---
+
+# README GUIDANCE
+
+> **Reference** for extraction patterns and Mermaid diagrams
+
+---
+
+## 1. EXTRACTION PATTERNS
+
+### POM.XML Extraction
+| Element | Extract | Use In |
+|---------|---------|--------|
+| `<artifactId>` | Project name | Title, badges |
+| `<version>` | Version | Badge |
+| `<description>` | Purpose | Overview |
+| `<app.runtime>` | MuleSoft version | Tech stack |
+| `<dependencies>` | Connectors | Tech stack |
+
+### Badge Formatting
+<!-- Integrated: 2026-01-16 -->
+
+Use plain text metadata format. **DO NOT** use external SVG badges (shields.io URLs).
+
+```markdown
+**Version:** 1.0.1-SNAPSHOT | **MuleSoft Runtime:** 4.9.0+ | **Status:** Active | **Type:** Event-Driven
+```
+
+### Flow File Extraction
+| Type | Identifier | Document As |
+|------|------------|-------------|
+| API Flow | `http:listener` | API Endpoint |
+| Batch Flow | `batch:job` | Batch Process |
+| Scheduled | `scheduler` | Scheduled Job |
+| Sub-flow | `<sub-flow>` | Reusable Component |
+| Error Handler | `error-handler` | Error Handling |
+
+### Configuration Extraction
+| Pattern | Type | Document As |
+|---------|------|-------------|
+| `${property.name}` | Property | Environment variable |
+| `${secure::prop}` | Secure | Secure config (name only) |
+| `${env.VAR_NAME}` | Environment | Required env var |
+
+---
+
+## 2. MERMAID DIAGRAM STRATEGY
+
+> **Rule**: Mermaid ONLY - NO ASCII, NO PlantUML
+> **Placement**: Per template (see `templates/readme-template-guide.md`)
+
+### Required: 2 Diagrams Minimum
+
+| # | Diagram | Mermaid Type |
+|---|---------|--------------|
+| 1 | System/Integration | `flowchart TB` |
+| 2 | Flow/Process | `flowchart TD` |
+
+### Diagram 1: System Architecture
+```mermaid
+flowchart TB
+    subgraph "External"
+        Client["🌐 Client"]
+        SF["☁️ Salesforce"]
+    end
+    subgraph "MuleSoft"
+        API["API Gateway"]
+        Flow["Main Flow"]
+    end
+    Client --> API --> Flow --> SF
+```
+
+### Diagram 2: Flow Process
+```mermaid
+flowchart TD
+    Start["📨 Request"] --> Validate{Validate}
+    Validate -->|Valid| Process["Process"]
+    Validate -->|Invalid| Error["400 Error"]
+    Process --> Transform["Transform"]
+    Transform --> Response["✅ Response"]
+```
+
+### Extraction → Mermaid Mapping
+| Extracted | Mermaid Element |
+|-----------|------------------|
+| `http:listener` | `A[HTTP Request]` |
+| `scheduler` | `A["⏰ Trigger"]` |
+| `http:request` | Target subgraph node |
+| `db:select` | `["🗄️ Database"]` |
+| `sftp:read` | `["📁 SFTP"]` |
+| `error-handler` | `{Decision}` branch |
+
+---
+
+## 3. SECTION STRUCTURE
+
+> **Section Details**: See `templates/readme-template-guide.md`
+> **Inclusion Rules**: See `templates/readme-style.yaml`
+
+**Core Principle:**
+- Generate ONLY sections where `include: true` in template
+- Section order and content per template guide
+- Examples for formatting reference only
+
+---
+
+## 4. VIOLATIONS CHECKLIST
+
+| Violation | Severity |
+|-----------|----------|
+| ASCII diagrams | **CRITICAL** |
+| Missing Mermaid | **CRITICAL** |
+| External SVG badges | **CRITICAL** |
+| Unlisted sections | HIGH |
+| Verbose explanations | HIGH |
+| Wrong heading format | MEDIUM |
+| Missing attribution | MEDIUM |
+
+---
+
+## 5. PRE-OUTPUT CHECKLIST
+
+Before generating README:
+- [ ] Templates/examples read
+- [ ] Mermaid diagrams planned (NOT ASCII)
+- [ ] At least 2 diagrams included
+- [ ] Badges use plain text format (NO external SVG)
+- [ ] Sections match template
+- [ ] R-GENIE attribution present
+
+**If ANY check fails → DO NOT OUTPUT → Fix first**
+
+---
+
+## 6. EVIDENCE-BOUND OUTPUTS
+
+Every documentation decision must cite its source:
+
+| Decision Type | Evidence Format |
+|---------------|----------------|
+| Section inclusion | "Including {section} — Template specifies include: true" |
+| Project detail | "Version {X} — Extracted from pom.xml `<version>`" |
+| Flow description | "Endpoint {path} — Found in {flow-file} `http:listener`" |
+| Assumption | "⚠️ ASSUMPTION: {value} — Project file unclear on '{detail}'" |
+| Gap entry | "GAP-{N}: Unable to confirm {detail} (asked {X} times)" |
+
+> If you cannot cite a source, flag as assumption. Never present assumptions as confirmed facts.
+
+---
+
+## 7. TREE OF THOUGHT (Ambiguous Decisions)
+
+For decisions with multiple valid paths, evaluate branches before choosing:
+
+```
+<thinking>
+Branch A: [Option] — fits because [evidence]. Risk: [risk].
+Branch B: [Option] — fits because [evidence]. Risk: [risk].
+Best path: [chosen] — Confidence: {HIGH/MEDIUM/LOW}
+</thinking>
+```
+
+**Common ambiguous decisions in README generation:**
+- API project vs batch project template selection
+- System architecture vs flow process for primary diagram
+- Which optional sections to include when template says "conditional"
+- Level of technical detail in overview section
+
+---
+
+## 8. FEW-SHOT PATTERNS
+
+### Badge Format
+
+❌ BAD - External SVG badges:
+```markdown
+![Version](https://img.shields.io/badge/version-1.0.0-blue)
+```
+
+✅ GOOD - Plain text metadata:
+```markdown
+**Version:** 1.0.1-SNAPSHOT | **MuleSoft Runtime:** 4.9.0+ | **Status:** Active
+```
+
+**Why**: External SVG badges break in enterprise environments behind firewalls.
+
+### Diagram Format
+
+❌ BAD - ASCII art:
+```
++--------+    +--------+
+| Client | -> | Server |
++--------+    +--------+
+```
+
+✅ GOOD - Mermaid flowchart:
+```mermaid
+flowchart TB
+    Client["🌐 Client"] --> Server["🖥️ Server"]
+```
+
+**Why**: Mermaid renders natively in GitHub/GitLab. ASCII art breaks with different fonts.

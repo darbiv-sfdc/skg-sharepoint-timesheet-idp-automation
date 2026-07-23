@@ -1,0 +1,100 @@
+#%RAML 1.0 Library
+
+types:
+  BaseEntity:
+    type: object
+    properties:
+      id:
+        type: string
+        description: Unique identifier
+      createdAt:
+        type: datetime
+      updatedAt:
+        type: datetime
+
+  Customer:
+    type: BaseEntity
+    properties:
+      firstName:
+        type: string
+        minLength: 1
+        maxLength: 50
+      lastName:
+        type: string
+        minLength: 1
+        maxLength: 50
+      email:
+        type: string
+        pattern: ^[\w\.-]+@[\w\.-]+\.[a-zA-Z]{2,}$
+      phone?:
+        type: string
+      status:
+        type: string
+        enum: [active, inactive, pending]
+        default: pending
+      addresses?:
+        type: Address[]
+
+  CustomerCreate:
+    type: object
+    properties:
+      firstName:
+        type: string
+        minLength: 1
+        maxLength: 50
+      lastName:
+        type: string
+        minLength: 1
+        maxLength: 50
+      email:
+        type: string
+        pattern: ^[\w\.-]+@[\w\.-]+\.[a-zA-Z]{2,}$
+      phone?: string
+      addresses?: Address[]
+
+  CustomerUpdate:
+    type: object
+    properties:
+      firstName?:
+        type: string
+        minLength: 1
+        maxLength: 50
+      lastName?:
+        type: string
+        minLength: 1
+        maxLength: 50
+      email?:
+        type: string
+      phone?: string
+      status?:
+        type: string
+        enum: [active, inactive, pending]
+
+  Address:
+    type: object
+    properties:
+      type:
+        type: string
+        enum: [home, work, billing, shipping]
+      street: string
+      city: string
+      state?: string
+      postalCode: string
+      country:
+        type: string
+        minLength: 2
+        maxLength: 2
+
+  CustomerList:
+    type: object
+    properties:
+      data: Customer[]
+      pagination: Pagination
+
+  Pagination:
+    type: object
+    properties:
+      page: integer
+      pageSize: integer
+      totalPages: integer
+      totalItems: integer

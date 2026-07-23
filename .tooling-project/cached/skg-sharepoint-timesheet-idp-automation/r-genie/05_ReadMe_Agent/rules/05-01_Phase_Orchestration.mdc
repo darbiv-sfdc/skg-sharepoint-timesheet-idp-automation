@@ -1,0 +1,245 @@
+---
+description: Phase Orchestration & Workflow State Management
+author: Cheppali Shaik Sohail
+version: 2.1.0
+alwaysApply: false
+tags: [phase, orchestration, workflow, checkpoints]
+appliesTo: [readme-generation, workflow]
+whenToUse:
+  - "Managing phase transitions"
+  - "Tracking workflow state"
+priority: HIGH
+---
+
+# PHASE ORCHESTRATION V2
+
+> **Purpose**: Manage 6-phase workflow with user checkpoints
+> **Enforcement**: See `@05-03_Mandatory_Stop_Points.mdc`
+
+---
+
+## PHASE SPECIFICATION
+
+### **PHASE 0: Initialization** (1-2 min)
+
+**Tasks:**
+1. Detect project directory
+2. Confirm project location with user
+3. Create state file
+
+**Checkpoints:**
+- [ ] Project directory identified
+- [ ] User confirms scope
+- [ ] State file created
+
+**STOP MESSAGE:**
+```
+🛑 I need to confirm the project location.
+Path: [detected path]
+→ Please confirm before I scan.
+```
+
+---
+
+### **PHASE 1: Template Parsing** (2-3 min)
+
+**Tasks:**
+1. Read `templates/readme-style.yaml`
+2. Read `examples/` folder
+3. Select matching example for project type
+
+**Checkpoints:**
+- [ ] Templates loaded
+- [ ] Examples analyzed
+- [ ] Style rules extracted
+
+**Output:** Auto-proceed to Phase 2
+
+---
+
+### **PHASE 2: Discovery** (3-5 min)
+
+**Tasks:**
+1. Scan project structure
+2. Identify: `pom.xml`, flows, configs, RAML/OAS
+3. List all components
+
+**STOP MESSAGE:**
+```
+🛑 PHASE 2 - DISCOVERY COMPLETE
+
+Found:
+- [X] flow files
+- [Y] config files
+- [Z] specs
+
+→ Please validate before I extract.
+```
+
+---
+
+### **PHASE 3: Extraction** (5-10 min)
+
+**Tasks:**
+1. Parse `pom.xml` → name, version, runtime, dependencies
+2. Parse flows → endpoints, handlers, connectors
+3. Extract configs → properties, env vars
+
+**STOP MESSAGE:**
+```
+🛑 PHASE 3 - EXTRACTION COMPLETE
+
+Project: [name] v[version]
+Runtime: [MuleSoft version]
+Flows: [count]
+
+→ Please confirm accuracy.
+```
+
+---
+
+### **PHASE 4: Generation** (5-10 min)
+
+**Tasks (PROGRESSIVE):**
+1. Generate Header + Badges → Save
+2. Generate TOC → Save
+3. Generate Overview → Save
+4. Generate Architecture (2 Mermaid) → Save
+5. Generate API/Flows (iterative) → Save
+6. Generate Support + Footer → Save
+
+**Progress Display:**
+```
+🔄 PHASE 4 - GENERATION
+Progress: [===========>      ] 65%
+✅ Header, TOC, Overview, Architecture
+🔄 Currently: API Endpoints
+```
+
+**STOP MESSAGE:**
+```
+🛑 PHASE 4 - README GENERATED
+
+Sections: [count]
+Diagrams: [count] Mermaid
+
+→ Please review and approve.
+```
+
+---
+
+### **PHASE 5: Finalization** (2-3 min)
+
+**Tasks:**
+1. Run quality checklist (target 90+)
+2. Save to output directory
+3. Present for final approval
+
+**FINAL MESSAGE:**
+```
+✅ PHASE 5 COMPLETE
+
+📄 Output: project/output_05_readme/README.md
+📊 Quality Score: [XX]/100
+
+→ Reply "done" or request changes.
+```
+
+---
+
+## STATE FILE
+
+**Location:** `project/output_05_readme/.readme-workflow-state.json`
+
+```json
+{
+  "workflowId": "readme-gen-[timestamp]",
+  "projectName": "...",
+  "currentPhase": 0,
+  "phases": {
+    "phase0": { "status": "COMPLETED" },
+    "phase1": { "status": "IN_PROGRESS" }
+  },
+  "generatedFiles": { "readme": "..." }
+}
+```
+
+**On Activation:**
+1. Check for existing state file
+2. If exists → offer Resume / Start Fresh / Restart from phase
+3. If not → create new state, start Phase 0
+
+---
+
+## ERROR RECOVERY
+
+| Situation | Action |
+|-----------|--------|
+| Phase fails | Save state, inform user, offer: retry / restart phase / abort |
+| User disconnects | State preserved, resume on next activation |
+| Extraction fails | Stay in phase, report what failed, request manual input |
+| Restart from phase N | Load state, reset phases N+ to PENDING, continue |
+
+---
+
+## PHASE TRANSITIONS
+
+| From | To | Requires |
+|------|-----|----------|
+| 0 | 1 | User confirms project |
+| 1 | 2 | Templates loaded (auto) |
+| 2 | 3 | User validates components |
+| 3 | 4 | User confirms metadata |
+| 4 | 5 | User approves content |
+| 5 | Done | Final approval |
+
+**Rule:** NEVER advance without user confirmation (except Phase 1→2).
+
+---
+
+## `<thinking>` BLOCK (MANDATORY Before Every Phase Output)
+
+```
+<thinking>
+1. Key inputs received: [list data/answers for this phase]
+2. Decisions I am making: [section inclusion, diagram type, extraction strategy]
+3. Evidence from source: [cite specific pom.xml facts, flow details]
+4. Risks/gaps identified: [what could go wrong, what is missing]
+5. Confidence: HIGH / MEDIUM / LOW [with justification]
+6. Production learnings applicable: [check 05_Production_Learnings.md]
+</thinking>
+```
+
+---
+
+## CONFIDENCE CALIBRATION
+
+| Confidence | When to Use | Action |
+|------------|------------|--------|
+| **HIGH** | Clear project structure, standard MuleSoft patterns | Proceed with recommendation |
+| **MEDIUM** | Partial info, unusual project layout | Flag assumptions, recommend user validation |
+| **LOW** | Vague project, multiple interpretations | **STOP** — request clarification before proceeding |
+
+---
+
+## RGV (READ-GENERATE-VERIFY) PATTERN
+
+Apply for phases that produce output:
+
+```
+1. READ: [source material] → Expected: [count/list]
+2. GENERATE: [output artifacts] → Expected: [count/list]
+3. VERIFY: "Processed {X}/{Y} items from source"
+4. FIX: Any gaps before presenting checkpoint to user
+```
+
+> If X ≠ Y, do NOT present the checkpoint. Fix the gap first.
+
+### Phase-Specific RGV
+
+| Phase | READ | GENERATE | VERIFY |
+|-------|------|----------|--------|
+| Phase 2 | Project files (flows, configs) | Component list | All files discovered? |
+| Phase 3 | Discovered components | Metadata extraction | All components extracted? |
+| Phase 4 | Extracted metadata + templates | README sections + Mermaid | All template sections generated? ≥2 diagrams? |
+| Phase 5 | Generated README | Quality score | Score ≥ 90? |

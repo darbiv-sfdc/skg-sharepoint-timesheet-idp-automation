@@ -1,0 +1,457 @@
+---
+description: WSR Email Composer - Domain Guidance (patterns, decisions, quality, infer-first, llm-native)
+author: Cheppali Shaik Sohail
+version: 1.2.0
+alwaysApply: false
+tags: [guidance, wsr, patterns, few-shot, decision-matrix, quality, infer-first, jira-parsing, llm-native]
+appliesTo: [wsr-composition]
+whenToUse:
+  - "Reference during any phase for domain patterns"
+  - "Decision points between Green/Amber/Red"
+  - "Quality self-check before each of the 2 stop points"
+  - "Parsing Jira paste in Phase 1 batch reply"
+priority: HIGH
+watermark: "R-GENIE-CS150893"
+---
+
+# GUIDANCE V1.2
+
+> **Purpose**: Domain-specific patterns, few-shot examples, decision matrices, quality checklist, edge-case handling, infer-first / Jira-parsing patterns for WSR email composition.
+>
+> **v1.2 update**: All inference (reference reading, Jira paste parsing, gap aggregation) is LLM-native — no parser/inference scripts. The 9 retained scripts are limited to: 6 format-compliance validators, 1 HTML builder, 2 math calculators.
+
+---
+
+## 1. SALESFORCE GDC WSR DOMAIN OVERVIEW
+
+WSR emails are parsed by the **Collab App** at `gdc-project-collaboration@salesforce.com`. Non-compliant emails are silently discarded — users may not realize their submission failed. This agent eliminates that silent-failure risk through deterministic validation.
+
+**Downstream records auto-created on success** (ref: guidelines lines 131-136):
+- `GDC_DG_Project__c` — Project record
+- `GDC_DG_WSRep__c` — WSR record with all metrics
+- `EmailMessage` — Email record linked to project
+- Attachments linked to both
+
+Processing time: typically 1-2 minutes after send.
+
+---
+
+## 2. FEW-SHOT PATTERNS — Subject Line
+
+### ❌ BAD: Subject uses dashes
+```
+Subject: WSR - 15-Jan-25 - Customer Portal - Green - NA
+```
+**Why wrong:** Parser expects pipes (`|`) as delimiters. Result → silent rejection.
+
+### ✅ GOOD: Subject uses pipes + Status - prefix
+```
+Subject: WSR | 15-Jan-25 | Customer Portal | Status - Green | NA
+```
+
+### ❌ BAD: Missing `Status -` prefix
+```
+Subject: WSR | 15-Jan-25 | Customer Portal | Green | NA
+```
+**Why wrong:** Guidelines line 16 mandates `Status -` prefix verbatim.
+
+### ❌ BAD: Slash date
+```
+Subject: WSR | 15/01/25 | Customer Portal | Status - Green | NA
+```
+**Why wrong:** Date must be `dd-mmm-yy` (line 14).
+
+### ❌ BAD: Reply/Forward
+```
+Subject: Re: WSR | 15-Jan-25 | Customer Portal | Status - Green | NA
+```
+**Why wrong:** Any prefix other than `WSR | ...` breaks parsing (line 9-10). Always compose fresh.
+
+### ✅ GOOD: Real-world (Heineken reference)
+```
+Subject: WSR | 10-Apr-26 | MS - PS - Heineken Legacy Migration-Project | Status - GREEN | EMEA North
+```
+
+---
+
+## 3. FEW-SHOT PATTERNS — Summary of WSR
+
+### ❌ BAD: Flat bullets, no hierarchy
+```
+Summary of WSR:
+- Sprint 4 started
+- Working on Zycus
+- Working on Heilite
+- UAT support
+- Austria, Spain
+```
+**Why wrong:** No context grouping; leadership can't scan for workstream/team.
+
+### ✅ GOOD: Hierarchical (Heineken pattern)
+```
+Summary of WSR:
+- The team is currently in Sprint 4 and working on user stories pertaining to below OpCo's (Operating Countries)
+  - Build: New Caledonia Block 3 & 4, US, Zycus Non DBB, Heilite 1
+  - Design: New Caledonia (Block 3), CFIN, & Heilite(1&2)
+  - UAT Support: Austria, Spain, Zycus DBB
+  - Business Go live: New Zealand & New Caledonia
+- Team 1: Working on the build for Zycus Non-DBB, Helite 1 and supporting UAT for Zycus DBB
+- Team 2: Working on the build for New Caledonia Block 3&4 and supporting UAT for Spain
+- Team 3: Working on HUSA Medium & High priority stories and supporting UAT for Austria
+- Platform Team update:
+  Completed:
+    - Code Reviews & Pipelines: Successfully finished code reviews for multiple APIs...
+    - Assessments & Policies: Concluded the New Relic Assessment for MuleSoft...
+  In Progress:
+    - Active Development: Building the email notification functionality for the Audit API...
+    - Deployment & Troubleshooting: Preparing to support the early morning production deployment...
+```
+
+---
+
+## 4. FEW-SHOT PATTERNS — Ask & Attention
+
+### ❌ BAD: Vague attention, no owner/deadline
+```
+Attention: Some stories are blocked.
+```
+
+### ✅ GOOD: Specific, actionable (Heineken pattern)
+```
+Ask : None as of now
+
+Attention:
+- 36 Zycus Non DBB Stories are currently blocked because test data is unavailable.
+  This has been highlighted to the Heineken team and a call is scheduled for 13th April
+  to discuss the mitigation plan.
+```
+
+**Characteristics:** specific count, specific reason, specific owner (Heineken team), specific mitigation date.
+
+### ❌ BAD: Missing "None as of now"
+```
+Ask :
+
+Attention: ...
+```
+**Why wrong:** Blank or TBD triggers parser failure. Always use `None as of now` when empty.
+
+---
+
+## 5. FEW-SHOT PATTERNS — Delivery Metrics
+
+### ❌ BAD: American spelling + % on DpD
+```
+Capacity Utilization: 100%
+User Stories Delivered: 23%
+Defects Per Days: 0.02%
+```
+**Issues:**
+- `Utilization` → must be British `Utilisation` (guidelines line 82)
+- `User Stories Delivered` (plural) → must be exact `User Story Delivered` (line 92)
+- `0.02%` → must be decimal `0.02` with NO `%` (line 102)
+
+### ✅ GOOD: Correct names + formats
+```
+Delivery Metrics- Sprint 4
+
+Metric                     | Details                           | Comments
+Capacity Utilisation: 100% | Capacity: 102 vs Planned: 102     | Blocked stories assigned mid-sprint
+User Story Delivered: 23%  | Planned: 43 vs Dev Completed: 10  | Sprint 4 In Progress from 8-Apr to 21-Apr
+
+2026 Release
+Phase              | Days | Valid Defects | Defect Per Days (DpD)
+Build              | 579  | 0             | 0.00
+SIT                | 579  | 4             | 0.01
+UAT                | 579  | 5             | 0.01
+PROD               | 0    | 0             | 0.00
+Over All Delivery  | 579  | 9             | 0.02
+```
+
+---
+
+## 6. DECISION MATRIX — Status Color
+
+### Overall Delivery Status / GDC Project Status
+
+| Color | Criteria | Examples |
+|-------|----------|----------|
+| **Green** | On track; capacity ≥95%; zero critical blockers; zero significant risks; all milestones met | Sprint progressing as planned; no escalations needed |
+| **Amber** | 1-2 minor delays OR risks with mitigation plan OR blockers actively being unblocked; recoverable within sprint | Some stories blocked but team has workaround; slight schedule slip |
+| **Red** | Significant issues needing leadership intervention (resources, scope, exec decisions); cannot recover within sprint | Key resource unavailable; critical system down; scope change required |
+
+### Decision Tree
+```
+Are there blockers that cannot be resolved in-sprint? → YES → Red
+Are there risks / delays with mitigation plans? → YES → Amber
+Is everything on track with no open issues? → YES → Green
+```
+
+### Bidirectional Sycophancy Guard (v1.1)
+Agent MUST surface a mismatch in EITHER direction — once, then accept user override.
+
+**Direction A — Optimism overreach (status too green for the content):**
+> *"You selected Green, but your Attention section mentions 3 blockers. Is this intentional, or should status be Amber/Red?"*
+
+**Direction B — Pessimism inertia (status too red for the content) — NEW v1.1:**
+> *"Status remains Amber from the prior week, but the new blockers are cleared and Attention is empty. Should status move to Green?"*
+
+**Trigger logic:**
+```
+inferred_status = Green AND blockers_in_state(after_user_updates) > 0     → Direction A nudge
+inferred_status ∈ {Amber, Red} AND blockers_in_state(after_user_updates) == 0
+   AND prior_status ∈ {Amber, Red}                                         → Direction B nudge
+```
+
+**Show once.** Render in the SP1 batch (preview) AND re-check in Phase 2 after the batch reply integrates updates. Once the user confirms or overrides, do not re-prompt.
+
+---
+
+## 7. DECISION MATRIX — Summary Grouping
+
+| Project Organization | Preferred Summary Grouping |
+|---------------------|----------------------------|
+| Distinct workstreams (Build / Design / UAT / Go-live) | Workstream-first (like Heineken example) |
+| Teams own end-to-end scopes | Team-first (Team 1, Team 2, ...) |
+| Mixed (workstreams + cross-team) | Workstream-first with team breakdowns nested |
+| Single small team | Flat list grouped by theme (development, testing, deployment) |
+
+### Decision Tree
+```
+Does the project have named workstreams distinct from team boundaries? → YES → workstream-first
+Do teams span multiple workstreams? → YES → workstream-first with team nesting
+Otherwise → team-first or flat-themed
+```
+
+---
+
+## 8. DECISION MATRIX — Ask vs Attention
+
+| Item | Classification |
+|------|----------------|
+| "We need a decision from exec on X by Friday" | **Ask** (has owner + deadline) |
+| "We need 2 more devs for sprint Y" | **Ask** (resource request) |
+| "Blocker on test data — team notified, call scheduled" | **Attention** (FYI for leadership awareness) |
+| "Risk of schedule slip due to external dep" | **Attention** (transparency) |
+| "Leadership should escalate with Client X" | **Ask** (escalation request) |
+| "Production incident resolved" | Neither — belongs in Summary/Completed |
+
+### Rule of Thumb
+- **Ask** = explicit request for leadership action (decision/resource/escalation), with owner + deadline
+- **Attention** = awareness item; leadership should know but no action required from them
+
+### Critical Blockers → BOTH
+If a blocker is critical, put a brief note in Summary + detailed info in Attention.
+
+---
+
+## 9. QUALITY CHECKLIST (Self-Check Before Each of the 2 Stop Points)
+
+Agent MUST verify before presenting either checkpoint (SP1 batch or SP2 final draft):
+
+### Content Quality
+- [ ] Every bullet traces to a user input (no invention)?
+- [ ] No `TBD`, `Project Update:`, or blank placeholders?
+- [ ] Gaps marked with `⚠️ MISSING — please provide {detail}`?
+- [ ] Language is professional and leadership-appropriate?
+- [ ] Summary bullets are concise (1-2 lines each preferred)?
+
+### Format Compliance
+- [ ] Subject regex `^WSR \| \d{2}-[A-Z][a-z]{2}-\d{2} \| .+ \| Status - (Green\|Amber\|Red) \| .+$`?
+- [ ] Date format `dd-mmm-yy` (e.g., `10-Apr-26`)?
+- [ ] `Status - Green/Amber/Red` prefix present?
+- [ ] British `Utilisation` (NOT `Utilization`)?
+- [ ] `User Story Delivered` (exact phrase, NOT `Stories`)?
+- [ ] `Defects Per Days` decimal, no `%`?
+- [ ] All 6 body sections in exact order?
+- [ ] `Ask :` shows `None as of now` (not blank) when empty?
+- [ ] Attention items have owner + deadline where applicable?
+- [ ] Recipients include `gdc-project-collaboration@salesforce.com`?
+- [ ] Send-fresh reminder shown (no Reply/Forward)?
+
+### Metric Math
+- [ ] `Capacity Utilisation = (actual / planned) * 100` verified?
+- [ ] `User Story Delivered = (dev_completed / planned) * 100` verified?
+- [ ] `DpD = defects / days` as decimal verified?
+- [ ] `Over All Delivery` row = sum of phase rows?
+
+---
+
+## 10. EDGE CASES & HANDLING
+
+| # | Edge Case | Handling |
+|---|-----------|----------|
+| 1 | Partial metrics (no UAT defects) | Allow `0` values; if user says "not applicable" → `N/A` in comments column, keep row structure |
+| 2 | Pre-sprint planning (no sprint yet) | Replace Sprint table with "Pre-sprint Planning" note; metrics become `⚠️ NOT YET APPLICABLE` |
+| 3 | Special characters in project name (`&`, `<`, etc.) | Warn user; offer sanitized version (`&` → `and`); guidelines forbid special chars in subject |
+| 4 | User requests reply/forward | Refuse per Constitutional Principle #2; explain parser rejects RE:/FW: |
+| 5 | Prior email from different project | Detect project-name mismatch; ask user: *"Prior email references X, current project is Y — proceed anyway for style only?"* |
+| 6 | Status contradicts blockers | Sycophancy guard: surface mismatch and ask user to reconsider |
+| 7 | Date in future | Confirm: *"WSRs are retrospective — did you mean {last Friday}? Current date is {today}"* |
+| 8 | Capacity math mismatch (82/102 but user wrote 95%) | `metrics_calculator.py` flags; ask user to reconcile |
+| 9 | Screenshot mentioned but not described | Ask: *"I don't read image data. Please describe the numeric values or key text from the screenshot."* |
+| 10 | Very long Summary (50+ bullets) | Suggest: *"This summary has {N} bullets. Consider consolidating by theme or moving details to an appendix for leadership readability."* |
+| 11 | User pastes entire prior email verbatim as current Summary | Caution: *"This looks identical to your prior email. This week's unique updates may be missing — please verify."* |
+| 12 | User provides Region not in common list | Accept any non-empty string but validate no special chars breaking subject regex |
+| 13 | Multi-project WSR (user bundles 2 projects) | Decline: *"Collab App expects one project per WSR. Compose separate emails for each project."* |
+| 14 | User asks to omit a required section | Refuse per Constitutional Principle #4: *"All 6 sections are required by the parser. If content is missing, I'll mark it as ⚠️ MISSING."* |
+
+---
+
+## 11. STYLE & TONE GUIDANCE
+
+**Audience:** Salesforce GDC Leaders — senior delivery/engineering leadership.
+
+**Tone:**
+- Professional but not stiff
+- Direct and specific — leaders want facts, not padding
+- Evidence-bound — every claim backed by a number or named event
+- Short sentences; scan-friendly bullets
+
+**Vocabulary:**
+- Prefer active voice: *"Team completed X"* not *"X was completed by the team"*
+- Use concrete counts: *"36 stories blocked"* not *"several stories blocked"*
+- Name stakeholders when asking or attention-flagging
+
+**Sign-off style:** Brief — `Thanks, {name}` is standard (ref: Heineken example).
+
+---
+
+## 12. COMMON MISTAKES → FIX TABLE
+
+| Mistake | Quick Fix | Caught by (v1.2) |
+|---------|-----------|------------------|
+| `Capacity Utilization` | → `Capacity Utilisation` | `british_spelling_linter.py` (auto-fix) |
+| `User Stories Delivered` | → `User Story Delivered` | `metric_name_validator.py` |
+| `DpD: 2.5%` | → `DpD: 2.5` (no %) | `numeric_format_validator.py` |
+| `Subject: WSR - Portal - 15-Jan-25` | → `WSR \| 15-Jan-25 \| Portal \| Status - Green \| NA` | `subject_line_validator.py` |
+| `Status: Green` in subject | → `Status - Green` | `status_format_validator.py` |
+| `15/01/25` | → `15-Jan-25` | LLM `<thinking>` self-check |
+| `Project Update:` header | → `Summary of WSR:` | LLM `<thinking>` self-check |
+| `Summary: TBD` | → `Summary of WSR: {actual content OR ⚠️ MISSING}` | `body_structure_validator.py` |
+| Blank `Ask:` | → `Ask : None as of now` | `body_structure_validator.py` |
+| Reply/Forward subject `Re:/Fwd:` | → Compose fresh email | LLM `<thinking>` self-check |
+| TO missing `gdc-project-collaboration@salesforce.com` | → Add it as TO | LLM `<thinking>` self-check |
+| Sections out of order | → Re-order to spec | LLM `<thinking>` self-check |
+
+---
+
+---
+
+## 13. INFER-FIRST PATTERNS (v1.1)
+
+The simplified flow's central rule: parse before asking, never re-ask data already inferred.
+
+### Pattern A — Mode A (Reference) Workflow
+```
+USER: "Compose a WSR. Here's last week's email — {.eml or pasted text}"
+AGENT (silent Phase 0):
+  → invokes prior_email_parser.py
+  → extracts: project name, region, sender, CC, status, all 6 sections, metrics, days
+  → auto-injects today's date
+  → builds draft state
+AGENT (Phase 1 single batch):
+  → renders all 6 inferred sections with [from reference] markers
+  → asks: leaves, jira paste, free-form updates
+  → runs bidirectional sycophancy guard preview
+USER: replies once with everything
+AGENT (Phase 2):
+  → integrates updates, computes days+metrics, runs validators silently
+  → presents final draft + validation summary + gap report
+USER: "approved" → bundle written, session ends
+```
+
+### Pattern B — Mode B (Fresh) Workflow
+```
+USER: "Compose a fresh WSR for Project Alpha"
+AGENT (silent Phase 0):
+  → no parser invocation
+  → auto-injects today's date
+  → loads team-roster.yaml
+  → builds skeletal draft state
+AGENT (Phase 1 single batch):
+  → asks: project name (if not given), region, sender, status colors,
+          summary bullets, completed, in progress, ask, attention,
+          leaves, jira paste / metric values
+USER: replies once
+AGENT (Phase 2): same as Pattern A
+```
+
+### Pattern C — Mode A with Screenshot Description
+```
+USER: "Compose WSR. I can't paste the prior email but here's a screenshot
+       showing: Project = Heineken Migration, Status Green, Capacity 102/102, ..."
+AGENT (silent Phase 0):
+  → no .eml available; treats user's description as a structured reference
+  → extracts what's described; marks rest as needing batch input
+AGENT (Phase 1): asks for missing fields + leaves + jira + free-form
+... continues as Pattern A
+```
+
+### Anti-Pattern — Re-Asking Inferred Data
+```
+❌ AGENT: "What's your project name?"  (when reference provided it)
+✅ AGENT: "Project: MS - PS - Heineken Legacy Migration-Project [from reference]"
+
+❌ AGENT: "What date is this WSR for?"
+✅ AGENT: "Date: 22-Apr-26 [auto: today's date]"
+
+❌ AGENT: per-section approval — "Is the Summary OK? ... now Completed? ... now In Progress?"
+✅ AGENT: single batch with all 6 sections rendered at once
+```
+
+---
+
+## 14. JIRA PASTE PARSING PATTERNS (v1.1)
+
+The Phase 1 batch consolidates 4 metric prompts into one Jira-paste / description prompt. `metrics_inference.py` recognizes:
+
+### Free-text patterns
+| User wrote | Inferred |
+|------------|----------|
+| `Capacity 102 / 102` | `capacity_actual=102, capacity_planned=102` |
+| `capacity 95%` | `capacity_percent=95` (actual/planned LEFT for follow-up if needed) |
+| `43 stories planned, 10 dev completed` | `story_planned=43, story_completed=10` |
+| `Build 4 defects, SIT 2 defects, UAT 1 defect, PROD 0` | per-phase defect counts |
+| `0 valid defects this sprint` | all-phase defects = 0 |
+
+### Tabular paste patterns
+```
+Phase  | Days | Defects | DpD
+Build  | 646  | 0       | 0.00
+SIT    | 646  | 4       | 0.01
+UAT    | 646  | 5       | 0.01
+PROD   | 0    | 0       | 0.00
+```
+→ Per-phase days/defects/DpD parsed directly.
+
+### Jira CSV / list patterns
+```
+ABC-123  Done    Story 5pt
+ABC-124  Done    Story 3pt
+ABC-125  In Progress  Story 8pt
+```
+→ Counts rows by status: `dev_completed = sum(status == "Done")`, etc.
+
+### Confidence levels
+- **HIGH** — explicit numbers (`Capacity 102 / 102`)
+- **MEDIUM** — percentage only (`capacity 95%`) — agent will ask follow-up if planned/actual needed
+- **LOW** — vague qualitative (`went well`) — falls back to `⚠️ MISSING — please provide capacity actual / planned`
+
+---
+
+## QUICK REFERENCE
+
+| Need | Reference |
+|------|-----------|
+| Main entry | `@WSR_Email_Composer_Agent.mdc` |
+| Template config + inference policy + days/metrics | `@00_Template_Configuration.mdc` |
+| Phase workflow (3 phases, 2 stops) | `@01_Phase_Orchestration.mdc` |
+| Stop points (2) + constitutional principles | `@03_Mandatory_Stop_Points.mdc` |
+| Scripts pillar (parsers, calculators, builders) | `lib/docs/scripts_README.md` |
+
+---
+
+> 🧞‍♂️ R-GENIE Agent Framework by Cheppali Shaik Sohail
+> ✍️ Agent Author: Cheppali Shaik Sohail | v1.0.0 | 2026-04-17
+> 🔧 Tuned by sohail via R-GENIE Agent Tuner | v1.1.0 → v1.2.0 | 2026-04-22

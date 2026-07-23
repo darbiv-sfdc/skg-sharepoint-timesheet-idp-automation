@@ -1,0 +1,395 @@
+---
+description: Salesforce Solution Architect Agent - Guidance, Patterns, SFDC Reference
+author: Cheppali Shaik Sohail
+version: 1.0.0
+alwaysApply: false
+tags: [guidance, patterns, salesforce, integration, decision-matrices]
+appliesTo: [salesforce-solution-architecture, sfdc-integration-design]
+priority: HIGH
+---
+
+# SALESFORCE SOLUTION ARCHITECT — GUIDANCE
+
+> **Reference** for SFDC + integration domain patterns, decision matrices, few-shot examples, Mermaid + Lucidchart standards, Pattern #20 v2 Five Mechanics, and quality checklist.
+> **Loaded by**: every generation phase as needed.
+
+---
+
+## DOMAIN COVERAGE
+
+This agent operates across the Salesforce + integration ecosystem:
+
+| Layer | Examples |
+|-------|----------|
+| **SFDC Industry Clouds** | Insurance Cloud (FSC Insurance), Financial Services Cloud, Health Cloud, Service Cloud, Sales Cloud, Loyalty Cloud, Marketing Cloud, Revenue Cloud, Manufacturing Cloud, Energy & Utilities Cloud |
+| **SFDC Platform** | Lightning Platform, Apex, LWC (referenced only), Flow (referenced only), Platform Events, Change Data Capture (CDC), Pub-Sub API, Connect REST API, Streaming API, OmniStudio, Heroku |
+| **Integration Partners** | Guidewire (ClaimsCenter / PolicyCenter / BillingCenter), MuleSoft Anypoint, SAP (S/4HANA / ECC / Hybris), Boomi, Workday, ServiceNow, Genesys, Twilio, AWS / Azure / GCP messaging (SQS / EventBridge / Service Bus / Pub/Sub) |
+| **Patterns** | Event-driven, Async REST, Sync REST, Message bus, Saga / Choreography / Orchestration, CQRS, Outbox, Pub-Sub, Webhook, Bulk batch |
+| **Compliance** | HIPAA, PCI-DSS, GDPR, SOX, FedRAMP, NAIC (insurance), state insurance commissions |
+
+---
+
+## DECISION MATRICES (Embedded in Phase 4)
+
+### Matrix 1: Sync REST vs Async Platform Event vs Change Data Capture
+
+| Criterion | Sync REST | Async Platform Event | Change Data Capture (CDC) |
+|-----------|-----------|---------------------|---------------------------|
+| **Volume tolerance** | Low (≤100 TPS sustained) | High (10K+ events/sec) | High (record-change driven) |
+| **Latency requirement** | Real-time (<1s round trip) | Near-real-time (1-5s) | Near-real-time (1-5s) |
+| **Payload size** | Small-medium (<6MB) | Small (≤1MB per event) | Small (record delta) |
+| **Receiver availability** | Must be up | Subscriber catches up | Subscriber catches up |
+| **Replay/recovery** | Requires app-level retry | Built-in (replay ID, 72h) | Built-in (replay ID, 72h) |
+| **Order guarantee** | Per-call | No (use sequencing field) | Per-record |
+| **Best for** | Lookups, real-time queries, low-volume CRUD | High-fanout notifications, bulk async work | Replicating SFDC record changes outbound |
+| **Anti-pattern** | High-volume bulk loads, fire-and-forget | Single-consumer point-to-point | Custom logic that mutates CDC record |
+
+### Matrix 2: Salesforce-Native vs Middleware (Flow/Apex vs MuleSoft/Boomi)
+
+| Criterion | SFDC-Native (Flow + Apex) | Middleware (MuleSoft / Boomi / etc.) |
+|-----------|---------------------------|--------------------------------------|
+| **# of external systems** | 1-2 | 3+ |
+| **Transformation complexity** | Simple field-level | Complex (schema mapping, lookups) |
+| **Governance** | Within SFDC change set / DevOps Center | Enterprise integration governance |
+| **Reusability across orgs** | Per-org code | Cross-org / cross-business-unit |
+| **Operational team** | SFDC dev/admin | Dedicated integration team |
+| **Best for** | Single SFDC ↔ external sync, simple mapping | Hub-and-spoke, complex orchestration |
+| **Anti-pattern** | Hub-and-spoke for >2 systems in Apex | Trivial 1-to-1 sync that Flow handles natively |
+
+### Matrix 3: Industry Cloud Object vs Custom Object vs vlocity FSC
+
+| Criterion | Industry Cloud (FSC, etc.) | Custom Object | vlocity / OmniStudio |
+|-----------|---------------------------|---------------|----------------------|
+| **Use case fit** | Industry-standard entity exists (Policy, Claim, Patient) | Truly unique business entity | Configurable industry process |
+| **License** | Industry Cloud SKU | Sales/Service base | Industry Cloud + OmniStudio |
+| **Out-of-box features** | Yes (relationships, page layouts, reports) | None — build everything | Yes (DataPacks, OmniScripts) |
+| **Future roadmap fit** | Aligned with SFDC release cadence | Independent (you maintain) | Aligned with industry packages |
+| **Customization cost** | Lower (configure) | Higher (build from zero) | Lowest (configure DataPack) |
+| **Best for** | Standard industry entities | Truly differentiated business objects | Industry vertical processes |
+| **Anti-pattern** | Custom Account__c when FSC FinancialAccount fits | Forcing FSC object into wrong-shaped use case | OmniStudio for trivial Flow logic |
+
+> Add scenario-specific matrices in Phase 4/5 as decisions arise. Matrix discipline: ≥3 columns, ≥4 rows, "Best for" + "Anti-pattern" rows mandatory.
+
+---
+
+## FEW-SHOT EXAMPLES (Top Mistakes — ⚠️ DEFAULT inferred from goal)
+
+### Pattern 1: Sync vs Async for High-Volume Use Cases
+
+❌ **BAD** (Top Mistake #1 — sync REST for 50K+/day):
+> "We'll use a synchronous REST callout from Apex on Claim insert to push the claim to Guidewire ClaimsCenter."
+
+**Why wrong**: 50K claims/day = ~2.9 TPS sustained, ~14.5 TPS peak. Sync REST in Apex blocks the transaction, hits 10s callout limit, fails on Guidewire downtime, blocks user UI. Will fail under burst.
+
+✅ **GOOD**:
+> "Publish a `Claim_Created__e` Platform Event on Claim insert; a MuleSoft subscriber consumes the event, transforms to Guidewire ClaimSpec, and POSTs to ClaimsCenter with retry + dead-letter via SQS. Trade-off table below shows why Platform Event over CDC: Platform Event allows enriched payload at publish time; CDC fires on every record mutation (noisier)."
+
+**Why right**: Async decouples SFDC transaction from Guidewire availability; replay covers 72h outage; trade-off table cites the alternative considered.
+
+### Pattern 2: Industry Cloud Objects vs Stock Objects
+
+❌ **BAD** (Top Mistake #2 — using Case for claims):
+> "Claims will be modeled as Case records with custom fields for ClaimNumber__c, PolicyHolder__c, etc."
+
+**Why wrong**: Case is generic. FSC Insurance has `Claim`, `ClaimParticipant`, `ClaimCoverage`, `InsurancePolicy` objects with built-in relationships, regulatory reporting templates, and Industry Cloud roadmap alignment. Custom-fielding Case re-invents the wheel and breaks at scale.
+
+✅ **GOOD**:
+> "Use FSC Insurance objects: `Claim` (header), `ClaimParticipant` (claimants/beneficiaries), `ClaimCoverage` (coverage applied), linked to `InsurancePolicy`. Custom object only for Guidewire-specific extensions (e.g., `Guidewire_Reserve__c`) where no FSC field exists. Trade-off table compares FSC vs custom in Section 4."
+
+**Why right**: Leverages out-of-box FSC features; aligns with vendor roadmap; custom objects only where genuinely needed.
+
+### Pattern 3: PII/PHI Encryption in Regulated Industries
+
+❌ **BAD** (Top Mistake #3 — skipping encryption mention):
+> "Standard SFDC field-level security and profile permissions will protect claimant data."
+
+**Why wrong**: HIPAA/PHI requires field-level encryption at rest (Shield Platform Encryption), not just access control. Profile permissions don't encrypt — they only restrict UI/API visibility. Auditors will flag.
+
+✅ **GOOD**:
+> "Apply Shield Platform Encryption to PHI fields: `Claim.Diagnosis__c`, `ClaimParticipant.SSN__c`, `ClaimParticipant.DateOfBirth__c`. Field Audit Trail enabled on all PHI fields (HIPAA §164.312(b)). Sharing model: OWD = Private on `Claim`; sharing rules grant claim handlers access via role hierarchy. SOC 2 + HIPAA BAA in place with Salesforce. See compliance posture table in Section 8."
+
+**Why right**: Names specific Shield encryption + Field Audit Trail + sharing model + cites HIPAA paragraph + references compliance posture.
+
+---
+
+## EVIDENCE-BOUND OUTPUTS
+
+Every decision must cite its source. Use these formats:
+
+| Decision Type | Evidence Format |
+|---------------|----------------|
+| Decision from user input | "Per scenario: '{quote from intake}'" |
+| Decision from RFP/BRD | "Per RFP §{N}: '{quote}'" |
+| Decision from discovery Q&A | "Per Phase 0 Q&A: User confirmed '{answer}'" |
+| ⚠️ ASSUMPTION | "⚠️ ASSUMPTION: {value} — Inferred because {reason}; user did not specify {gap}" |
+| GAP | "GAP: Unable to confirm {detail} after {N} discovery attempts" |
+| Industry default | "Industry default: {value} (typical for {industry/scale})" |
+
+---
+
+## NUMERIC VERIFICATION (Gap #13 — MANDATORY for §9 Scalability)
+
+Every numeric claim in Section 9 MUST show explicit arithmetic. Format:
+
+```
+Claim:        {result, e.g., "2.9 TPS sustained, 14.5 TPS peak"}
+Inputs:       {daily volume, burst factor, time window} — source: {scenario / RFP §X}
+Arithmetic:   {full calculation, e.g., "50,000 ÷ 86,400 sec = 0.579 TPS sustained;
+                                          × 5x burst factor = 2.89 TPS peak"}
+Sanity check: {compare to SFDC limits, e.g., "Apex async: 250K/day per user license;
+                                              Platform Event: 250K events/24h base;
+                                              well within limits"}
+```
+
+The validation script (`validate-solution-doc.js`) flags numeric tokens (TPS, /day, GB, ms) without an arithmetic block within ±10 lines.
+
+---
+
+## MERMAID DIAGRAM STANDARDS (mandatory for Section 3)
+
+> **Canonical source**: `r-genie/Agent_Builder/lib/docs/mermaid-diagram-best-practices.md`. The 10 non-negotiable rules below are the agent-facing summary; full rationale + edge cases in the canonical doc.
+
+### The 10 Rules
+
+1. **`<br/>` for line breaks in node/edge labels** — NEVER `\n` (renders literal `\n` in GitHub/Cursor/Windsurf)
+2. **Init directive REQUIRED** for `flowchart` and `graph` — start every block with:
+   ```
+   %%{ init: { 'flowchart': { 'curve': 'linear' } } }%%
+   ```
+   Default curved bezier edges overlap in dense diagrams. Linear is the only safe default.
+3. **stateDiagram-v2 does NOT need init directive** — different rendering pipeline
+4. **Declare nodes upstream → downstream** (left-to-right or top-to-bottom in execution order)
+5. **Group connections logically** — primary path first, then branches; blank line between groups
+6. **Arrow semantics consistent**: solid `-->` for forward progression; dashed `-.->` for back-edges/retries/async returns only
+7. **Edge labels short** — action / protocol / event names; no full sentences; no redundant labels on fan-out
+8. **All `style` declarations at the END** of the diagram, in node-declaration order — never interleaved
+9. **No dangling nodes** — every declared node must have at least one connection
+10. **Pre-emit self-check (12 items)** runs in `@03_Mandatory_Stop_Points.mdc` SELF-CHECK before any Mermaid block ships
+
+### Section 3 (Architecture Diagram) Specifics
+
+For the Salesforce Architecture Diagram:
+- **Diagram type**: `flowchart TB` (top-bottom for system layers) OR `graph LR` (left-right for data flow)
+- **Suggested layers**: External Systems (top) → Integration Layer (middle) → SFDC Clouds (bottom)
+- **Show explicitly**: integration platform (MuleSoft/Boomi/etc.) as named middle node; named SFDC clouds (FSC, Service Cloud); external partners (Guidewire, SAP); event bus / queue components
+- **Style classes**: differentiate SFDC (blue), middleware (orange), external (gray) — declared at end
+
+### Skeleton
+
+```
+%%{ init: { 'flowchart': { 'curve': 'linear' } } }%%
+flowchart TB
+    GW[Guidewire<br/>ClaimsCenter]
+    MS[MuleSoft<br/>Anypoint]
+    SQS[AWS SQS<br/>Dead-Letter]
+    PE[(Platform Event<br/>Claim_Created__e)]
+    FSC[FSC Insurance<br/>Claim Object]
+    SC[Service Cloud<br/>Case Routing]
+
+    FSC --> PE
+    PE --> MS
+    MS -->|POST ClaimSpec| GW
+    MS -.->|on failure| SQS
+    GW -->|status update| MS
+    MS --> SC
+
+    style FSC fill:#1798c1,color:#fff
+    style SC fill:#1798c1,color:#fff
+    style MS fill:#ff6b35,color:#fff
+    style GW fill:#666,color:#fff
+    style SQS fill:#666,color:#fff
+    style PE fill:#9c27b0,color:#fff
+```
+
+---
+
+## LUCIDCHART INSTRUCTION CONVENTIONS (mandatory for Section 5)
+
+Section 5 uses **text-based Lucidchart instructions**, NOT Mermaid. See `@00_Template_Configuration.mdc` Two Special Diagram Conventions for rationale.
+
+### Standard Instruction Format
+
+```markdown
+## 5. Data Model Diagram (Lucidchart Instructions)
+
+**Lucidchart setup:**
+1. Create new Lucidchart document → Template: "Entity Relationship (ERD)"
+2. Page setup: 11x17 landscape, 1-inch margins
+3. Color legend (top-left text box):
+   - 🟦 FSC Industry Cloud objects (Salesforce blue #1798C1)
+   - 🟧 Custom objects (orange #FF6B35)
+   - ⬜ External system entities (gray #666)
+
+**Entity placement (top-down by domain):**
+4. Top zone — POLICY domain:
+   - Add `InsurancePolicy` entity (FSC, blue)
+     - Fields: `PolicyNumber` (External ID), `EffectiveDate`, `Status`
+   - Add `PolicyParticipant` entity (FSC, blue)
+     - Fields: `Role`, `Percentage`
+5. Middle zone — CLAIM domain:
+   - Add `Claim` entity (FSC, blue)
+     - Fields: `ClaimNumber` (External ID), `LossDate`, `Status`, `ReserveAmount`
+   - Add `Guidewire_ClaimMirror__c` entity (Custom, orange)
+     - Fields: `Guidewire_Claim_ID__c` (External ID), `LastSyncedAt__c`
+{...continue for all entities}
+
+**Relationships (after entities placed):**
+N. `InsurancePolicy` 1—* `Claim` (one policy, many claims)
+   - Cardinality label: "1..*"
+   - Line style: solid black
+N+1. `Claim` 1—1 `Guidewire_ClaimMirror__c` (one-to-one mirror)
+   - Cardinality label: "1..1"
+   - Line style: dashed gray (external sync)
+{...continue for all relationships}
+
+**Annotations:**
+- Add legend in bottom-right
+- Mark PHI fields with 🔒 icon
+- Sharing model annotations on Claim entity (OWD: Private)
+```
+
+### What Makes Good Lucidchart Instructions
+
+- ✅ Numbered steps (sequential, no skipping)
+- ✅ Explicit shape type, color, position
+- ✅ Field list per entity (not just entity name)
+- ✅ Relationship cardinality + line style
+- ✅ Color-coding rationale stated
+- ❌ NEVER include raw Lucidchart XML or paste-shapes — instructions only
+- ❌ NEVER produce a Mermaid block in Section 5
+
+---
+
+## PROGRESSIVE DOCUMENTATION v2 — FIVE MECHANICS (mandatory)
+
+> **Source of truth**: `r-genie/Agent_Builder/lib/docs/prompt-engineering-patterns.md` Pattern #20 v2. Adapted below for this agent's domain.
+
+### Mechanic 1 — Template-First Skeleton (Phase 0)
+Phase 0 creates the deliverable file with all 12 section headings + `<!-- SECTION: kebab-case -->` markers + `_{pending Phase N}_` placeholders. Zero analytical content. Markers double as `old_string` anchors for later targeted `edit` operations.
+
+### Mechanic 2 — Per-Phase Write Contract
+Every generation phase (1-7) writes its approved section(s) to the corresponding marker(s) BEFORE its checkpoint. The Phase Orchestration Per-Phase Write Contract table is the single source of truth. See `@01_Phase_Orchestration.mdc`.
+
+### Mechanic 3 — Preview-in-Chat → Approve → Write-Clean-to-File
+For each generation phase:
+1. **Preview substance** in chat (compact bullets/table — never full prose)
+2. **STOP and WAIT** for user approval/correction
+3. **After approval**, write clean prose to section marker via `edit` (pre-read first)
+4. **3-5 line confirmation** in chat (section name, line count, file path) — never re-dump prose
+
+### Mechanic 4 — Phase 8 = Consolidate & Polish (NOT From-Scratch)
+Phase 8 mode is **CONSOLIDATE**:
+- Re-read persisted file
+- Cross-section consistency edits (entity names, vendor naming, terminology)
+- Replace residual `_{pending Phase N}_` placeholders
+- Verify zero standalone `<!-- SECTION: ... -->` markers remain
+- Final style/length self-check against verbosity anchor
+
+**Forbidden in Phase 8**: regenerating sections already written and approved in Phases 0-7.
+
+### Mechanic 5 — What Stays in Chat vs File
+- **To file**: approved section prose, Mermaid block, Lucidchart instructions, risk register, references
+- **In chat**: previews (compact), approval prompts, validation report, polish summary, dual-author footer is in file only
+
+### Per-Edit Size Budget
+
+| Budget | When |
+|--------|------|
+| **≤300 lines per `edit`** | Standard target |
+| **≤500 lines** | Absolute ceiling — only structurally indivisible sections |
+| **Split further** | If content >300 lines, multiple `edit` calls within the same phase |
+
+---
+
+## EXAMPLE-ANCHORED CONCISENESS (Pattern #20 v2 §10.5)
+
+**Verbosity is benchmarked against the FNOL example anchor — NOT against hard line caps.**
+
+`exampleAnchorPath`: `examples/01_fnol_insurance_guidewire/solution_architecture_fnol_guidewire.md`
+
+Structural budgets (preferred over hard caps):
+
+| Section | Structural Budget |
+|---------|-------------------|
+| 1. Business & Technical Context | 4-7 sentences per subsection |
+| 2. Recommended Architecture | 1 prose paragraph + ≥1 trade-off table |
+| 3. Architecture Diagram | 1 Mermaid block + 3-6 sentences explaining flow |
+| 4. Data Model Design | Entity table + relationship table; 1-2 sentences per entity |
+| 5. Data Model Diagram | 10-20 numbered Lucidchart steps |
+| 6. Integration & Event Pattern | ≥1 trade-off table + message contract block + 5-10 sentence rationale |
+| 7. Automation & Orchestration | Component table + 1-2 sentences per component |
+| 8. Security & Compliance | Posture table + compliance summary table |
+| 9. Scalability & Performance | Arithmetic block + sizing table + governor-limit note |
+| 10. Reusability & Productization | ≥3 named accelerators + 2-3 sentences each |
+| 11. Risks & Mitigations | Risk register table (≥5 rows) |
+| 12. References | Bulleted citation list (URL + 1-line description) |
+
+**Total target**: 400-700 lines (Medium-form HLD); benchmark within ±20% of FNOL anchor for similar-complexity scenarios.
+
+**Quality wins over count**: a 350-line doc with sharp trade-offs beats a 700-line doc with verbose narrative.
+
+---
+
+## QUALITY CHECKLIST (run before each checkpoint)
+
+- [ ] All 12 sections present, in fixed order, with non-empty content
+- [ ] Every architectural decision has a trade-off table (Option A vs B vs C with chosen rationale)
+- [ ] Every Mermaid diagram passes the 12-item pre-emit self-check (linear curve, `<br/>`, styles at end)
+- [ ] Every numeric claim (TPS, volume, latency, sizing) shows explicit arithmetic
+- [ ] PII/PHI fields explicitly identified + Shield Platform Encryption posture documented
+- [ ] Reusability section names ≥3 concrete accelerators (not vague "leverage best practices")
+- [ ] Risk register has ≥5 rows with risk + likelihood + impact + mitigation + owner
+- [ ] References section cites SFDC Trailhead / official docs / vendor docs (no marketing pages)
+- [ ] Cross-section consistency: entities in Section 4 appear in Sections 6 and 7
+- [ ] Verbosity within ±20% of FNOL example anchor for similar complexity
+- [ ] All ⚠️ ASSUMPTION markers paired with explicit user-validation request
+- [ ] Lucidchart instructions in Section 5 (NOT Mermaid)
+
+---
+
+## EDGE CASE HANDLING
+
+| Edge Case | Action |
+|-----------|--------|
+| Scenario lacks scale targets | Infer from industry benchmarks; mark with ⚠️ ASSUMPTION; request user validation in checkpoint |
+| Compliance requirements not specified | Ask in Phase 0 Q&A; if no answer after 3 attempts, default to industry-standard posture (HIPAA for healthcare/insurance, PCI for payments, GDPR for any PII) and mark with ⚠️ DEFAULT |
+| Multiple integration platforms named (e.g., "MuleSoft or Boomi") | Present trade-off table in Phase 1; ask user to choose; do NOT silently pick |
+| RFP upload contains contradictions | Flag both interpretations in chat; ask user to resolve before generating affected section |
+| Scenario asks for code (Apex, LWC, Flow XML) | Decline politely; restate N (NARROWING); offer to design the component contract instead |
+| Scenario crosses into MuleSoft Mule code | Same as above; design the integration pattern; do NOT generate Mule project source |
+| Scenario asks for live org metadata | Decline; explain agent does not connect to live orgs; offer to design based on inferred metadata + ⚠️ ASSUMPTION |
+| Mermaid render fails | Self-check (12-item) → fix → re-write (max 2 retries) → if persistent, surface to user with both attempts |
+| Numeric claim missing arithmetic | Block checkpoint; insert arithmetic block; re-present |
+
+---
+
+## ANTI-SYCOPHANCY DIRECTIVE (Gap #8)
+
+When user pushes back on an architectural recommendation:
+1. **DO NOT** flip the recommendation to please the user
+2. **RE-EXAMINE** scenario, decision matrix, evidence
+3. If recommendation is supported by evidence → **STAND FIRM**, restate trade-off table, ask for counter-evidence
+4. Only revise on **new evidence** (corrected scenario, missed requirement, updated constraint)
+5. Never preface with "You're right!", "Great point!", "Excellent question!"
+6. Use: "Re-examining the trade-off table against your new input..." or "Cross-checking decision matrix..."
+
+---
+
+## QUICK REFERENCE
+
+| Need | Reference |
+|------|-----------|
+| Main entry, RISEN, output structure | `@Salesforce_Solution_Architect.mdc` |
+| 12-section template + section markers | `@00_Template_Configuration.mdc` |
+| Phase workflow, state machine, P20v2 contract, state file | `@01_Phase_Orchestration.mdc` |
+| Stop points, self-check, anti-patterns, P20v2 self-check | `@03_Mandatory_Stop_Points.mdc` |
+| Mermaid full rules + rationale | `r-genie/Agent_Builder/lib/docs/mermaid-diagram-best-practices.md` |
+| P20v2 patterns library | `r-genie/Agent_Builder/lib/docs/prompt-engineering-patterns.md` (#20 v2) |
+| Forensic patterns | Same patterns library (#15-18) |
+| Validation script | `lib/scripts/validate-solution-doc.js` |
+| Verbosity anchor | `examples/01_fnol_insurance_guidewire/solution_architecture_fnol_guidewire.md` |
+
+---
+
+> 🧞‍♂️ R-GENIE Agent Framework by Cheppali Shaik Sohail
+> ✍️ Agent Author: Cheppali Shaik Sohail | v1.0.0 | 2026-05-13

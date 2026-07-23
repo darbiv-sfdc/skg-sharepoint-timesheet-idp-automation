@@ -1,0 +1,276 @@
+# WSR Email — Section Specifications
+# Source: Salesforce GDC Collab App Submission Guidelines
+# Consumed by: 00_Template_Configuration.mdc, all lib/ scripts
+
+metadata:
+  agent_version: "1.2.0"
+  parser_endpoint: "gdc-project-collaboration@salesforce.com"
+  date_format: "dd-mmm-yy"                    # e.g., 10-Apr-26
+  subject_regex: '^WSR \| \d{2}-[A-Z][a-z]{2}-\d{2} \| .+ \| Status - (Green|Amber|Red) \| .+$'
+  subject_max_length: 255
+  status_colors: [Green, Amber, Red]
+  required_status_prefix: "Status - "
+  forbidden_subject_prefixes: ["RE:", "Re:", "re:", "FW:", "Fw:", "fw:", "Fwd:", "fwd:"]
+
+# ============================================================
+# SUBJECT LINE — 5 components, ORDER MATTERS
+# ============================================================
+subject_components:
+  - name: "prefix"
+    value: "WSR"
+    required: true
+    position: 1
+  - name: "date"
+    format: "dd-mmm-yy"
+    required: true
+    position: 2
+  - name: "project_name"
+    source: "Org62/Collab App canonical name"
+    required: true
+    position: 3
+    forbidden_chars: ["|", "<", ">"]         # pipe reserved as delimiter
+  - name: "status"
+    value: "Status - {Green|Amber|Red}"
+    required: true
+    position: 4
+  - name: "region"
+    examples: ["EMEA North", "Amer - ICE", "APAC", "LATAM", "Japan"]
+    required: true
+    position: 5
+
+delimiter: " | "                              # pipe surrounded by spaces
+
+# ============================================================
+# BODY SECTIONS — ORDER MATTERS, all required
+# ============================================================
+body_sections:
+  - name: "Greeting"
+    id: "greeting"
+    template: "Dear Leaders,"
+    required: true
+
+  - name: "Intro"
+    id: "intro"
+    template: "Please find the Weekly Status Report for the {project_name} as of {date}"
+    required: true
+
+  - name: "Overall Delivery status"
+    id: "overall_delivery_status"
+    format: "**Overall Delivery status** is **{color}**"
+    required: true
+    color_codes:
+      Green: "#38761d"
+      Amber: "#e69138"
+      Red:   "#cc0000"
+
+  - name: "GDC project status"
+    id: "gdc_project_status"
+    format: "**GDC project status** is **{color}**"
+    required: true
+
+  - name: "Summary of WSR:"
+    id: "summary_of_wsr"
+    required: true
+    exact_header: "Summary of WSR:"
+    structure: "hierarchical_bullets"
+    common_groupings:
+      - "Sprint context (Sprint N, date range)"
+      - "Workstreams: Build / Design / UAT Support / Business Go-live"
+      - "Team-by-team updates (Team 1, Team 2, ...)"
+      - "Platform Team update"
+    sub_headers:
+      - name: "Completed"
+        optional: true
+      - name: "In Progress"
+        optional: true
+    forbidden_alternatives:
+      - "Project Update:"
+      - "Summary:"
+      - "Summary: TBD"
+
+  - name: "Ask for/ Attention required by Leaders:"
+    id: "ask_attention"
+    required: true
+    exact_header: "Ask for/ Attention required by Leaders:"
+    sub_sections:
+      - name: "Ask :"
+        exact_header: "Ask :"                 # note: space before colon
+        default_if_empty: "None as of now"
+        required_fields_per_item: [request, owner, deadline]
+      - name: "Attention:"
+        exact_header: "Attention:"
+        default_if_empty: "None as of now"
+        required_fields_per_item: [issue, owner, mitigation_plan]
+
+  - name: "Delivery Metrics & Quality Details:"
+    id: "delivery_metrics"
+    required: true
+    exact_header: "Delivery Metrics & Quality Details:"
+    tables:
+      - name: "sprint_metrics"
+        title: "Delivery Metrics- Sprint {N}"
+        columns: ["Metric", "Details", "Comments"]
+        header_background: "#ffff00"          # yellow
+        rows:
+          - metric: "Capacity Utilisation"
+            value_format: "XX%"
+            comments_hint: "e.g., Capacity: 102 vs Planned: 102"
+            validation:
+              british_spelling: true
+              percent_required: true
+          - metric: "User Story Delivered"
+            value_format: "XX%"
+            comments_hint: "e.g., Planned: 43 vs Dev Completed: 10"
+            validation:
+              exact_phrase: "User Story Delivered"
+              percent_required: true
+      - name: "release_dpd"
+        title: "{YEAR} Release"
+        columns: ["Phase", "Days", "Valid Defects", "Defect Per Days (DpD)"]
+        header_background: "#ffff00"
+        rows:
+          - {phase: "Build", required: true}
+          - {phase: "SIT", required: true}
+          - {phase: "UAT", required: true}
+          - {phase: "PROD", required: true}
+          - {phase: "Over All Delivery", required: true, is_total_row: true}
+        metric_format: "decimal"
+        forbidden_formats: ["percentage", "with_percent_symbol"]
+
+  - name: "Signoff"
+    id: "signoff"
+    template: "Thanks\n{sender_name}"
+    required: true
+
+# ============================================================
+# FORBIDDEN CONTENT
+# ============================================================
+forbidden_headers:
+  - "Project Update:"                         # must be "Summary of WSR:"
+  - "Summary: TBD"
+  - "Summary:"                                # must be "Summary of WSR:"
+
+forbidden_terms:
+  - term: "Capacity Utilization"
+    reason: "American spelling — use British 'Utilisation'"
+    replacement: "Capacity Utilisation"
+    validator: "british_spelling_linter.py"
+  - term: "User Stories Delivered"
+    reason: "Must be exact phrase: 'User Story Delivered' (singular)"
+    replacement: "User Story Delivered"
+    validator: "metric_name_validator.py"
+  - term: "Stories Delivered"
+    reason: "Must be full phrase 'User Story Delivered'"
+    replacement: "User Story Delivered"
+    validator: "metric_name_validator.py"
+  - term: "Defects/Day"
+    reason: "Must be 'Defects Per Days' as decimal, no %"
+    replacement: "Defects Per Days"
+    validator: "metric_name_validator.py"
+  - term: "DpD%"
+    reason: "DpD must be decimal, NO percent symbol"
+    replacement: "DpD"
+    validator: "numeric_format_validator.py"
+
+forbidden_placeholders:
+  - "TBD"
+  - "To be determined"
+  - "[insert here]"
+  - "<value>"
+  - "XX%"                                     # without real value
+  - ""                                        # blank content
+
+# ============================================================
+# RECIPIENT POLICY
+# ============================================================
+recipient_policy:
+  to_required:
+    - "gdc-project-collaboration@salesforce.com"
+  cc: "user_provided"
+  forbidden_subject_prefixes: ["RE:", "Re:", "re:", "FW:", "Fw:", "fw:", "Fwd:", "fwd:"]
+  send_mode: "fresh_email_only"
+  fresh_email_reminder: "Compose a FRESH email in Gmail/Outlook — do NOT Reply or Forward."
+
+# ============================================================
+# INFERENCE POLICY (Mode A vs Mode B)
+# v1.1 added the policy; v1.2 removed the parser script — the LLM now
+# reads prior email / screenshot text natively (better than regex).
+# ============================================================
+inference_policy:
+  modes:
+    mode_a_reference: "User pastes prior .eml / email text / describes a screenshot — agent (LLM) extracts the maximum possible context BEFORE asking any question"
+    mode_b_fresh: "No reference provided — agent asks essentials only"
+  auto_detect: true                       # detect by presence of pasted email/text/screenshot description
+  extracted_by_llm:                       # v1.2: LLM does this natively (no script)
+    - subject_components
+    - sender_name
+    - cc_list
+    - region
+    - project_name
+    - team_labels
+    - workstream_names
+    - status_color
+    - prior_metric_values
+    - prior_days_totals
+  ask_only_if_missing: true               # never re-ask data already inferred from reference
+  date_policy: "always_today_never_ask"   # auto-fill today's date in dd-mmm-yy
+  parser_script: null                     # v1.2: dropped (LLM-native)
+
+# ============================================================
+# DAYS CALCULATION (cumulative running totals per phase)
+# v1.1 added; v1.2 retains — auditable math via deterministic script
+# ============================================================
+days_calculation:
+  source_file: "templates/team-roster.yaml"
+  formula: "new_total = prior_total + (active_members × 5 × weeks_elapsed) − sum(leaves)"
+  cumulative: true                        # current week's total = prior + this week's contribution
+  per_phase: true                         # Build/SIT/UAT typically share same total; PROD = 0 pre-release
+  prod_default: 0                         # PROD stays 0 unless explicitly marked active
+  prompt_to_user:
+    leaves: "Any leaves/holidays this week? Format: Name=days_off (e.g., Akshay=2, Bhawna=1). Reply 'none' if everyone was full."
+    weeks_elapsed_default: 1
+  calculator_script: "lib/calculators/days_calculator.py"
+
+# ============================================================
+# METRICS INFERENCE (Jira-driven, single user prompt)
+# v1.1 added inference script; v1.2 removed it — the LLM parses the
+# Jira paste / free-text natively, then feeds metrics_calculator.py
+# ============================================================
+metrics_inference:
+  prompt_to_user: "Paste your Jira sprint export OR describe this week's metrics (capacity, planned vs delivered stories, defects per phase)."
+  inferred_fields:                        # LLM extracts these natively
+    - capacity_actual
+    - capacity_planned
+    - story_planned
+    - story_dev_completed
+    - defects_per_phase: [Build, SIT, UAT, PROD]
+  fallback_on_no_data: "⚠️ MISSING — render inline in Phase 2 draft"
+  inference_script: null                  # v1.2: dropped (LLM-native)
+  computation_script: "lib/calculators/metrics_calculator.py"
+
+# ============================================================
+# OUTPUT ARTIFACTS
+# v1.2: 4 files (down from 6) — plain-text preview & gap_report.md
+# folded into chat console + run_metadata.json
+# ============================================================
+output_artifacts:
+  directory_pattern: "project/output_wsr/{YYYY-MM-DD-HHmm}_{project-slug}/"
+  files:
+    - {name: "subject.txt",           purpose: "Exact subject line"}
+    - {name: "email_body.html",       purpose: "Parser-ready HTML — open in browser, Cmd+A Cmd+C, paste into Gmail"}
+    - {name: "validation_report.md",  purpose: "6-validator PASS/FAIL"}
+    - {name: "run_metadata.json",     purpose: "Audit: mode, inferences, inputs, gaps list, timestamp, tuner attribution"}
+  chat_only:
+    - {name: "plain-text preview",    purpose: "Rendered inline in chat at Phase 2 — not written to disk"}
+    - {name: "gap list",              purpose: "Rendered inline at Phase 2 + captured into run_metadata.json"}
+
+# ============================================================
+# DOWNSTREAM RECORDS (created by Collab App parser on success)
+# ============================================================
+downstream_records:
+  - "GDC_DG_Project__c"         # Project record
+  - "GDC_DG_WSRep__c"           # WSR record
+  - "EmailMessage"              # Email record
+  - "Attachments"               # linked to WSR and Email
+
+processing_sla: "1-2 minutes typical after send"

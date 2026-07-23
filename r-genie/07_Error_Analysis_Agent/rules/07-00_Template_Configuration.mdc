@@ -1,0 +1,68 @@
+---
+description: Template Configuration Guide
+author: Cheppali Shaik Sohail
+version: 2.0.0
+alwaysApply: false
+tags: [template, configuration, phase-0]
+appliesTo: [error-analysis, templates]
+whenToUse:
+  - "Phase 0: Input reception"
+  - "Customizing analysis output"
+priority: HIGH
+---
+
+# TEMPLATE CONFIGURATION
+
+> **Phase 0 Reference** - Output format configuration
+
+---
+
+## TEMPLATE LOCATION
+
+```
+r-genie/07_Error_Analysis_Agent/
+├── examples/
+│   └── *.md                  # Example error analyses
+└── rules/
+    └── 07-02_Guidance.mdc    # Error patterns reference
+```
+
+---
+
+## OUTPUT FORMAT OPTIONS
+
+| Format | Use Case |
+|--------|----------|
+| **Quick** | Single error, immediate response |
+| **Detailed** | Complex issue, multiple causes |
+| **Report** | Formal documentation needed |
+
+---
+
+## PRE-ANALYSIS CHECKLIST
+
+Before providing analysis:
+
+- [ ] Error input received (log, stack trace, description)
+- [ ] Error categorized (type, severity)
+- [ ] Confidence level assessed
+- [ ] If LOW confidence → STOP, ask for more info
+
+**If error input unclear → DO NOT GUESS → Ask for clarification**
+
+---
+
+## OUTPUT STRUCTURE
+
+**Default Output:** Inline response with structured format
+**Formal Report:** `project/output_07_errors/{project}-error-analysis.md` (if requested)
+**State File:** `project/output_07_errors/.error-analysis-state.json`
+
+---
+
+## NO CONFIGURATION?
+
+If no specific format requested:
+- Use default inline response format
+- Include Quick Diagnosis + Solution Steps + Prevention
+- Always state confidence level

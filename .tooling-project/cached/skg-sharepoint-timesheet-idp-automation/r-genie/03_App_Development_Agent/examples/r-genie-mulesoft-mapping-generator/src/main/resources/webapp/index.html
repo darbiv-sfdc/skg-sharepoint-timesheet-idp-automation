@@ -1,0 +1,1354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="R-Genie MuleSoft Mapping Generator - AI-powered mapping sheet generator with Boomi integration">
+    <meta name="theme-color" content="#667eea">
+    <title>R-Genie | MuleSoft Mapping Generator | AI-Powered Data Transformation</title>
+    
+    <!-- Favicon -->
+    <link rel="icon" href="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTYiIGhlaWdodD0iNTYiIHZpZXdCb3g9IjAgMCA1NiA1NiIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNTYiIGhlaWdodD0iNTYiIHJ4PSI4IiBmaWxsPSIjNjY3ZWVhIi8+PHBhdGggZD0iTTE0IDE3aDI4TTE0IDI1aDIwTTE0IDMzaDI0TTE0IDQxaDE2IiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjMiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgLz48Y2lyY2xlIGN4PSI0MCIgY3k9IjMyIiByPSI4IiBmaWxsPSIjZmZkNzAwIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjIiIC8+PHRleHQgeD0iMzciIHk9IjM3IiBmb250LXNpemU9IjEyIiBmaWxsPSIjMDA3YmZmIj7ijJI8L3RleHQ+PC9zdmc+">
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Inter', sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: #f8f9fa;
+            min-height: 100vh;
+            font-size: 16px;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Top Header */
+        .top-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px 30px;
+            box-shadow: 0 4px 20px rgba(102, 126, 234, 0.15);
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .logo-section {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .logo-character {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            background: #ffffff;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+        }
+
+        .logo-character::before {
+            content: '🧞‍♂️';
+            font-size: 2.2rem;
+        }
+
+        .header-text h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            margin: 0;
+        }
+
+        .powered-by {
+            font-size: 0.9rem;
+            opacity: 0.9;
+            font-weight: 400;
+        }
+
+
+
+        .description {
+            text-align: center;
+            font-size: 1rem;
+            opacity: 0.95;
+            margin-top: 10px;
+        }
+
+
+
+
+
+        /* Main Container */
+        .main-container {
+            background: #ffffff;
+            flex: 1;
+            padding: 30px;
+        }
+
+        .content-header {
+            margin-bottom: 30px;
+        }
+
+        .content-header h2 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #374151;
+            margin-bottom: 8px;
+        }
+
+        .content-header p {
+            color: #6b7280;
+            font-size: 1rem;
+            line-height: 1.5;
+        }
+
+        /* Form Layout */
+        .form-layout {
+            max-width: 1200px;
+        }
+
+        /* Input/Output Grid */
+        .input-output-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group.full-width {
+            grid-column: 1 / -1;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #374151;
+            font-size: 0.95rem;
+        }
+
+        .form-group textarea,
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+            font-family: inherit;
+            background: #ffffff;
+        }
+
+        .form-group textarea {
+            min-height: 200px;
+            resize: vertical;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            line-height: 1.5;
+        }
+
+        .form-group textarea:focus,
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .helper-text {
+            font-size: 0.875rem;
+            color: #6b7280;
+            margin-top: 6px;
+            line-height: 1.4;
+        }
+
+        .helper-text code {
+            background: #f3f4f6;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 0.8rem;
+        }
+
+        .path-warning {
+            background: #fef3cd;
+            border: 1px solid #fbbf24;
+            color: #92400e;
+            padding: 8px 12px;
+            border-radius: 6px;
+            margin-top: 8px;
+            font-size: 0.85rem;
+            line-height: 1.4;
+        }
+
+        /* File Link Styling */
+        .file-link {
+            color: #667eea;
+            text-decoration: none;
+            border-bottom: 1px solid transparent;
+            transition: all 0.2s ease;
+            cursor: pointer;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 0.9rem;
+            background: rgba(102, 126, 234, 0.1);
+            padding: 2px 6px;
+            border-radius: 4px;
+            display: inline-block;
+            margin: 2px 0;
+        }
+
+        .file-link:hover {
+            color: #4f46e5;
+            background: rgba(102, 126, 234, 0.2);
+            border-bottom-color: #667eea;
+            transform: translateY(-1px);
+        }
+
+        .file-link:active {
+            transform: translateY(0);
+        }
+
+        /* File Upload Section */
+        .file-upload-section {
+            margin-top: 8px;
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        .upload-btn {
+            background: #f3f4f6;
+            color: #374151;
+            border: 1px solid #d1d5db;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: auto;
+            margin: 0;
+        }
+
+        .upload-btn:hover {
+            background: #e5e7eb;
+            border-color: #9ca3af;
+            transform: none;
+            box-shadow: none;
+        }
+
+        /* Configuration Section */
+        .config-section {
+            border-top: 1px solid #e5e7eb;
+            padding-top: 30px;
+            margin-top: 30px;
+        }
+
+        .config-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 25px;
+            align-items: start;
+        }
+
+        .generate-row {
+            align-items: end;
+            margin-bottom: 0;
+        }
+
+        .generation-mode-group select {
+            background: #f8faff;
+            border-color: #c7d2fe;
+        }
+
+        .filename-input {
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+        }
+
+        /* Directory Picker */
+        .directory-picker {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .directory-picker input[type="text"] {
+            flex: 1;
+        }
+
+        .browse-btn {
+            background: #f3f4f6;
+            color: #374151;
+            border: 1px solid #d1d5db;
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: auto;
+            margin: 0;
+            white-space: nowrap;
+        }
+
+        .browse-btn:hover {
+            background: #e5e7eb;
+            border-color: #9ca3af;
+            transform: none;
+            box-shadow: none;
+        }
+
+        /* File Selected States */
+        .file-selected {
+            margin-top: 8px;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .file-selected.loading {
+            background: #f3f4f6;
+            color: #6b7280;
+            border: 1px solid #d1d5db;
+        }
+
+        .file-selected.success {
+            background: rgba(16, 185, 129, 0.1);
+            color: #059669;
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+
+        .file-selected.error {
+            background: rgba(239, 68, 68, 0.1);
+            color: #dc2626;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        .file-selected.warning {
+            background: rgba(245, 158, 11, 0.1);
+            color: #92400e;
+            border: 1px solid rgba(245, 158, 11, 0.3);
+        }
+
+        /* Generate Button Group */
+        .generate-button-group {
+            display: flex;
+            align-items: flex-end;
+            margin-top: 24px;
+        }
+
+        .generate-button-wrapper {
+            width: 100%;
+            display: flex;
+            justify-content: center;
+        }
+
+        .generate-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 14px 32px;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 16px rgba(102, 126, 234, 0.3);
+            min-width: 240px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .generate-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+        }
+
+        .generate-btn:active {
+            transform: translateY(0);
+        }
+
+        .generate-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Response Section */
+        .response-section {
+            margin-top: 30px;
+            padding-top: 30px;
+            border-top: 1px solid #e5e7eb;
+        }
+
+        .response-section h2 {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: #374151;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        #response {
+            display: none;
+            background: #f8faff;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #e0e7ff;
+            font-size: 0.95rem;
+            line-height: 1.6;
+            color: #374151;
+        }
+
+        .loading-indicator {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 3rem;
+            text-align: center;
+        }
+
+        .loading-indicator .spinner {
+            width: 3rem;
+            height: 3rem;
+            border: 4px solid #e5e7eb;
+            border-top-color: #667eea;
+            border-radius: 50%;
+            margin-bottom: 1.5rem;
+            animation: spin 1s linear infinite;
+        }
+
+        .loading-indicator p {
+            color: #6b7280;
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Theme Toggle */
+        .theme-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: #374151;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 9999;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        .theme-toggle:hover {
+            transform: scale(1.05);
+            background: rgba(102, 126, 234, 0.1);
+            color: #667eea;
+        }
+
+        .theme-toggle svg {
+            width: 1.3rem;
+            height: 1.3rem;
+        }
+
+        [data-theme="dark"] .theme-toggle .sun {
+            display: block;
+        }
+
+        [data-theme="dark"] .theme-toggle .moon {
+            display: none;
+        }
+
+        .theme-toggle .sun {
+            display: none;
+        }
+
+        .theme-toggle .moon {
+            display: block;
+        }
+
+        /* Dark Theme Styles */
+        [data-theme="dark"] {
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+        }
+
+        [data-theme="dark"] body {
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            color: #e2e8f0;
+        }
+
+        [data-theme="dark"] .top-header {
+            background: rgba(30, 41, 59, 0.9);
+            border-bottom: 1px solid #334155;
+        }
+
+        [data-theme="dark"] .header-title {
+            color: #f1f5f9;
+        }
+
+        [data-theme="dark"] .powered-by {
+            color: #cbd5e1;
+        }
+
+        [data-theme="dark"] .description {
+            color: #cbd5e1;
+        }
+
+        [data-theme="dark"] .main-container {
+            background: rgba(30, 41, 59, 0.95);
+            border: 1px solid #334155;
+        }
+
+        [data-theme="dark"] .content-header h2 {
+            color: #f1f5f9;
+        }
+
+        [data-theme="dark"] .content-header p {
+            color: #cbd5e1;
+        }
+
+        [data-theme="dark"] .form-group label {
+            color: #e2e8f0;
+        }
+
+        [data-theme="dark"] textarea,
+        [data-theme="dark"] input[type="text"],
+        [data-theme="dark"] select {
+            background: #334155;
+            border-color: #475569;
+            color: #e2e8f0;
+        }
+
+        [data-theme="dark"] textarea:focus,
+        [data-theme="dark"] input[type="text"]:focus,
+        [data-theme="dark"] select:focus {
+            border-color: #667eea;
+            background: #3f4a5f;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        [data-theme="dark"] textarea::placeholder,
+        [data-theme="dark"] input::placeholder {
+            color: #94a3b8;
+        }
+
+        [data-theme="dark"] .upload-btn,
+        [data-theme="dark"] .browse-btn {
+            background: #475569;
+            color: #e2e8f0;
+            border: 1px solid #64748b;
+        }
+
+        [data-theme="dark"] .upload-btn:hover,
+        [data-theme="dark"] .browse-btn:hover {
+            background: #64748b;
+            border-color: #94a3b8;
+        }
+
+        [data-theme="dark"] .generate-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            box-shadow: 0 4px 16px rgba(102, 126, 234, 0.4);
+        }
+
+        [data-theme="dark"] .generate-btn:hover {
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.6);
+        }
+
+        [data-theme="dark"] .config-section {
+            border-top-color: #475569;
+        }
+
+        [data-theme="dark"] .generate-section {
+            border-top-color: #475569;
+        }
+
+        [data-theme="dark"] .response-section {
+            border-top-color: #475569;
+        }
+
+        [data-theme="dark"] .response-section h2 {
+            color: #f1f5f9;
+        }
+
+        /* Dark theme for response content - now handled dynamically in JavaScript */
+
+        [data-theme="dark"] .helper-text {
+            color: #94a3b8;
+        }
+
+        [data-theme="dark"] .helper-text code {
+            background: #475569;
+            color: #e2e8f0;
+        }
+
+        [data-theme="dark"] .path-warning {
+            background: rgba(245, 158, 11, 0.2);
+            border-color: #f59e0b;
+            color: #fbbf24;
+        }
+
+        [data-theme="dark"] .file-link {
+            color: #93c5fd;
+            background: rgba(147, 197, 253, 0.1);
+        }
+
+        [data-theme="dark"] .file-link:hover {
+            color: #bfdbfe;
+            background: rgba(147, 197, 253, 0.2);
+            border-bottom-color: #93c5fd;
+        }
+
+        [data-theme="dark"] .file-selected {
+            background: rgba(51, 65, 85, 0.5);
+            color: #cbd5e1;
+            border-color: #475569;
+        }
+
+        [data-theme="dark"] .file-selected.success {
+            background: rgba(16, 185, 129, 0.2);
+            color: #6ee7b7;
+            border-color: #10b981;
+        }
+
+        [data-theme="dark"] .file-selected.error {
+            background: rgba(239, 68, 68, 0.2);
+            color: #fca5a5;
+            border-color: #ef4444;
+        }
+
+        [data-theme="dark"] .file-selected.loading {
+            background: rgba(59, 130, 246, 0.2);
+            color: #93c5fd;
+            border-color: #3b82f6;
+        }
+
+        [data-theme="dark"] .file-selected.warning {
+            background: rgba(245, 158, 11, 0.2);
+            color: #fbbf24;
+            border-color: #f59e0b;
+        }
+
+        [data-theme="dark"] .toast {
+            background: rgba(30, 41, 59, 0.95);
+            border: 1px solid #475569;
+            color: #e2e8f0;
+        }
+
+        [data-theme="dark"] .toast.success {
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.9) 0%, rgba(5, 150, 105, 0.9) 100%);
+            color: white;
+        }
+
+        [data-theme="dark"] .toast.error {
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.9) 0%, rgba(220, 38, 38, 0.9) 100%);
+            color: white;
+        }
+
+        [data-theme="dark"] .toast.warning {
+            background: linear-gradient(135deg, rgba(245, 158, 11, 0.9) 0%, rgba(217, 119, 6, 0.9) 100%);
+            color: white;
+        }
+
+        /* Dark theme scrollbar styling */
+        [data-theme="dark"] ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        [data-theme="dark"] ::-webkit-scrollbar-track {
+            background: #334155;
+        }
+
+        [data-theme="dark"] ::-webkit-scrollbar-thumb {
+            background: #64748b;
+            border-radius: 4px;
+        }
+
+        [data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        /* Dark theme selection styling */
+        [data-theme="dark"] ::selection {
+            background: rgba(102, 126, 234, 0.3);
+            color: #f1f5f9;
+        }
+
+        /* Toast Notifications */
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 80px;
+            padding: 12px 20px;
+            border-radius: 8px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            z-index: 1000;
+            transform: translateY(-100%);
+            opacity: 0;
+            transition: all 0.4s ease;
+            max-width: 24rem;
+            backdrop-filter: blur(10px);
+        }
+
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        .toast.success {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+        }
+
+        .toast.error {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            color: white;
+        }
+
+        .toast.warning {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            color: white;
+        }
+
+        /* Responsive Design */
+        @media screen and (max-width: 1024px) {
+            .input-output-grid {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+            
+            .config-row {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+            
+            .generate-row {
+                align-items: stretch;
+            }
+            
+            .generate-button-group {
+                margin-top: 20px;
+            }
+            
+            .generate-btn {
+                min-width: 100%;
+                padding: 16px 24px;
+            }
+            
+            .directory-picker {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            /* Dark theme adjustments for mobile */
+            [data-theme="dark"] .theme-toggle {
+                background: rgba(51, 65, 85, 0.9);
+                border: 1px solid #64748b;
+            }
+        }
+
+        @media screen and (max-width: 768px) {
+            .container {
+                padding: 0;
+            }
+            
+            .top-header {
+                padding: 15px 20px;
+            }
+            
+            .header-content {
+                text-align: center;
+            }
+            
+            .main-container {
+                padding: 20px;
+            }
+            
+            .theme-toggle {
+                top: 15px;
+                right: 15px;
+                width: 44px;
+                height: 44px;
+            }
+            
+            .toast {
+                right: 15px;
+                top: 70px;
+                max-width: calc(100vw - 30px);
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Theme toggle button -->
+    <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">
+        <svg class="sun" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>
+        </svg>
+        <svg class="moon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
+        </svg>
+    </button>
+
+    <div class="container">
+        <!-- Top Header -->
+        <div class="top-header">
+            <div class="header-content">
+                <div class="logo-section">
+                    <div class="logo-character"></div>
+                    <div class="header-text">
+                        <h1 class="header-title">AI-CodeMate</h1>
+                        <span class="powered-by">Powered by R-Genie 2.0</span>
+                    </div>
+                </div>
+            </div>
+            <div class="description">
+                AI-powered MuleSoft mapping generation and Excel mapping sheet documentation for seamless data transformations
+            </div>
+        </div>
+
+
+
+
+
+        <!-- Main Content -->
+        <div class="main-container">
+            <div class="content-header">
+                <h2>📊 Excel Mapping Sheet Generator</h2>
+                <p>Analyze input/output examples and generate a comprehensive Excel mapping sheet that explains the transformation logic with detailed documentation.</p>
+            </div>
+
+            <div class="form-layout">
+
+            <form id="mappingForm">
+                <!-- Two Column Layout for Input/Output -->
+                <div class="input-output-grid">
+                    <div class="input-column">
+                        <div class="form-group">
+                            <label for="inputExample">🔼 Input Data :</label>
+                            <textarea id="inputExample" name="inputExample" placeholder="Enter your sample input data here..." required></textarea>
+                            <div class="file-upload-section">
+                                <input type="file" id="inputExampleFile" name="inputExampleFile" accept=".json,.xml,.txt,.csv" style="display: none;">
+                                <button type="button" class="upload-btn" onclick="document.getElementById('inputExampleFile').click()">📁 Upload File</button>
+                            </div>
+                            <div id="input-file-selected" class="file-selected" style="display: none;"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="output-column">
+                        <div class="form-group">
+                            <label for="outputExample">🔽 Expected Output Data:</label>
+                            <textarea id="outputExample" name="outputExample" placeholder="Enter your expected output data here..." required></textarea>
+                            <div class="file-upload-section">
+                                <input type="file" id="outputExampleFile" name="outputExampleFile" accept=".json,.xml,.txt,.csv" style="display: none;">
+                                <button type="button" class="upload-btn" onclick="document.getElementById('outputExampleFile').click()">📁 Upload File</button>
+                            </div>
+                            <div id="output-file-selected" class="file-selected" style="display: none;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Business Context Section -->
+                <div class="form-group full-width">
+                    <label for="instructions">📝 Business Context & Requirements (Optional):</label>
+                    <textarea id="instructions" name="instructions" placeholder="Provide any business context, requirements, or specific mapping rules... This will help the model to generate a more accurate mapping sheet in less time.
+
+Example:
+• Explain the business purpose of this transformation
+• List the validation rules (if any)  
+• Describe conditional mapping logic
+• Note any special formatting requirements"></textarea>
+                    <small class="helper-text">Provide any special requirements or mapping rules</small>
+                </div>
+
+                                        <!-- Configuration Section -->
+                        <div class="config-section">
+                            <!-- Row 1: Target Directory and Excel Filename -->
+                            <div class="config-row">
+                                <div class="form-group">
+                                    <label for="targetDirectory">📁 Target Directory (Optional)</label>
+                                    <div class="directory-picker">
+                                        <input type="file" id="targetDirectory" name="targetDirectory" webkitdirectory directory multiple style="display: none;">
+                                        <input type="text" id="targetDirectoryPath" name="targetDirectoryPath" placeholder="Type full path (e.g., /Users/username/Documents) or click Select Folder" readonly>
+                                        <button type="button" id="browseDirectoryBtn" class="browse-btn">📁 Select Folder</button>
+                                    </div>
+                                    <div id="directory-selected" class="file-selected" style="display: none;"></div>
+                                    <div id="path-warning" class="path-warning" style="display: none;">
+                                        ⚠️ <strong>Note:</strong> Folder picker only provides folder name. For specific paths, please type the full path manually.
+                                    </div>
+                                    <small class="helper-text">
+                                        <strong>Manual Path Entry:</strong> Type full path like <code>/Users/username/Documents</code><br>
+                                        <strong>Folder Picker:</strong> Will use folder name in default downloads directory<br>
+                                        <strong>Leave Empty:</strong> Uses default downloads directory
+                                    </small>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="excelFilename">📄 Excel Filename (Optional):</label>
+                                    <input type="text" id="excelFilename" name="excelFilename" placeholder="Enter custom filename (e.g., customer-mapping, order-transformation)" class="filename-input">
+                                    <small class="helper-text">Leave empty for auto-generated filename. Only letters, numbers, hyphens, and underscores allowed.</small>
+                                </div>
+                            </div>
+
+                            <!-- Row 2: Generation Mode and Generate Button -->
+                            <div class="config-row generate-row">
+                                <div class="form-group generation-mode-group">
+                                    <label for="generationMode">⚙️ Generation Mode:</label>
+                                    <select id="generationMode" name="generationMode" required>
+                                        <option value="precision" selected>🎯 Precision (Accurate) - Gemini 2.5 Pro for advanced reasoning and complex logic</option>
+                                        <option value="fast">⚡ Velocity (Fast) - Gemini 2.5 Flash for optimal speed and efficiency</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="form-group generate-button-group">
+                                    <div class="generate-button-wrapper">
+                                        <button type="submit" class="generate-btn" id="generateBtn">
+                                            🚀 Generate Mapping Sheet
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Hidden fields for compatibility -->
+                            <input type="file" id="boomiMapping" name="boomiMapping" accept=".xlsx,.xls,.csv" style="display: none;">
+                            <div id="file-selected" class="file-selected" style="display: none;"></div>
+                        </div>
+            </form>
+            </div>
+
+            <!-- Results Section -->
+            <div class="response-section">
+            <h2>
+                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                </svg>
+                Generated Mapping Sheet
+            </h2>
+            
+            <div id="response"></div>
+            
+            <div id="loading" class="loading-indicator" style="display: none;">
+                <div class="spinner"></div>
+                <p>Generating your mapping sheet...</p>
+                <small class="helper-text">This may take a few moments depending on the complexity</small>
+            </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast notification -->
+    <div id="toast" class="toast">
+        <span id="toast-message"></span>
+    </div>
+
+    <script>
+        // Theme management
+        const themeToggle = document.getElementById('theme-toggle');
+        const currentTheme = localStorage.getItem('theme') || 'light';
+        document.documentElement.setAttribute('data-theme', currentTheme);
+
+        themeToggle.addEventListener('click', () => {
+            const theme = document.documentElement.getAttribute('data-theme');
+            const newTheme = theme === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+        });
+
+        // File upload handling
+        const fileInput = document.getElementById('boomiMapping');
+        const fileSelected = document.getElementById('file-selected');
+
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                fileSelected.textContent = `📄 Selected: ${file.name}`;
+                fileSelected.style.display = 'block';
+            } else {
+                fileSelected.style.display = 'none';
+            }
+        });
+
+        // Input example file upload handling
+        const inputExampleFile = document.getElementById('inputExampleFile');
+        const inputExampleTextarea = document.getElementById('inputExample');
+        const inputFileSelected = document.getElementById('input-file-selected');
+
+        inputExampleFile.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                inputFileSelected.className = 'file-selected loading';
+                inputFileSelected.textContent = `📄 Loading: ${file.name}...`;
+                inputFileSelected.style.display = 'block';
+                
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    inputExampleTextarea.value = event.target.result;
+                    inputFileSelected.className = 'file-selected success';
+                    inputFileSelected.textContent = `✅ Loaded: ${file.name}`;
+                };
+                reader.onerror = () => {
+                    inputFileSelected.className = 'file-selected error';
+                    inputFileSelected.textContent = `❌ Error loading: ${file.name}`;
+                };
+                reader.readAsText(file);
+            } else {
+                inputFileSelected.style.display = 'none';
+                inputFileSelected.className = 'file-selected';
+                inputExampleTextarea.value = '';
+            }
+        });
+
+        // Output example file upload handling
+        const outputExampleFile = document.getElementById('outputExampleFile');
+        const outputExampleTextarea = document.getElementById('outputExample');
+        const outputFileSelected = document.getElementById('output-file-selected');
+
+        outputExampleFile.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                outputFileSelected.className = 'file-selected loading';
+                outputFileSelected.textContent = `📄 Loading: ${file.name}...`;
+                outputFileSelected.style.display = 'block';
+                
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    outputExampleTextarea.value = event.target.result;
+                    outputFileSelected.className = 'file-selected success';
+                    outputFileSelected.textContent = `✅ Loaded: ${file.name}`;
+                };
+                reader.onerror = () => {
+                    outputFileSelected.className = 'file-selected error';
+                    outputFileSelected.textContent = `❌ Error loading: ${file.name}`;
+                };
+                reader.readAsText(file);
+            } else {
+                outputFileSelected.style.display = 'none';
+                outputFileSelected.className = 'file-selected';
+                outputExampleTextarea.value = '';
+            }
+        });
+
+        // Directory picker handling
+        const directoryInput = document.getElementById('targetDirectory');
+        const directoryPath = document.getElementById('targetDirectoryPath');
+        const browseDirectoryBtn = document.getElementById('browseDirectoryBtn');
+        const directorySelected = document.getElementById('directory-selected');
+        const pathWarning = document.getElementById('path-warning');
+
+        // Check if File System Access API is supported
+        const supportsFileSystemAccess = 'showDirectoryPicker' in window;
+
+        // Make path input editable by default
+        directoryPath.readOnly = false;
+
+        browseDirectoryBtn.addEventListener('click', async () => {
+            if (supportsFileSystemAccess) {
+                try {
+                    // Use modern File System Access API (Chrome/Edge)
+                    const directoryHandle = await window.showDirectoryPicker();
+                    directoryPath.value = directoryHandle.name;
+                    directorySelected.textContent = `📁 Selected folder: ${directoryHandle.name}`;
+                    directorySelected.className = 'file-selected warning';
+                    directorySelected.style.display = 'block';
+                    pathWarning.style.display = 'block';
+                } catch (err) {
+                    // User cancelled or error occurred
+                    console.log('Directory selection cancelled or failed:', err);
+                }
+            } else {
+                // Fallback to webkitdirectory for other browsers
+                directoryInput.click();
+            }
+        });
+
+        // Fallback directory picker for browsers without File System Access API
+        directoryInput.addEventListener('change', (e) => {
+            const files = e.target.files;
+            if (files.length > 0) {
+                // Get the directory name from the first file
+                const firstFile = files[0];
+                const fullPath = firstFile.webkitRelativePath;
+                const directoryName = fullPath.split('/')[0];
+                
+                directoryPath.value = directoryName;
+                directorySelected.textContent = `📁 Selected folder: ${directoryName}`;
+                directorySelected.className = 'file-selected warning';
+                directorySelected.style.display = 'block';
+                pathWarning.style.display = 'block';
+                
+                // Clear the file input to prevent uploading files
+                directoryInput.value = '';
+            } else {
+                directoryPath.value = '';
+                directorySelected.style.display = 'none';
+                pathWarning.style.display = 'none';
+            }
+        });
+
+        // Hide warning when user manually types path
+        directoryPath.addEventListener('input', () => {
+            if (directoryPath.value.includes('/') || directoryPath.value.includes('\\')) {
+                // User is typing a full path
+                pathWarning.style.display = 'none';
+                directorySelected.style.display = 'none';
+            }
+        });
+
+        // Clear everything when path is cleared
+        directoryPath.addEventListener('input', () => {
+            if (directoryPath.value === '') {
+                directorySelected.style.display = 'none';
+                pathWarning.style.display = 'none';
+            }
+        });
+
+        // Form submission
+        const form = document.getElementById('mappingForm');
+        const generateBtn = document.getElementById('generateBtn');
+        const loading = document.getElementById('loading');
+        const response = document.getElementById('response');
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            // Show loading state
+            generateBtn.disabled = true;
+            generateBtn.innerHTML = '⏳ Generating...';
+            loading.style.display = 'flex';
+            response.style.display = 'none';
+
+            try {
+                const formData = new FormData();
+                formData.append('inputExample', document.getElementById('inputExample').value);
+                formData.append('outputExample', document.getElementById('outputExample').value);
+                formData.append('instructions', document.getElementById('instructions').value);
+                const generationModeValue = document.getElementById('generationMode').value;
+                formData.append('generationMode', generationModeValue === 'precision' ? 'pro' : generationModeValue);
+                formData.append('excelFilename', document.getElementById('excelFilename').value);
+                formData.append('targetDirectory', document.getElementById('targetDirectoryPath').value);
+                
+                const boomiMappingFile = document.getElementById('boomiMapping');
+                if (boomiMappingFile.files[0]) {
+                    formData.append('boomiMapping', boomiMappingFile.files[0]);
+                }
+
+                const apiResponse = await fetch('http://localhost:8081/api/generate-mapping', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await apiResponse.json();
+
+                if (apiResponse.ok) {
+                    showResponse(result);
+                    showToast('success', 'Mapping sheet generated successfully!');
+                } else {
+                    throw new Error(result.message || 'Failed to generate mapping sheet');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showError(error.message);
+                showToast('error', 'Failed to generate mapping sheet');
+            } finally {
+                // Reset loading state
+                generateBtn.disabled = false;
+                generateBtn.innerHTML = '🚀 Generate Mapping';
+                loading.style.display = 'none';
+            }
+        });
+
+        function showResponse(result) {
+            const isDarkTheme = document.documentElement.getAttribute('data-theme') === 'dark';
+            
+            // Define theme-aware styles
+            const successBg = isDarkTheme ? 'rgba(30, 41, 59, 0.8)' : '#f0f9ff';
+            const successBorder = isDarkTheme ? '#475569' : '#0ea5e9';
+            const successTitleColor = isDarkTheme ? '#60a5fa' : '#0ea5e9';
+            const textColor = isDarkTheme ? '#cbd5e1' : '#374151';
+            const headingColor = isDarkTheme ? '#e2e8f0' : '#374151';
+            const mutedColor = isDarkTheme ? '#94a3b8' : '#6b7280';
+            const strongColor = isDarkTheme ? '#f1f5f9' : '#374151';
+            const summaryBg = isDarkTheme ? 'rgba(102, 126, 234, 0.2)' : 'rgba(102, 126, 234, 0.1)';
+            const summaryBorder = isDarkTheme ? '#667eea' : 'rgba(102, 126, 234, 0.3)';
+            const summaryTitleColor = isDarkTheme ? '#93c5fd' : '#667eea';
+            const nextStepsBg = isDarkTheme ? 'rgba(51, 65, 85, 0.8)' : '#f9fafb';
+            const nextStepsBorder = isDarkTheme ? '#475569' : '#e5e7eb';
+            
+            response.innerHTML = `
+                <div style="background: ${successBg}; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; border: 1px solid ${successBorder};">
+                    <h3 style="margin: 0 0 0.5rem; color: ${successTitleColor};">✅ Generation Complete</h3>
+                    <p style="margin: 0; color: ${textColor};">Your mapping sheet has been generated successfully!</p>
+                </div>
+                
+                <div style="margin-bottom: 1rem;">
+                    <h4 style="color: ${headingColor}; margin-bottom: 0.5rem;">📄 File Details:</h4>
+                    <ul style="color: ${mutedColor}; padding-left: 1.5rem;">
+                        <li><strong style="color: ${strongColor};">Filename:</strong> ${result.filename || 'Generated mapping sheet'}</li>
+                        <li><strong style="color: ${strongColor};">Location:</strong> ${result.filePath ? `<a href="#" class="file-link" data-file-path="${result.filePath}" title="Click to open file">${result.filePath}</a>` : 'Default directory'}</li>
+                        <li><strong style="color: ${strongColor};">Format:</strong> Excel (.xlsx)</li>
+                        <li><strong style="color: ${strongColor};">Generation Mode:</strong> ${result.generationMode || 'Precision'}</li>
+                    </ul>
+                </div>
+
+                ${result.summary ? `
+                    <div style="background: ${summaryBg}; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; border: 1px solid ${summaryBorder};">
+                        <h4 style="color: ${summaryTitleColor}; margin: 0 0 0.5rem;">📊 Generation Summary:</h4>
+                        <p style="margin: 0; color: ${textColor};">${result.summary}</p>
+                    </div>
+                ` : ''}
+
+                <div style="background: ${nextStepsBg}; padding: 1rem; border-radius: 8px; border: 1px solid ${nextStepsBorder};">
+                    <h4 style="color: ${headingColor}; margin: 0 0 0.5rem;">💡 Next Steps:</h4>
+                    <ul style="color: ${mutedColor}; padding-left: 1.5rem; margin: 0;">
+                        <li>Review the generated mapping sheet</li>
+                        <li>Import into your integration platform</li>
+                        <li>Test with sample data</li>
+                        <li>Adjust mappings as needed</li>
+                    </ul>
+                </div>
+            `;
+            
+            // Add event listener for file links
+            const fileLinks = response.querySelectorAll('.file-link');
+            fileLinks.forEach(link => {
+                link.addEventListener('click', handleFileClick);
+            });
+            
+            response.style.display = 'block';
+        }
+
+        // Handle file link clicks
+        function handleFileClick(event) {
+            event.preventDefault();
+            const filePath = event.target.getAttribute('data-file-path');
+            
+            if (!filePath) {
+                showToast('error', 'File path not available');
+                return;
+            }
+            
+            try {
+                // Try multiple approaches to open the file
+                const fileUrl = `file://${filePath.replace(/\\/g, '/')}`;
+                
+                // Method 1: Try to open with file:// protocol
+                const newWindow = window.open(fileUrl, '_blank');
+                
+                // Method 2: If that fails, try to create a downloadable link
+                if (!newWindow || newWindow.closed || typeof newWindow.closed == 'undefined') {
+                    // Fallback: Copy path to clipboard and notify user
+                    navigator.clipboard.writeText(filePath).then(() => {
+                        showToast('info', `File path copied to clipboard: ${filePath}<br><small>Please navigate to this location to open the file</small>`);
+                    }).catch(() => {
+                        // Final fallback: Show manual instruction
+                        showToast('warning', `Please navigate to: ${filePath}<br><small>File opening blocked by browser security</small>`);
+                    });
+                } else {
+                    showToast('success', 'Opening file...');
+                }
+            } catch (error) {
+                console.error('Error opening file:', error);
+                // Copy to clipboard as fallback
+                navigator.clipboard.writeText(filePath).then(() => {
+                    showToast('info', `File path copied to clipboard: ${filePath}`);
+                }).catch(() => {
+                    showToast('error', `Unable to open file. Path: ${filePath}`);
+                });
+            }
+        }
+
+        function showError(message) {
+            const isDarkTheme = document.documentElement.getAttribute('data-theme') === 'dark';
+            
+            // Define theme-aware styles for error
+            const errorBg = isDarkTheme ? 'rgba(239, 68, 68, 0.2)' : 'rgba(239, 68, 68, 0.1)';
+            const errorBorder = isDarkTheme ? '#ef4444' : '#ef4444';
+            const errorTitleColor = isDarkTheme ? '#fca5a5' : '#ef4444';
+            const textColor = isDarkTheme ? '#cbd5e1' : '#374151';
+            const headingColor = isDarkTheme ? '#e2e8f0' : '#374151';
+            const mutedColor = isDarkTheme ? '#94a3b8' : '#6b7280';
+            const dividerColor = isDarkTheme ? '#475569' : '#e5e7eb';
+            
+            response.innerHTML = `
+                <div style="background: ${errorBg}; border: 1px solid ${errorBorder}; padding: 1rem; border-radius: 8px;">
+                    <h3 style="margin: 0 0 0.5rem; color: ${errorTitleColor};">❌ Generation Failed</h3>
+                    <p style="margin: 0; color: ${textColor};">${message}</p>
+                    <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid ${dividerColor};">
+                        <h4 style="color: ${headingColor}; margin: 0 0 0.5rem;">💡 Troubleshooting Tips:</h4>
+                        <ul style="color: ${mutedColor}; padding-left: 1.5rem; margin: 0;">
+                            <li>Verify your input and output examples are valid</li>
+                            <li>Check your network connection</li>
+                            <li>Try a different generation mode</li>
+                            <li>Contact support if the issue persists</li>
+                        </ul>
+                    </div>
+                </div>
+            `;
+            response.style.display = 'block';
+        }
+
+        function showToast(type, message) {
+            const toast = document.getElementById('toast');
+            const toastMessage = document.getElementById('toast-message');
+            
+            toast.className = `toast ${type}`;
+            // Use innerHTML to support HTML content in messages
+            toastMessage.innerHTML = message;
+            toast.classList.add('show');
+            
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 5000);
+        }
+    </script>
+</body>
+</html>

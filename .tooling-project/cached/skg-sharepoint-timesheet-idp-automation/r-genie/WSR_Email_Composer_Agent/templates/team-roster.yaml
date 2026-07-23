@@ -1,0 +1,42 @@
+# Team Roster — single source of truth for days_calculator
+# Update this file when team composition changes.
+# Consumed by: lib/calculators/days_calculator.py, 00_Template_Configuration.mdc
+
+metadata:
+  total_members: 14
+  default_days_per_member_per_week: 5
+  weekly_capacity_default: 70    # 14 members × 5 days
+  notes: "Per-member days × 5 minus leaves equals weekly capacity contribution"
+
+teams:
+  team_1:
+    name: "Team 1"
+    members:
+      - "Thulasi"
+      - "Akshay"
+      - "Harsh"
+      - "Aditya"
+  team_2:
+    name: "Team 2"
+    members:
+      - "Nitin"
+      - "Bhawna"
+      - "Divyam"
+      - "El Mehdi"
+      - "Chaymae"
+  team_3:
+    name: "Team 3"
+    members:
+      - "Raza"
+      - "Raviteja"
+      - "Kranthi"
+      - "Yogesh"
+      - "Paul"
+
+# Days formula (cumulative running total from prior WSR):
+#   new_total = prior_total + (active_members × 5 × weeks_elapsed) − sum(leaves_this_period)
+#
+# Per phase:
+#   Build / SIT / UAT typically share the same cumulative count
+#   PROD = 0 in pre-release projects
+#   "Over All Delivery" mirrors the active phase's running total

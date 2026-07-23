@@ -1,0 +1,337 @@
+---
+description: Phase Orchestration & Workflow State Management
+author: Cheppali Shaik Sohail
+version: 2.1.0
+alwaysApply: false
+tags: [phase, orchestration, workflow, checkpoints]
+appliesTo: [dataweave, workflow]
+whenToUse:
+  - "Managing phase transitions"
+  - "Tracking workflow state"
+priority: HIGH
+---
+
+# PHASE ORCHESTRATION V2
+
+> **Purpose**: Manage 5-phase workflow with user checkpoints
+> **Enforcement**: See `@03-01-02_Mandatory_Stop_Points.mdc`
+
+---
+
+## PHASE SPECIFICATION
+
+### **PHASE 0: Scenario Detection & Routing** (1-2s)
+
+**Tasks:**
+1. Detect input file types (JSON, XML, CSV, Excel, PDF)
+2. Identify scenario type and route to optimal workflow
+3. Present scenario to user for confirmation
+
+**Scenario Types:**
+| Scenario | Trigger | Validation Pipeline |
+|----------|---------|---------------------|
+| SINGLE_EXAMPLE | 1 input + 1 expected | Syntax → CLI → Security |
+| MULTI_EXAMPLE | Multiple input/output pairs | Consistency → Pattern → Quality |
+| MULTI_INPUT | Multiple source files | Cross-reference → Integration |
+| MAPPING_ONLY | Mapping sheet without samples | Field analysis → Synthetic |
+
+**Checkpoints:**
+- [ ] Input files detected
+- [ ] Scenario type identified
+- [ ] User confirmed scenario
+
+**Checkpoint Message:**
+```
+🎯 SCENARIO DETECTION - Requires Confirmation
+
+**Detected:**
+- Input files: {list files found}
+- Scenario type: {SINGLE_EXAMPLE/MULTI_EXAMPLE/MULTI_INPUT/MAPPING_ONLY}
+- Validation pipeline: {selected pipeline}
+
+**Please confirm:**
+→ Reply "confirmed" to proceed with this scenario
+→ Reply "modify" to adjust scenario detection
+→ Reply with questions
+
+Waiting for your confirmation...
+```
+
+---
+
+### **PHASE 1: Requirements Analysis** (100-500ms)
+
+**🚨 MANDATORY SCRIPT - DO NOT SKIP:**
+```bash
+node r-genie/03-01_Dataweave_Agent/lib/processors/03-01-02_Requirements_Analyzer.js input.json expected.json
+```
+**DO NOT manually analyze structure. RUN THE SCRIPT FIRST.**
+
+**Tasks:**
+1. **RUN Requirements Analyzer script** (mandatory)
+2. Review script output for domain, functions, complexity
+3. Present analysis to user
+
+**Checkpoints:**
+- [ ] **Requirements Analyzer script executed**
+- [ ] Domain detected from script output
+- [ ] Functions recommended from script output
+- [ ] User approved analysis
+
+**Checkpoint Message:**
+```
+✅ PHASE 1 COMPLETE - Review Required
+
+**Requirements Analyzer Output:**
+{paste script output here}
+
+**Analysis Summary:**
+- Domain detected: {from script}
+- Recommended functions: {from script}
+- Complexity: {from script}
+
+**Please review:**
+→ Reply "approved" to proceed to Phase 2
+→ Reply "review" to discuss analysis
+
+Waiting for your review...
+```
+
+---
+
+### **PHASE 2: DataWeave Script Generation** (User-driven)
+
+**Tasks:**
+1. **PRESENT approach** - Show transformation strategy
+2. **WAIT FOR APPROVAL** - Do NOT generate until user approves
+3. After approval: Generate DataWeave script
+4. Apply safe defaults strategy
+5. Present script to user
+
+**🚨 CRITICAL: Transformation Proposal Format (BEFORE generating)**
+```
+🎯 TRANSFORMATION PROPOSAL - Requires Your Approval
+
+Based on your requirements, here is the approach:
+
+**Transformation Strategy:**
+| Aspect | Details |
+|--------|---------|
+| Pattern | {map/reduce/filter/flatMap} |
+| Safe Defaults | {natural null / default 0 / default now()} |
+| Key Functions | {functions to use} |
+
+**Field Mappings:**
+| Source | Target | Logic |
+|--------|--------|-------|
+| {source.field} | {target.field} | {transformation} |
+
+**Before I generate the DataWeave script:**
+→ Reply "approved" to proceed
+→ Reply with modifications needed
+
+Waiting for your decision...
+```
+
+**Checkpoints:**
+- [ ] Transformation approach presented
+- [ ] User approved approach
+- [ ] Script generated with safe defaults
+- [ ] Script presented to user
+- [ ] User approved script
+
+**Checkpoint Message (AFTER script generated):**
+```
+✅ PHASE 2 COMPLETE - Review Required
+
+**Generated:**
+- DataWeave script: {line count} lines
+- Safe defaults applied: {count} fields
+- No hardcoded values: ✅ Verified
+
+**Script location:** `project/output_03_01_dataweave/script.dwl`
+
+**Please review the script above:**
+→ Reply "approved" to proceed to Phase 3 (Validation)
+→ Reply "modify" to request changes
+→ Reply with specific adjustments
+
+Waiting for your review...
+```
+
+---
+
+### **PHASE 3: Validation Suite** (3-6s)
+
+**🚨 MANDATORY SCRIPT - USE ENHANCED SUITE:**
+```bash
+# RECOMMENDED: Smart auto-routing (runs full pipeline automatically)
+node r-genie/03-01_Dataweave_Agent/lib/scripts/03-01-01_Enhanced_Suite.js --mode smart script.dwl input.json expected.json
+
+# OR: Complete mode with explicit output file
+node r-genie/03-01_Dataweave_Agent/lib/scripts/03-01-01_Enhanced_Suite.js --mode complete script.dwl input.json output.json expected.json
+```
+**DO NOT only run CLI Validator. RUN THE ENHANCED SUITE for full pipeline.**
+
+**Tasks:**
+1. **RUN Enhanced Suite script** (mandatory) - runs all validations automatically
+2. Review script output for all validation results
+3. Present results to user
+
+**Checkpoints:**
+- [ ] **Enhanced Suite script executed**
+- [ ] Error detection passed (from script)
+- [ ] CLI validation passed (from script)
+- [ ] Security scan passed (from script)
+- [ ] Output accuracy verified (from script)
+- [ ] User confirmed results
+
+**Checkpoint Message:**
+```
+✅ PHASE 3 COMPLETE - Validation Results
+
+**Validation Summary:**
+| Check | Status | Details |
+|-------|--------|---------|
+| Error Detection | ✅ PASSED | No errors detected |
+| CLI Validation | ✅ PASSED | Execution successful |
+| Security Scan | ✅ PASSED | Score: {score}/100 |
+| Output Accuracy | ✅ PASSED | {accuracy}% match |
+
+**Issues found:** {count} (if any, list them)
+
+**Please review:**
+→ Reply "approved" to proceed to Phase 4 (Performance)
+→ Reply "fix" to address issues
+→ Reply with questions
+
+Waiting for your review...
+```
+
+---
+
+### **PHASE 4: Performance Optimization** (5-15s)
+
+**🚨 MANDATORY SCRIPT - RUN QUALITY GATES:**
+```bash
+node r-genie/03-01_Dataweave_Agent/lib/processors/03-01-16_Quality_Gates.js script.dwl
+```
+**DO NOT manually review quality. RUN THE SCRIPT.**
+
+**Optional - Performance Analysis (for complex scripts):**
+```bash
+node r-genie/03-01_Dataweave_Agent/lib/scripts/03-01-24_Performance_Analyzer.js script.dwl
+```
+
+**Tasks:**
+1. **RUN Quality Gates script** (mandatory)
+2. Run Performance Analyzer (optional, for complex scripts)
+3. Review script output for quality and performance metrics
+4. Deliver final script
+
+**Checkpoint Message:**
+```
+✅ PHASE 4 COMPLETE - Transformation Delivered
+
+**Performance Analysis:**
+| Metric | Status | Recommendation |
+|--------|--------|----------------|
+| Imports | ✅ Optimized | {details} |
+| Safe Checking | ✅ Applied | {details} |
+| Memory | ✅ Efficient | {details} |
+| Streaming | {✅/⚠️} | {recommendation if needed} |
+
+**Deliverables:**
+- Script: `project/output_03_01_dataweave/script.dwl`
+- Analysis: `project/output_03_01_dataweave/analysis-reports/`
+
+🧞‍♂️ **DataWeave transformation complete!**
+
+→ Reply "done" to close session
+→ Reply with additional requests
+```
+
+---
+
+## STATE FILE
+
+**Location:** `project/output_03_01_dataweave/.dataweave-workflow-state.json`
+
+```json
+{
+  "projectName": "...",
+  "currentPhase": 0,
+  "scenario": "SINGLE_EXAMPLE",
+  "phases": {
+    "phase0": { "status": "COMPLETED", "checkpoints": {...} },
+    "phase1": { "status": "IN_PROGRESS", "checkpoints": {...} }
+  },
+  "outputFiles": []
+}
+```
+
+**On Activation:**
+1. Check for existing state file
+2. If exists → offer resume/restart options
+3. If not → create new state, start Phase 0
+
+---
+
+## ERROR RECOVERY
+
+| Situation | Action |
+|-----------|--------|
+| Phase fails | Save state, inform user, offer: retry / restart phase / abort |
+| Validation fails | Show specific errors, offer fixes, retry validation |
+| User disconnects | State preserved, resume on next activation |
+| Invalid input | Stay in current phase, request correction |
+
+---
+
+## `<thinking>` BLOCK (MANDATORY Before Every Phase Output)
+
+```
+<thinking>
+1. Key inputs received: [list data/answers for this phase]
+2. Decisions I am making: [transformation strategy, function choices, rationale]
+3. Evidence from source: [cite specific input/output structure facts]
+4. Risks/gaps identified: [what could go wrong, what is missing]
+5. Confidence: HIGH / MEDIUM / LOW [with justification]
+6. Production learnings applicable: [check 03-01_Production_Learnings.md]
+</thinking>
+```
+
+---
+
+## CONFIDENCE CALIBRATION
+
+| Confidence | When to Use | Action |
+|------------|------------|--------|
+| **HIGH** | Clear input/output samples, proven pattern | Proceed with recommendation |
+| **MEDIUM** | Partial info, reasonable inference | Flag assumptions, recommend user validation |
+| **LOW** | Vague input, multiple interpretations | **STOP** — request clarification before proceeding |
+
+---
+
+## RGV (READ-GENERATE-VERIFY) PATTERN
+
+Apply for phases that produce output:
+
+```
+1. READ: [source material] → Expected: [count/list]
+2. GENERATE: [output artifacts] → Expected: [count/list]
+3. VERIFY: "Processed {X}/{Y} items from source"
+4. FIX: Any gaps before presenting checkpoint to user
+```
+
+> If X ≠ Y, do NOT present the checkpoint. Fix the gap first.
+
+### Phase-Specific RGV
+
+| Phase | READ | GENERATE | VERIFY |
+|-------|------|----------|--------|
+| Phase 0 | Input files provided | Scenario detection | All files classified? |
+| Phase 1 | Input + expected structure | Requirements analysis | All fields mapped? |
+| Phase 2 | Approved requirements | DataWeave script | All mappings in script? Safe defaults applied? |
+| Phase 3 | Script + validation tools | Validation results | All checks passed? |
+| Phase 4 | Quality gates output | Optimized script | Score meets threshold? |

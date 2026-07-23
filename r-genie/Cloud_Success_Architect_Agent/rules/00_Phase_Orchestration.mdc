@@ -1,0 +1,547 @@
+---
+description: Cloud Success Architect Agent - Phase Orchestration & Workflow State Management
+author: Cheppali Shaik Sohail
+version: 1.7.1
+alwaysApply: false
+tags: [phase, orchestration, workflow, success-architect, mulesoft, agentforce, feasibility, coverage, kpi, persona-refinement, indexed-research, progressive-documentation-v2, per-flow-diagrams]
+appliesTo: [customer-use-case-analysis, hld-generation, enterprise-validation, persona-stress-test, progressive-artifact-production]
+whenToUse:
+  - "Managing the 9-phase Cloud Success Architect workflow (Phase 4 has 4A/4B/4C sub-stops; Phase 5 has per-persona stops + consolidation)"
+  - "Tracking use case analysis state across multi-session work"
+  - "Enforcing feasibility, coverage, KPI, and persona-refinement gates before HLD generation"
+  - "Enforcing Progressive Documentation v2 — every phase writes to file before checkpoint (no chat-only intermediate work)"
+priority: HIGH
+---
+
+# PHASE ORCHESTRATION V1.7.1
+
+> **Purpose**: Manage the 9-phase conversational workflow that turns a customer use case into an executive-ready HLD + Supporting Doc + per-flow Diagrams + Refinement Log.
+> **Enforcement**: See `@02_Mandatory_Stop_Points.mdc`
+
+---
+
+## WORKFLOW STATE MACHINE
+
+```mermaid
+stateDiagram-v2
+    [*] --> Phase0: /use-cloud-success-architect
+    Phase0 --> CP0: Use Case Parsed
+    CP0 --> Phase1: Confirmed
+    Phase1 --> CP1: Problem Locked
+    CP1 --> Phase2: Approved
+    Phase2 --> CP2: Capabilities Captured + Research Logged
+    CP2 --> Phase3: Approved
+    Phase3 --> CP3: Options Proposed
+    CP3 --> Phase4: Approved
+    Phase4 --> Phase4A: Finalist Selected
+    Phase4A --> CP4A: Feasibility Scored
+    CP4A --> Phase4B: All GO/CONDITIONAL
+    Phase4B --> CP4B: Coverage Verified
+    CP4B --> Phase4C: 100% Pain Coverage
+    Phase4C --> CP4: KPIs Defined
+    CP4 --> Phase5: Approved
+    Phase5 --> CP5_Persona: Per-persona 5-tier Q&A
+    CP5_Persona --> Phase5: Next persona OR Round 2
+    CP5_Persona --> CP5: All personas done OR lock-now
+    CP5 --> Phase6: Solution v2 Approved
+    Phase6 --> CP6: HLD Drafted (incl. Coverage + KPIs)
+    CP6 --> Phase7: Approved
+    Phase7 --> CP7: Supporting Doc Drafted (incl. Feasibility + NFR + Measurement + Refinement Summary)
+    CP7 --> Phase8: Approved
+    Phase8 --> [*]: Panel Prep Delivered
+```
+
+---
+
+## PHASE DEFINITIONS
+
+| Phase | Name | Primary Deliverable | Checkpoint |
+|-------|------|---------------------|------------|
+| 0 | Use Case Intake | Use case summary + panel personas table | Confirm parsed understanding |
+| 1 | Problem Deep-Dive | Pains, drivers, metrics, constraints captured | Approve problem statement |
+| 2 | Capability Discovery + Live Research | Current-state footprint + research_log.md | Approve current state + research |
+| 3 | Solution Brainstorming | 2–3 architecture options with tradeoffs (Tree of Thought) | Approve option shortlist |
+| 4 | Solution Finalization (3 sub-stops) | Finalist + Feasibility Matrix + Coverage Matrix + KPI table | Approve all 3 sub-stops |
+| 4A | — Feasibility Validation | 8-dim feasibility matrix per capability; verdict GO/CONDITIONAL/NO-GO | Approve feasibility |
+| 4B | — Problem-Solution Coverage | Bidirectional matrix; uncovered pains + future-enablers flagged | Approve coverage |
+| 4C | — KPI Definition | 3-tier KPI table (Business / Operational / Technical) with baselines | Approve KPIs |
+| 5 | **Adversarial Persona Refinement** | `Refinement_Log.md` — Phase-0 panel + industry overlay + 5 generic adversarial personas × 5-tier Q&A; Solution v1→v2 with Phase 4 deltas | **Per-persona stops + final consolidation** |
+| 6 | HLD Generation | `HLD.md` (incl. §6.5 Coverage + §11 KPIs) | Approve HLD |
+| 7 | Supporting LLD Doc | `Supporting.md` (incl. §3.5 Feasibility + §4.5 NFR + §10 Measurement + Appendix A Coverage Full + Appendix B Refinement Summary) | Approve Supporting Doc |
+| 8 | Panel Rehearsal Prep | `Panel_QA.md` — Q&A + objections | Confirm delivery |
+
+---
+
+## PROGRESSIVE DOCUMENTATION v2 (v1.7.0 — MANDATORY CONTRACT)
+
+> **Why this exists:** In v1.6.0 and earlier, all file writes happened at Phase 5+. By Phase 6, context windows were near-exhausted, and the agent had to *regenerate from chat memory* — losing fidelity. v1.7.0 reverses this: **every phase that produces content writes to the corresponding section before its checkpoint.** Phase 6 is then a *consolidate-and-polish* pass over progressively-built sections, not a from-scratch generation. This is the TDA pattern (`r-genie/01_Technical_Design_Agent/rules/01-01_Phase_Orchestration.mdc`) adapted to the 9-phase CSA workflow. Critical Rule #16 in `Cloud_Success_Architect.mdc` is the binding enforcement.
+
+### Per-Phase Write Contract
+
+| Phase | Writes to `HLD.md` section | Writes to `Supporting.md` section | Other artifact writes |
+|-------|-----------------------------------|------------------------------------------|------------------------|
+| **0 — Intake** | _(SKELETON)_ create file from `templates/HLD-template.md` with all `<!-- SECTION: ... -->` placeholders | _(SKELETON)_ create file from `templates/Supporting-Doc-template.md` with all `<!-- SECTION: ... -->` placeholders | _(none yet)_ |
+| **1 — Problem Deep-Dive** | §3 What We Heard (persona quotes) | §1.2 Business Drivers + Top Pains (full evidence) | _(none)_ |
+| **2A — Current State** | _(none — too early for narrative)_ | §3 Current State Snapshot (footprint table) | _(none)_ |
+| **2B — Live Research** | §2 Why Now (3-row forces table — research-informed) | §3 (extend with research findings) | `research_log.md` |
+| **3 — ToT Brainstorming** | _(none — branches don't enter HLD)_ | §2 Design Rationale §2.1 Branches + §2.2 Tradeoff Matrix | _(none)_ |
+| **4 prelim** | _(none — component list is internal)_ | §2 §2.3 Component Draft List | _(none)_ |
+| **4A — Feasibility** | _(none — depth lives in Supporting)_ | §3.5 Feasibility Validation Matrix (full 8-dim) | _(none)_ |
+| **4B — Coverage** | §6.5 How This Solves Your Problems (panel-friendly subset) | Appendix A Coverage Matrix (full bidirectional) | _(none)_ |
+| **4C — KPIs** | §11 Success Metrics & KPIs (3-tier table) | §10 Measurement & Observability (skeleton + per-KPI rows) | _(may produce stub `KPI_Baselines_v1.md` early)_ |
+| **5 — Persona Refinement** | _APPEND DELTAS ONLY_ to §3 / §6.5 / §11 if Phase 5 OPPs touch them (audit trail in Refinement Log) | _APPEND DELTAS ONLY_ to §3.5 / §10 / Appendix A if Phase 4 deltas re-validate | `Refinement_Log.md` (full per-persona log) |
+| **6 — HLD Consolidate** | §1 Executive Summary · §4 Future State · §5 Architecture (Mermaid) · §6 Design Choices · §7 Data Flows (text summary) · §8 Accelerators · §9 Roadmap · §10 Your Ask — and POLISH §3 / §6.5 / §11 | _(no Supporting writes — that's Phase 7)_ | **`diagrams.md`** (per-flow drill-downs — mandatory if ≥2 capability flows) |
+| **7 — Supporting Consolidate** | _(no HLD writes — locked at Phase 6)_ | §1 Reviewer Summary · §2 Design Rationale (Components) · §4 Risk Register · §4.5 NFR Compliance · §5 Assumption Log · §6 Gap Register · §7 Phased Roadmap · §8 Talk Track · §9 Cross-Ref · POLISH §3 / §3.5 / §10 / Appendix A / Appendix B | `KPI_Baselines_v1.md` (final signed-off version) |
+| **8 — Panel Prep** | _(no edits — HLD/Supporting are locked)_ | _(no edits)_ | `Panel_QA.md` |
+
+### Per-Phase Write Protocol (the TDA pattern adapted)
+
+For EVERY phase that has writes per the contract above:
+
+1. **PRESENT analytical content in chat** — tables, decisions, branches, matrices — per phase task list
+2. **GET user approval** at the phase checkpoint
+3. **SHOW preview** of what will be written to file (1-3 lines of compressed prose) — confirm the structural budget per `templates/HLD-template.md` is met
+4. **WRITE clean content** to the corresponding `<!-- SECTION: X -->` marker via `edit`/`multi_edit` (NOT a full file regeneration)
+5. **VERIFY the write** by re-reading the section markers — confirm content landed in the right place
+6. **UPDATE state file** `phaseStatuses.phaseN.status = "COMPLETED"` AND `generatedArtifacts[]` entry for the file (size, lines, sections-now-filled)
+7. **ONLY THEN** present next-phase prompt
+
+**Forbidden after Phase 0:** chat-only intermediate output. Every analytical artifact (problem deep-dive, capability scan, ToT branches, feasibility matrix, coverage matrix, KPI table) MUST persist to file before its checkpoint approval is accepted. This is the binding rule that prevents Gap #2 (context-window exhaustion).
+
+**Conciseness during progressive writes (v1.7.0):** Each section's structural budget (per `templates/HLD-template.md`) is the binding constraint. Total HLD line count is a **soft signal** with advisory threshold ~380 lines (2× retail example). Forbidden Phrases (`@02_Mandatory_Stop_Points.mdc`) remain the primary anti-verbosity enforcement. The hard 250-line cap from v1.5.0/v1.6.0 is **superseded** — see Production Learning #1.2 for rationale.
+
+### Phase 6 Consolidate-Mode (Critical Redefinition)
+
+Phase 6 is NO LONGER a from-scratch HLD generation. It is a **consolidate-and-polish** pass:
+
+1. **READ** the progressively-built HLD (§3 from Phase 1, §2 from Phase 2B, §6.5 from Phase 4B, §11 from Phase 4C, plus any Phase 5 deltas)
+2. **GENERATE** the missing sections in order: §1 Exec Summary (now everything is known) → §4 Future State table → §5 Proposed Architecture Mermaid + 5-bullet description → §6 Design Choices (3-5 choices, 3-bullet format each) → §7 Data Flows text summary → §8 Accelerators → §9 Roadmap → §10 Your Ask
+3. **PRODUCE `diagrams.md`** from `templates/diagrams-template.md` if the architecture has ≥2 distinct capability flows (cap 4; defer remainder to Supporting Doc Appendix C). Apply Per-Flow Drill-Down recipe from `01_Guidance.mdc` §7.7.2.
+4. **POLISH** the progressively-built sections (§3, §6.5, §11) for verbosity discipline + Forbidden Phrases sweep
+5. **VERIFY** structural budgets met per section + diagram syntax (`<br/>`, `curve: linear`, layout order, edge semantics, no dangling nodes — `01_Guidance.mdc` §7.6 D1-D8)
+
+The context-window benefit: by Phase 6, the agent has 4 sections already written and 6 sections to generate (instead of generating all 10 from scratch). The 6 generation tasks are individually small (per-section budgets in template). This survives long sessions.
+
+---
+
+## PHASE 0: USE CASE INTAKE
+
+**Tasks:**
+1. READ the use case brief (paste or file from `project/input_cloud_success_architect/`)
+2. Apply **Forensic Input Processing** (see protocol below) — build mind map
+3. Extract: business context, audience/panel, stated ambition, implicit pains
+4. Confirm panel personas (CDO, VP Integration, Director Arch, VP Business Apps)
+5. Flag missing information (⚠️ ASSUMPTION markers)
+6. **Artifact Writes (v1.7.0 Progressive Documentation v2):** create the working directory `project/output_cloud_success_architect/{slug}/` and write **two skeleton files** by copying templates verbatim:
+   - `HLD.md` ← `templates/HLD-template.md` (all `<!-- SECTION: X -->` markers preserved; `{Customer Name}` / `{Panel composition}` / `YYYY-MM-DD` placeholders filled with Phase 0 intake data)
+   - `Supporting.md` ← `templates/Supporting-Doc-template.md` (same skeleton + intake placeholders filled)
+   - Initialize `.success-architect-state.json` per `lib/docs/state-schema-reference.md` with `phaseStatuses.phase0 = "IN_PROGRESS"` and `generatedArtifacts[]` containing both skeleton entries with `notes: "skeleton - awaiting Phase N writes"`
+   - **DO NOT** create `diagrams.md` skeleton here — it's created in Phase 6 only if needed (depends on Phase 4 capability flow count)
+   - **🚫 Filename convention (v1.7.1):** artifact filenames are slug-free — `HLD.md` / `Supporting.md` / `diagrams.md` / `Refinement_Log.md` / `Panel_QA.md` / `KPI_Baselines_v1.md` / `research_log.md`. **Never** prefix filenames with `{slug}_` — the parent folder `{slug}/` already encodes the use case (Production Learning #1.3).
+
+<thinking>
+1. Key inputs received: {use case text, panel composition, any stated tech context}
+2. Decisions I am making: {domain classification, industry vertical, archetype of problem}
+3. Evidence from source: {cite specific sentences / sections}
+4. Risks/gaps identified: {what's missing, what's ambiguous}
+5. Confidence: HIGH / MEDIUM / LOW {with justification}
+6. Production learnings applicable: {check Production_Learnings.md}
+</thinking>
+
+**Checkpoint 0 Format:**
+```
+📋 PHASE 0 — Use Case Intake Summary
+
+**Use case (one line):** {summary}
+**Industry / Vertical:** {inferred}
+**Stated ambition:** {from the brief}
+**Panel personas detected:**
+  - CDO / CxO — {name if given, else role}
+  - VP of Integration — {name if given}
+  - Director of Architecture — {name if given}
+  - VP of Business Apps — {if optional, flag}
+**Implicit pains / headwinds:** {inferred, flagged as ⚠️ ASSUMPTION if not stated}
+**Gaps to confirm:**
+  - {missing context 1}
+  - {missing context 2}
+
+→ "approved" to proceed to Phase 1
+→ "adjust" + describe corrections
+```
+
+**STOP. Wait for approval.**
+
+---
+
+## PHASE 1: PROBLEM DEEP-DIVE
+
+**Tasks — ask progressively, one theme at a time:**
+
+1. **Business drivers** — why this matters now, what's triggering the investment
+2. **Pains** — top 3 pains each persona would articulate
+3. **Success metrics** — what does success look like in 12 months
+4. **Constraints** — regulatory, security, geography, budget signal, timeline
+5. **Existing API-led maturity** — APIs in production, team size, delivery velocity
+
+> If the brief already answers a theme, summarize and confirm rather than re-ask.
+
+**RGV Cycle:**
+```
+1. READ: 5 problem themes → Expected: 5 answered or marked ⚠️ ASSUMPTION
+2. GENERATE: Problem statement draft
+3. VERIFY: All 5 themes addressed
+4. FIX: Any gaps before checkpoint
+```
+
+**Artifact Writes (Phase 1 — Progressive Documentation v2):**
+- `HLD.md` → **§3 What We Heard From You** — bullet list of ≤6 verbatim quotes (≤25 words each), one per persona — pulled from Phase 1 deep-dive answers
+- `Supporting.md` → **§1.2 Business Drivers + Top Pains** — full evidence (Phase 1 raw answers, BD/Pain IDs, evidence-source citations like "brief line N" or "Phase 1 Q3 answer")
+- Update state: `problemDeepDive` (drivers, topPains, successMetrics, constraints, apiLedMaturity) per state schema
+- **Show preview** of the §3 bullets in chat (compressed to budget) → get approval → then write to file → re-read sections to verify content landed before presenting checkpoint
+
+**Checkpoint 1:** Present problem statement with cited evidence + confirm §3 written to HLD + §1.2 written to Supporting. STOP.
+
+---
+
+## PHASE 2: CAPABILITY DISCOVERY + LIVE RESEARCH
+
+**Two-part phase: (A) ask the customer about their current state, (B) run live web research against MuleSoft + Agentforce official sources to refresh the capability catalog before brainstorming.**
+
+### 2A. Current-State Q&A (ask per capability layer)
+
+1. **MuleSoft footprint** — Anypoint edition, Runtime Fabric/CloudHub 2.0, Flex Gateway (standalone vs Managed), API count, Anypoint Code Builder adoption, connectors in use
+2. **Salesforce footprint** — clouds deployed (Sales, Service, Data 360/Data Cloud, Industries), user counts, customization depth
+3. **Agentforce readiness** — Agentforce Builder usage, Agent Script adoption, Atlas reasoning experience, Data 360 / Data Cloud activation status, Einstein Trust Layer posture, Intelligent Context pipelines, Multi-Agent Orchestration plans
+4. **Data estate** — systems of record, event backbone, master data strategy, AI/ML platforms, vector store strategy
+5. **Talent & operating model** — integration CoE maturity, platform team size, DevSecOps posture, Agentforce Testing Center usage
+
+> For any capability the customer lacks, note as a **gap** — this becomes a recommendation in Phase 3.
+
+### 2B. 3-Tier Research Protocol (MANDATORY)
+
+> **Full protocol** (3 tiers, routing table, `research_log.md` template, RGV cycle, stale-index escape hatch, failure handling): **`lib/docs/research-sources-and-protocol.md`**. Read this file before executing Phase 2B.
+
+**Summary:**
+1. Scope 5–8 capability areas based on customer footprint + stated ambition.
+2. **Tier 1 — INDEXED FIRST**: For each area, query `@Docs:<primary>` per Routing Table (`lib/docs/research-sources-and-protocol.md` §2). If ≥1 cited passage with status info → CAPTURED. Apply Stale-Index Escape Hatch (§1.4) for 2026 features when indexed doc >30 days old.
+3. **Tier 2 — LIVE FALLBACK**: For unresolved areas, use `search_web` / `read_url_content` against the canonical URL from the Routing Table. Mark `source-mode = "live-fetch"`.
+4. **Tier 3 — CATALOG LAST-RESORT**: If both fail, use baked-in catalog with `⚠️ STALE` marker; STOP and notify user.
+5. Per area capture: Status (GA/Preview/Beta/Roadmap/Deprecated), Source-mode (`@Docs:<name>` / `live-fetch` / `⚠️ STALE catalog`), Source URL(s), Last-indexed (if @Docs), Research-date, Key facts, Customer-fit signal.
+6. Identify catalog gaps (findings not in `lib/docs/mulesoft-agentforce-capability-catalog.md`) → mark as `⚠️ PREVIEW` candidates for Phase 3.
+7. Write `research_log.md` per template in `lib/docs/research-sources-and-protocol.md` §1.6 — include Tier ratio (T1:T2:T3) at top.
+
+**Stale-index escape hatch:** If an indexed `@Docs` is older than 30 days AND the capability area is a 2026 feature (Agent Fabric / Agent Visualizer / LLM Gateway / Trusted Agent Identity / Hyperforce regional GA / AgentExchange roster), SKIP Tier 1 and go direct to Tier 2 with note `indexed-likely-stale`.
+
+**Failure handling:** if all three tiers fail (indexed empty + live-fetch blocked + catalog stale), STOP; do NOT fabricate. Offer wait-and-retry OR `⚠️ RESEARCH UNAVAILABLE` flag on every Phase 3 recommendation.
+
+**Artifact Writes (Phase 2 — Progressive Documentation v2):**
+- After 2A — `Supporting.md` → **§3 Current State Snapshot** — MuleSoft / Salesforce / Agentforce / Data / Talent footprint tables (one per layer)
+- After 2B — `HLD.md` → **§2 Why Now — The Agentic Moment** — 3-row forces table (each row: Force | Status with date/version | What it means for you ≤25 words). Sources from `research_log.md` Tier 1/2 captures
+- After 2B — `Supporting.md` → **§3 (extend)** — append research findings (capability area status, source-mode, URL, research-date) as a sub-table
+- After 2B — `research_log.md` (standalone artifact — already mandated)
+- Update state: `currentState`, `researchLog.tierRatio`, `researchLog.criticalFindings[]`
+- **Show preview** of §2 forces table in chat → get approval → write to HLD § 2 marker → verify
+
+**Checkpoint 2:** Present (1) Current-State Snapshot Table from §2A, (2) Research Summary from §2B + (3) confirm §2 forces table written to HLD + §3 written to Supporting + `research_log.md` written. STOP.
+
+---
+
+## PHASE 3: SOLUTION BRAINSTORMING (TREE OF THOUGHT)
+
+**Tasks:**
+
+1. Brainstorm **3 distinct architecture branches** covering the solution space:
+   - **Branch A:** API-led backbone with Agentforce on top (classic composable)
+   - **Branch B:** Agent-first with MuleSoft AI Chain + Topic Center as action layer
+   - **Branch C:** Event-driven / Data Cloud-centered pattern
+   - (Adapt branches to the actual use case — these are starters, not rigid)
+
+2. For each branch evaluate on 6 dimensions:
+   - Business fit (maps to stated pains)
+   - Time-to-value
+   - Risk / maturity of components
+   - Cost envelope (signal only — no pricing)
+   - Talent fit (gap to customer's current skills)
+   - Extensibility (what it enables next)
+
+3. Produce a **tradeoff matrix** and a **recommendation** (but present all 3 to the user).
+
+> See `@01_Guidance.mdc` Section 5 Tree of Thought brainstorming template.
+
+<thinking>
+Branch A: {description} — fits because {evidence}. Risk: {risk}. Score: {x/10}
+Branch B: {description} — fits because {evidence}. Risk: {risk}. Score: {x/10}
+Branch C: {description} — fits because {evidence}. Risk: {risk}. Score: {x/10}
+Recommended: {choice} — Confidence: {HIGH/MEDIUM/LOW}
+</thinking>
+
+**RGV Cycle:**
+```
+1. READ: Problem themes (5) + capability gaps (N) from Phases 1-2
+2. GENERATE: 3 branches, each addressing ≥3 pain themes
+3. VERIFY: Every branch cites ≥3 customer facts from Phases 0-2
+4. FIX: If branches feel generic, re-ground in evidence before checkpoint
+```
+
+**Artifact Writes (Phase 3 — Progressive Documentation v2):**
+- `Supporting.md` → **§2 Design Rationale §2.1 Brainstorming Branches** — full description of all 3 branches with evidence citations
+- `Supporting.md` → **§2 §2.2 Tradeoff Matrix** — 3 branches × 6 dimensions (Business fit, TTV, Risk, Cost, Talent, Extensibility) with 1-10 scores
+- `Supporting.md` → **§2 §2.3 Recommendation** — selected branch + rationale (recommendation goes here, NOT in HLD — HLD never shows alternatives that were rejected)
+- _(No HLD writes in Phase 3 — branches are reviewer-facing only)_
+- Update state: `brainstorming.branches[]`, `brainstorming.tradeoffMatrix`, `brainstorming.recommendation`
+- **Show preview** of recommendation paragraph in chat → get approval → write to Supporting §2 → verify
+
+**Checkpoint 3:** Present the 3 branches + tradeoff matrix + recommendation + confirm §2 written to Supporting. STOP.
+
+---
+
+## PHASE 4: SOLUTION FINALIZATION (3 SUB-STOPS — 4A, 4B, 4C)
+
+> **v1.2.0 change:** Phase 4 expanded with three mandatory sub-stops to enforce enterprise-grade discipline before HLD generation. Each sub-stop has its own checkpoint. Order is fixed: 4A → 4B → 4C. The user must approve each sub-stop before the next begins.
+
+**Tasks (preliminary, before sub-stops):**
+
+1. User picks a branch OR asks to hybridize (agent facilitates hybridization)
+2. Capture **draft component list**: components, data flows, accelerators selected, integration patterns
+3. For each draft component, record evidence citation: `Chose X because customer stated '{fact}' in Phase {N}`
+4. Build the high-level **architecture diagram outline** (Mermaid, will be rendered in Phase 6)
+5. **Identify capability flows** — distinct read/write paths or user-journey flows. This count drives Phase 6 Step 7: if ≥2 flows → `diagrams.md` is mandatory; if <2 → omit that artifact, HLD §7 text summary suffices.
+6. **Proceed to Phase 4A — Feasibility Validation** (do NOT proceed to Phase 5 yet)
+
+**Artifact Writes (Phase 4 prelim — Progressive Documentation v2):**
+- `Supporting.md` → **§2 §2.3 Component Draft List** — finalist branch + component list with per-component evidence citations
+- Update state: `finalist.selectedBranch`, `finalist.components[]` (each with evidence ref), `finalist.capabilityFlows[]` (count + names → drives Phase 6 Step 7 diagrams.md decision)
+
+---
+
+### PHASE 4A → 4B → 4C — Enterprise Validation Sub-Stops
+
+> **Full task lists, RGV cycles, checkpoint formats, and `<thinking>` templates** for Phase 4A (Feasibility), Phase 4B (Coverage), Phase 4C (KPIs) live in **`lib/docs/phase-4-enterprise-gates-spec.md`** (operational "how"). Pattern reference (anti-patterns, decision trees, KPI catalog): **`lib/docs/enterprise-validation-patterns.md`** (definitional "why"). Read both before executing any Phase 4 sub-stop.
+
+**Order is fixed: 4A → 4B → 4C. Each sub-stop has its own checkpoint. User must approve each before the next begins.**
+
+| Sub-Stop | Purpose | State Key Updated | Gate to Pass |
+|----------|---------|-------------------|--------------|
+| **4A — Feasibility Validation** | Validate every draft capability is do-able for THIS customer (8 dims: GA, Geography, Edition, Footprint, Timeline, Skill, Commercial, Data Residency) | `feasibilityMatrix` | Zero NO-GO capabilities (or all NO-GO have replacements) |
+| **4B — Problem-Solution Coverage** | Bidirectional pain↔component mapping; flag uncovered pains and future-enablers | `coverageMatrix` | 100% pain coverage + future-enabler ratio ≤ 20% |
+| **4C — KPI Definition** | 3-tier table (Business 3-5 / Operational 3-5 / Technical 3-5) with Baseline + Target + Window + Owner + Instrumentation per KPI | `kpis` | Every KPI has 5 mandatory fields; TBD baselines flagged for `KPI_Baselines_v1.md` |
+
+**Artifact Writes per Sub-Stop (v1.7.0 Progressive Documentation v2):**
+
+| Sub-Stop | HLD section written | Supporting section written |
+|----------|---------------------|----------------------------|
+| **4A** | _(none — feasibility depth is reviewer-only)_ | **§3.5 Feasibility Validation Matrix** — full 8-dim table per capability with verdict (GO / CONDITIONAL / NO-GO) + §3.5.3 Blockers & Mitigations |
+| **4B** | **§6.5 How This Solves Your Problems** — panel-friendly subset table (top pains × persona × how-we-solve-it × component refs); _"Coverage: N/M stated pains addressed"_ summary line | **Appendix A Coverage Matrix (Full)** — A.1 Pain → Component (bidirectional) + A.2 Component → Pain with future-enabler tags |
+| **4C** | **§11 Success Metrics & KPIs** — 3-tier tables (11.1 Business / 11.2 Operational / 11.3 Technical) with Baseline + Target + Window + Owner | **§10 Measurement & Observability Strategy** (skeleton + per-KPI rows in §10.1 Instrumentation Plan); stub `KPI_Baselines_v1.md` listing TBD-baseline KPIs |
+
+For each sub-stop: present analytical content in chat → get approval → write to file via targeted `edit` on the section marker → verify → checkpoint.
+
+**After Phase 4C approval, Phase 4 (overall) is COMPLETE — proceed to Phase 5.**
+
+---
+
+## PHASE 5: ADVERSARIAL PERSONA REFINEMENT
+
+> **v1.3.0 addition.** Stress-test the Phase-4-finalized solution against simulated panel personas BEFORE HLD generation. Per-persona loop with HITL stops + final consolidation stop. **Full operational spec** (library, tiers, Improvement Opportunity Schema, RGV, termination, Phase 4 delta rules): **`lib/docs/phase-5-persona-refinement-spec.md`** — read before executing.
+
+**Activation contract:** Phase 4C `COMPLETED`. Entry artifact = Solution v1 (Phase 4 finalist + 4A/4B/4C outputs).
+
+**Persona engagement order** (deterministic — spec §2.4):
+1. Phase-0 panel personas (panel order from state)
+2. Industry overlay if `industryVertical` matches healthcare / financial-services / retail / manufacturing / public-sector (spec §2.2)
+3. Generic library: CFO → CISO → Skeptic-Architect → Vendor-Burned-Buyer → Compliance-Officer
+
+**Per-persona loop (5 tiers per persona):**
+1. **GENERATE** 5 questions — Basic → Intermediate → Advanced → Expert → Adversarial (templates: spec §3)
+2. **ANSWER** each using v_n; **VERIFY** against catalog; trigger live research only on uncertainty (D6); score Confidence
+3. **DECIDE** verdict per Q: ✅ KEEP / ⚠️ IMPROVE / ❌ DISCARD-WITH-NOTE (rules: spec §5)
+4. **STOP — Per-Persona Checkpoint** (`@02_Mandatory_Stop_Points.mdc` Stop #9)
+
+**End-of-loop consolidation:** if ≥1 HIGH-impact IMPROVE → Round 2 for affected personas only (max 2 rounds, D5; selection: spec §9.3) → generate v1→v2 diff → **STOP — Final Consolidation** (Stop #10).
+
+**Phase 4 Delta Re-Validation (D7, spec §8):** component add/remove → 4B delta; capability/geography/edition change → 4A delta; KPI change → 4C delta. Delta runs do NOT trigger Phase 4 stops; recorded in `Refinement_Log.md` §6.
+
+**Termination (D5):** Normal (all personas done) / Max-rounds (2 completed; remainder → Risk Register) / User-locked-early (`lock now` + mandatory 1-line rationale).
+
+**RGV Cycle:** READ Phase 4 finalist + 4B + 4C + persona list (P) → GENERATE P × 5 questions [+ Round 2 subset], per Q produce A + verification + verdict + opportunity → VERIFY: 5 tiers per persona, every IMPROVE has full Schema (spec §4), every DISCARD has deferral target, every delta has updated state, v2 diff reconciles → FIX gaps before checkpoint.
+
+**Outputs:** `Refinement_Log.md` (from `templates/Refinement-Log-template.md`); state updates to `refinementLog`, `personasEngaged[]`, `improvementsApplied[]`, `improvementsRejected[]`, `currentRefinementRound`, `terminationTrigger`; delta updates to `feasibilityMatrix` / `coverageMatrix` / `kpis` if Phase 4 re-validation triggered.
+
+**Artifact Writes (Phase 5 — Progressive Documentation v2):**
+- `Refinement_Log.md` — full per-persona Q&A audit trail per template format
+- **APPEND DELTAS** (not full rewrites) to progressively-built HLD/Supporting sections when Phase 5 OPPs change them:
+  - HLD §3 (if new persona quotes surface — rare; usually Phase 1 has all of them)
+  - HLD §6.5 (if Phase 4B delta re-validation adds/removes pain→component mappings)
+  - HLD §11 (if Phase 4C delta adds new KPIs — e.g., cliff metrics, composite indices)
+  - Supporting §3.5 (if Phase 4A delta re-validates capabilities)
+  - Supporting §10 (if Phase 4C delta adds KPI rows that need instrumentation)
+  - Supporting Appendix A (if Phase 4B delta changes coverage)
+- **Append Appendix B Refinement Summary** to `Supporting.md` — B.1 Personas Engaged · B.2 v1→v2 Diff · B.3 Phase 4 Delta Outcomes · B.4 Termination & Confidence
+
+**Checkpoint 5 (final consolidation):** Solution v2 hardened; refinement log written; Phase 4 deltas reconciled; HLD/Supporting deltas appended. STOP.
+
+---
+
+## PHASE 6: HLD CONSOLIDATE & POLISH + PER-FLOW DIAGRAMS (Progressive Documentation v2)
+
+> **v1.7.0 CRITICAL REDEFINITION:** Phase 6 is **consolidate-and-polish**, NOT from-scratch generation. By this phase, `HLD.md` already contains §3 (Phase 1), §2 (Phase 2B), §6.5 (Phase 4B), §11 (Phase 4C), and any Phase 5 deltas. Phase 6 generates the **6 remaining sections** + the per-flow drill-downs artifact, then polishes the whole document.
+
+**Phase 6 Task List (7 steps):**
+
+**Step 1 — RE-READ progressively-built HLD.** Confirm §2, §3, §6.5, §11 are present and updated with Phase 5 deltas. List which `<!-- SECTION: X -->` markers are still placeholders.
+
+**Step 2 — Generate §1 Executive Summary.** Now that the full solution is locked, write ≤80 words / 3 sentences: (S1) who you are + one stated pain quoted; (S2) what we propose in 12-18 words; (S3) the measured outcome at 12 months.
+
+**Step 3 — Generate §4 Aspirational Future State.** ≤5-row table mapping Today (from Phase 1 facts) → 12-18 Months From Now (from ambition) → Stakeholder Who Cares.
+
+**Step 4 — Generate §5 Proposed Architecture.** ONE Mermaid `flowchart LR` diagram ≤12 primary nodes following recipe `01_Guidance.mdc` §7.7.1 (Architecture-HLD): subgraph dashed-borders + 4-class OR 18-class palette + action `-->` vs governance `-.->` edges. Apply ALL 8 syntax/layout rules from §7.6 D1-D8. Follow with the 5-bullet "How this works for you" block (≤25 words each).
+
+**Step 5 — Generate §6 Design Choices + §7 Data Flows summary.** §6 = 3-5 design choices in 3-bullet format (What/Why for you/Business benefit, each ≤30 words). §7 = max 2 flows as text summaries (each ≤8 numbered steps, ≤15 words/step) — cross-referencing `diagrams.md` for visuals.
+
+**Step 6 — Generate §8 Accelerators + §9 Roadmap + §10 Your Ask.** §8 = ≤6-row accelerator table. §9 = 90/180/365-day horizon table. §10 = 3 time-boxed asks + 2-3 commitments-in-return.
+
+**Step 7 — Produce `diagrams.md`** _(NEW in v1.7.0)_:
+   - **Decision:** if `finalist.capabilityFlows[].length >= 2` per state, this artifact is **mandatory**. If <2, **skip** (HLD §7 text summary suffices).
+   - **Create** `diagrams.md` from `templates/diagrams-template.md`
+   - **Generate** 1 Mermaid drill-down per capability flow (cap **4 flows**; defer remainder to Supporting Doc Appendix C)
+   - **Apply** Per-Flow Drill-Down recipe `01_Guidance.mdc` §7.7.2: init directive merging `curve: linear` + `themeVariables.fontSize: 16px`; numbered-step labels on edges ("1. Action ≤8 words"); subgraphs by logical zone (Data Sources / MuleSoft API-Led / Salesforce Platform / Backend); 4-class minimal palette (`sf` / `ms` / `backend` / `user`) per recipe §7.7.1
+   - **Add** "Strategy Summary" 3-4 bullets per flow (architectural rationale, NOT narrative)
+
+**Step 8 — POLISH the progressively-built sections** (§3 quotes, §6.5 coverage, §11 KPIs) — Forbidden Phrases sweep + structural budget verification + Mermaid syntax check D1-D8.
+
+**Step 9 — Update generation footer** of HLD: `Authored with: Cloud Success Architect Agent v1.7.0 | {generation-date}`.
+
+> HLD audience is the **panel**. Write in "you" terms. No deep technical jargon. Diagrams > paragraphs. Use Solution **v2** (Phase 5 exit), not v1. See `templates/HLD-template.md` for canonical structure. **Conciseness is example-anchored** — benchmark against `examples/retail-personalized-offerings_HLD.md` (~190 lines for a 4-capability use case). Total HLD line count is a *soft signal* with advisory threshold ~380 lines.
+
+**RGV Cycle:** READ progressively-built HLD sections (4 already filled: §2, §3, §6.5, §11) + Solution v2 components (N) + Phase 4B+5 coverage matrix + Phase 4C+5 KPIs + pains (M) + personas + `finalist.capabilityFlows[]` count → GENERATE 6 remaining HLD sections (§1, §4, §5, §6, §7, §8-§10) + `diagrams.md` (if ≥2 flows) → VERIFY: every component cited with customer fact, all personas addressed, "you" language throughout, §6.5 reflects all Phase 5 deltas, §11 has every KPI with Baseline+Target+Window+Owner, `diagrams.md` has 1 Mermaid per capability flow with recipe §7.7.2 applied, syntax D1-D8 passes → FIX any "they/the customer" → "you", complete remaining sections, `<br/>` discipline applied to all node/edge labels.
+
+**Checkpoint 6:** HLD consolidated (all 10+ sections filled with verbosity discipline) + `diagrams.md` produced (if applicable) + all Forbidden Phrases gates pass. Ask user to review in IDE. STOP.
+
+---
+
+## PHASE 7: SUPPORTING LLD DOC CONSOLIDATE & POLISH (Progressive Documentation v2)
+
+> **v1.7.0 CRITICAL REDEFINITION:** Phase 7 is **consolidate-and-polish**. By this phase, `Supporting.md` already contains §1.2 (Phase 1), §3 (Phase 2A/2B), §2 (Phase 3 + 4 prelim), §3.5 (Phase 4A), Appendix A (Phase 4B), §10 skeleton (Phase 4C), Appendix B + any deltas (Phase 5). Phase 7 generates the **remaining sections** + KPI Baselines artifact + polishes the whole document.
+
+**Phase 7 Task List:**
+
+**Step 1 — RE-READ progressively-built Supporting Doc.** Confirm §1.2, §2, §3, §3.5, §10 skeleton, Appendix A, Appendix B are present and reflect all Phase 5 deltas. List which `<!-- SECTION: X -->` markers are still placeholders.
+
+**Step 2 — Generate §1 Reviewer Summary.** 1-paragraph restatement targeting the reviewer: what HLD proposes + key assumptions + where risks are managed.
+
+**Step 3 — Generate §2 Design Rationale — Component by Component.** For each Solution v2 component (typically 8-12): Role / Why chosen (evidence cite) / Alternatives considered (2-3 + why rejected) / Tradeoff accepted.
+
+**Step 4 — Generate §3 Accelerator Selection Matrix.** Y/N evaluation × industry accelerators (Healthcare, FS, Retail, Mfg, Utilities, Consumer Goods, Salesforce OMS, SAP) with customization ratios.
+
+**Step 5 — Generate §4 Risk Register + §4.5 NFR Compliance Matrix.** §4 = 3-5 risks per category × 5 categories (Technical, Delivery, Org, Security/Compliance, Commercial) with likelihood/impact/mitigation. §4.5 = 8 NFR categories with target + how-met + components-responsible + gap.
+
+**Step 6 — Generate §5 Assumption Log + §6 Gap Register.** §5 = every ⚠️ ASSUMPTION across Phases 0-5 with impact + validation path. §6 = items that couldn't be confirmed after 3 attempts.
+
+**Step 7 — Generate §7 Phased Roadmap (detailed) + §8 Talk Track + §9 Cross-Ref.** §7 = 0-90 / 90-180 / 180-365 day horizon detail (workstreams + decisions). §8 = per-HLD-section talk-track tips. §9 = HLD-section → Supporting-section back-pointer table.
+
+**Step 8 — POLISH Appendix C (Per-Flow Diagrams overflow)** _(NEW in v1.7.0)_: if Phase 6 capped at 4 flows but the architecture has additional flows, write Appendix C as a brief table listing the deferred flows with one-line descriptions and a pointer back to the cross-reference in `diagrams.md`.
+
+**Step 9 — Generate `KPI_Baselines_v1.md`** — separate artifact listing every KPI requiring 90-day pre-launch baseline capture; signed off by executive sponsor. Promotes the stub created in Phase 4C to the final signed-off form.
+
+**Step 10 — POLISH the progressively-built sections** (§2 Design Rationale alignment with §3.5 Feasibility, §10 instrumentation completeness vs HLD §11, Appendix A coverage entries vs §6.5).
+
+**Step 11 — Update generation footer** of Supporting Doc: `Authored with: Cloud Success Architect Agent v1.7.0 | {generation-date}`.
+
+> See `templates/Supporting-Doc-template.md` for canonical structure (incl. §3.5 Feasibility, §4.5 NFR, §10 Measurement, Appendix A Coverage Full, Appendix B Refinement Summary, Appendix C Diagram Overflow if applicable).
+
+**RGV Cycle:** READ progressively-built Supporting sections (§1.2, §2, §3, §3.5, §10 skeleton, Appendix A, Appendix B) + Phase 4A+5 feasibility + Phase 4B+5 coverage + Phase 4C+5 KPIs + Phase 5 refinement log + Phase 6 HLD components + `finalist.capabilityFlows[]` count → GENERATE remaining 9 sections (§1, §3 accelerator-matrix, §4, §4.5, §5, §6, §7, §8, §9) + KPI Baselines artifact + optional Appendix C → VERIFY: §3.5 has every feasibility entry (incl. Phase 5 deltas), §4.5 has 8 NFR rows, §10 has 1 row per HLD §11 KPI, Appendix A has 100% of coverage entries, Appendix B summarizes refinement log, `KPI_Baselines_v1.md` lists all TBD-baseline KPIs → FIX any missing rows from source phase output.
+
+**Checkpoint 7:** Supporting Doc consolidated (all sections filled) + KPI Baselines artifact final + optional Appendix C if diagrams.md overflowed. Ask user to review. STOP.
+
+---
+
+## PHASE 8: PANEL REHEARSAL PREP
+
+**Tasks:**
+
+1. Generate **Q&A bank** with 15 likely questions grouped by persona:
+   - CDO / CxO — 4 questions (strategy, ROI, risk, governance)
+   - VP of Integration — 4 questions (tech depth, roadmap, migration, reliability)
+   - Director of Architecture — 4 questions (landing zones, networking, security, observability)
+   - VP of Business Apps — 3 questions (user adoption, change management, business value)
+2. Generate **objection handlers** for 5 common objections (cost, lock-in, timeline, Agentforce maturity, skills)
+3. Produce **follow-up list** — what to send after the meeting
+
+**Checkpoint 8:** Panel prep delivered. Confirm agent run complete.
+
+---
+
+## STATE FILE
+
+**Location:** `project/output_cloud_success_architect/{slug}/.success-architect-state.json`
+
+**Full schema + per-phase update protocol + `<thinking>` block templates:** `lib/docs/state-schema-reference.md`
+
+**Top-level keys (v1.3.0):** `useCaseSlug`, `useCaseSummary`, `industryVertical`, `panelPersonas[]`, `problemDeepDive`, `currentState`, `brainstorming`, `finalist`, **`feasibilityMatrix`** (Phase 4A), **`coverageMatrix`** (Phase 4B), **`kpis`** (Phase 4C), **`refinementLog`** (Phase 5 — personas, opportunities, delta runs, termination), **`nfrCompliance`** (Phase 7), `assumptionLog[]`, `gapRegister[]`, `generatedArtifacts`, `currentPhase`, `phaseStatuses` (now includes `phase4A`, `phase4B`, `phase4C`, `phase5`).
+
+---
+
+## STATE FILE UPDATE PROTOCOL (MANDATORY)
+
+Update state file after EVERY phase completion. After user approves a phase:
+1. Update `currentPhase` → next phase
+2. Set completed phase status to `"COMPLETED"`
+3. Add `completedAt` timestamp
+4. Append any new entries to `assumptionLog[]` / `gapRegister[]`
+5. For Phase 4A/4B/4C: also write the corresponding object (`feasibilityMatrix` / `coverageMatrix` / `kpis`); see `lib/docs/state-schema-reference.md` for per-phase update map.
+6. For Phase 5 per-persona stops: append to `refinementLog.personasEngaged[?name].rounds[?round].questions[]`; for delta runs append to `refinementLog.deltaRuns[]` and update affected `feasibilityMatrix` / `coverageMatrix` / `kpis`; for final consolidation set `refinementLog.endedAt` + `solutionVersionPost`.
+
+---
+
+## EXECUTION RULES, RGV, CONFIDENCE & FORENSIC PROTOCOL
+
+**Per-phase rhythm:** **Before:** load relevant `@01_Guidance.mdc` section + produce `<thinking>` block + assess Confidence. **During:** follow phase tasks + apply RGV for generation phases (3, 5, 6, 7, 8) + cite evidence. **After:** present checkpoint, STOP and WAIT, update state file on approval.
+
+**Confidence levels:** HIGH (clear customer facts, proven capability) → proceed. MEDIUM (partial context, reasonable inference) → flag `⚠️ ASSUMPTION`, recommend validation. LOW (vague/contradictory) → STOP, request clarification.
+
+**RGV pattern:** READ (inputs from prior phases — count/list) → GENERATE (artifact sections — count/list) → VERIFY ("Grounded X/Y sections with citations") → FIX (any ungrounded) before checkpoint. **If X ≠ Y, do NOT present the checkpoint.**
+
+**Forensic Input Processing (Phase 0):** (1) INVENTORY = mind map (sections + numerical anchors); (2) SECTION-BY-SECTION RGV; (3) POSITIONAL BIAS SCAN — re-read 30%–70% (LLMs under-index middles); (4) COMPLETENESS VERIFICATION (>10% delta → re-read); (5) CROSS-SECTION COHERENCE — flag contradictions.
+
+---
+
+## RESUME, BACKWARD NAVIGATION & ERROR RECOVERY
+
+**Resume:** on activation, check for `project/output_cloud_success_architect/{slug}/.success-architect-state.json` → show last completed phase, offer resume/restart. Multiple slugs → ask which.
+
+**Backward navigation:** "revise phase N" → mark N+1…8 `NEEDS_REVIEW`. Special cases: "switch finalist" → re-run 4A+4B+4C+5; "re-run feasibility" → 4B/4C/5-8; "re-run coverage" → 4C/5-8; "revise KPIs" → 5-8; "re-run refinement" → re-engage Phase 5 with current solution; "edition/entitlement changed" → re-check 4A Edition dim, then 4B/4C/5-8. Full cascade map: `lib/docs/state-schema-reference.md` §"Backward Navigation Cascade".
+
+**Error recovery:** mid-generation failure → save state + report + offer retry. Unreadable input → ask for paste. Conflicting customer facts → flag + ask which to trust + log decision. Disconnect → state preserved.
+
+---
+
+## QUICK REFERENCE
+
+| Need | Reference |
+|------|-----------|
+| Main identity / RISEN | `@Cloud_Success_Architect.mdc` |
+| **Progressive Documentation v2 contract (v1.7.0)** | This file — section "Progressive Documentation v2" + per-phase "Artifact Writes" blocks |
+| Capability catalog + patterns | `@01_Guidance.mdc` |
+| Research sources | `@01_Guidance.mdc` Section 12 |
+| Enterprise validation patterns (NFR §13, Feasibility §14, Coverage §15, KPIs §16) | `lib/docs/enterprise-validation-patterns.md` (summary in `@01_Guidance.mdc` §13-16) |
+| **Phase 4A/4B/4C operational spec** (tasks, RGV, checkpoints, `<thinking>` templates) | **`lib/docs/phase-4-enterprise-gates-spec.md`** |
+| **Phase 5 Persona Refinement spec** (persona library, tiers, schema, delta rules, termination) | **`lib/docs/phase-5-persona-refinement-spec.md`** |
+| **State schema (full JSON) + per-phase update protocol** | **`lib/docs/state-schema-reference.md`** |
+| Stop points | `@02_Mandatory_Stop_Points.mdc` |
+| HLD template (incl. §6.5 Coverage + §11 KPIs) | `templates/HLD-template.md` |
+| Supporting Doc template (incl. §3.5 Feasibility + §4.5 NFR + §10 Measurement + Appendix A Coverage + Appendix B Refinement Summary) | `templates/Supporting-Doc-template.md` |
+| **Per-flow Diagrams template (v1.7.0)** | **`templates/diagrams-template.md`** |
+| Refinement Log template (Phase 5 output) | `templates/Refinement-Log-template.md` |
+| NFR Profile per Capability (used by 4A Feasibility + Supporting §4.5) | `lib/docs/mulesoft-agentforce-capability-catalog.md` §9 |
+| **Mermaid syntax + layout best practices (D1-D8)** | **`@01_Guidance.mdc` §7.6** |
+| **Diagram pattern recipes (Architecture-HLD · Per-Flow Drill-Down · Async/Event-Bus · Round-Trip)** | **`@01_Guidance.mdc` §7.7** |
+| **Worked examples** | **`examples/retail-personalized-offerings_HLD.md` (architecture) + `examples/retail-personalized-offerings_diagrams.md` (per-flow drill-downs)** |
+
+---
+
+> 🧞‍♂️ R-GENIE Agent Framework by Cheppali Shaik Sohail
+> ✍️ Agent Author: Cheppali Shaik Sohail | v1.0.0 | 2026-04-23
+> 🔧 Tuned by Cheppali Shaik Sohail via R-GENIE Agent Tuner | v1.3.0 | 2026-05-05
+> 🔧 Tuned by Cheppali Shaik Sohail via R-GENIE Agent Tuner | v1.4.0 | 2026-05-06
+> 🔧 Tuned by Cheppali Shaik Sohail via R-GENIE Agent Tuner | v1.7.0 | 2026-05-12
+> 🔧 Tuned by Cheppali Shaik Sohail via R-GENIE Agent Tuner | v1.7.1 | 2026-05-13

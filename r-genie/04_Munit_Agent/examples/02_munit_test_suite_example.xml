@@ -1,0 +1,173 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 🧞‍♂️ R-GENIE MUNIT TEST SUITE EXAMPLE -->
+<!-- Extracted and simplified from: s-sfdc-commerce-mst-api-at/src/test/munit/solace-listener-sfdc-account-test-suite.xml -->
+
+<mule xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:munit="http://www.mulesoft.org/schema/mule/munit"
+	xmlns:munit-tools="http://www.mulesoft.org/schema/mule/munit-tools"
+	xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xsi:schemaLocation="
+		http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+		http://www.mulesoft.org/schema/mule/munit http://www.mulesoft.org/schema/mule/munit/current/mule-munit.xsd
+		http://www.mulesoft.org/schema/mule/munit-tools  http://www.mulesoft.org/schema/mule/munit-tools/current/mule-munit-tools.xsd">
+
+	<!-- ✅ MUNIT SUITE CONFIGURATION -->
+	<munit:config name="example-test-suite.xml" />
+	
+	<!-- 🔧 GLOBAL PROPERTIES FOR TESTING -->
+	<global-property name="mule.env" value="dev" />
+	<global-property name="region" value="eu" />
+
+	<!-- ✅ SUCCESS TEST EXAMPLE - Main Business Flow -->
+	<munit:test name="solace-listener-sfdc-account-flow-success-test" description="Test main account flow success scenario">
+		
+		<!-- 🔧 SETUP: Mock External System Calls -->
+		<munit:behavior>  <!-- ❌ CRITICAL: NO doc:name allowed on munit:behavior -->
+			<!-- ✅ SALESFORCE UPSERT MOCK -->
+			<munit-tools:mock-when doc:name="Mock Salesforce Account Upsert" processor="salesforce:upsert">  <!-- ✅ doc:name allowed on components -->
+				<munit-tools:with-attributes>
+					<munit-tools:with-attribute whereValue="bd7a1bab-e965-4bad-a37e-bdef0aac65ea" attributeName="doc:id"/>
+				</munit-tools:with-attributes>
+				<munit-tools:then-return>
+					<munit-tools:payload value='{"successful": true}' mediaType="application/json"/>
+				</munit-tools:then-return>
+			</munit-tools:mock-when>
+			
+			<!-- ✅ SOLACE PUBLISH MOCK -->
+			<munit-tools:mock-when doc:name="Mock Solace Message Publish" processor="solace:publish">  <!-- ✅ doc:name allowed on components -->
+				<munit-tools:with-attributes>
+					<munit-tools:with-attribute whereValue="0459095c-4b81-45f5-9d41-7e6b0c97c823" attributeName="doc:id"/>
+				</munit-tools:with-attributes>
+			</munit-tools:mock-when>
+			
+			<!-- ✅ SOLACE ACK MOCK -->
+			<munit-tools:mock-when doc:name="Mock Solace Message Acknowledgment" processor="solace:ack">  <!-- ✅ doc:name allowed on components -->
+				<munit-tools:with-attributes>
+					<munit-tools:with-attribute whereValue="bb48f72c-2a1c-4090-bf88-0b8e3a479967" attributeName="doc:id"/>
+				</munit-tools:with-attributes>
+			</munit-tools:mock-when>
+
+			<!-- ✅ SALESFORCE QUERY MOCK -->
+			<!-- ⚠️ EXCEPTION: Utility flow that ONLY sets target variable, no business logic -->
+			<!-- See Section 4.1 Mock Strategy Guide - avoid mocking business flow-refs -->
+			<munit-tools:mock-when processor="flow-ref">
+				<munit-tools:with-attributes>
+					<munit-tools:with-attribute whereValue="5b81a359-b965-424a-adec-a633910c8d58" attributeName="doc:id"/>
+				</munit-tools:with-attributes>
+				<munit-tools:then-return>
+					<munit-tools:variables>
+						<munit-tools:variable key="sfdcQueryAccountResponse" 
+							value='#[MunitTools::getResourceAsString("customer/sfdc-query-account-response.json")]' 
+							mediaType="application/json"/>
+					</munit-tools:variables>
+				</munit-tools:then-return>
+			</munit-tools:mock-when>
+
+			<!-- 🔍 SPY: DATAWEAVE TRANSFORMATION VALIDATION -->
+			<munit-tools:spy processor="ee:transform">
+				<munit-tools:with-attributes>
+					<munit-tools:with-attribute whereValue="975bcc9c-0af7-462b-93f6-6f4b6e1db1a9" attributeName="doc:id"/>
+				</munit-tools:with-attributes>
+				<munit-tools:before-call>
+					<munit-tools:assert-equals 
+						actual="#[vars.inpPayload]"
+						expected='#[MunitTools::getResourceAsString("customer/customer-input-payload.xml")]'
+						message="Assert failed for Input Payload"/>
+				</munit-tools:before-call>
+				<munit-tools:after-call>
+					<munit-tools:assert-equals 
+						actual="#[payload]"
+						expected='#[MunitTools::getResourceAsString("customer/account-mapping-output.json")]'
+						message="Assert failed for Account Mapping"/>
+				</munit-tools:after-call>
+			</munit-tools:spy>
+		</munit:behavior>
+
+		<!-- ⚡ EXECUTION: Run the actual flow -->
+		<munit:execution>  <!-- ❌ CRITICAL: NO doc:name allowed on munit:execution -->
+			<munit:set-event>
+				<munit:payload 
+					value='#[MunitTools::getResourceAsString("customer/customer-input-payload.xml")]'
+					encoding="UTF-8" mediaType="application/xml"/>
+				<munit:attributes
+					value='#[{"userProperties": {"correlation_id": "1234-munit-test", "tracking_id": "1234"}, "destination": "test/queue", "messageReferenceId": "1234"}]'/>
+			</munit:set-event>
+			<flow-ref name="solace-listener-sfdc-account-flow"/>
+		</munit:execution>
+
+		<!-- ✅ VALIDATION: Verify the results -->
+		<munit:validation>  <!-- ❌ CRITICAL: NO doc:name allowed on munit:validation -->
+			<munit-tools:verify-call processor="solace:ack">
+				<munit-tools:with-attributes>
+					<munit-tools:with-attribute whereValue="bb48f72c-2a1c-4090-bf88-0b8e3a479967" attributeName="doc:id"/>
+				</munit-tools:with-attributes>
+			</munit-tools:verify-call>
+		</munit:validation>
+	</munit:test>
+
+	<!-- ❌ FAILURE TEST EXAMPLE - Critical Error Handling -->
+	<munit:test name="solace-listener-sfdc-account-flow-salesforce-error-test" description="Test Salesforce connectivity error handling">
+		<munit:behavior>
+			<!-- ✅ MOCK SALESFORCE TO THROW ERROR -->
+			<munit-tools:mock-when processor="salesforce:upsert">
+				<munit-tools:with-attributes>
+					<munit-tools:with-attribute whereValue="bd7a1bab-e965-4bad-a37e-bdef0aac65ea" attributeName="doc:id"/>
+				</munit-tools:with-attributes>
+				<munit-tools:then-return>
+					<munit-tools:payload value='{"successful": false}' mediaType="application/json"/>
+					<munit-tools:error typeId="SALESFORCE:CONNECTIVITY"/>
+				</munit-tools:then-return>
+			</munit-tools:mock-when>
+			
+			<!-- ✅ MOCK OTHER SYSTEMS FOR CLEAN TEST -->
+			<munit-tools:mock-when processor="solace:publish"/>
+			<munit-tools:mock-when processor="solace:ack"/>
+		</munit:behavior>
+
+		<munit:execution>
+			<munit:set-event>
+				<munit:payload 
+					value='#[MunitTools::getResourceAsString("customer/customer-input-payload.xml")]'
+					encoding="UTF-8"
+					mediaType="application/xml"/>
+			</munit:set-event>
+			<flow-ref name="solace-listener-sfdc-account-flow"/>
+		</munit:execution>
+
+		<munit:validation>
+			<!-- ✅ VERIFY ERROR HANDLING FLOW WAS CALLED -->
+			<munit-tools:verify-call processor="flow-ref">
+				<munit-tools:with-attributes>
+					<munit-tools:with-attribute whereValue="d9244afd-40f4-46e9-a4d2-385c8506d04e" attributeName="doc:id"/>
+				</munit-tools:with-attributes>
+			</munit-tools:verify-call>
+		</munit:validation>
+	</munit:test>
+
+	<!-- ✅ SIMPLIFIED SUCCESS TEST FOR SUB-FLOW -->
+	<munit:test name="sfdc-query-common-sub-flow-test" description="Test SFDC query sub-flow">
+		<munit:behavior>
+			<munit-tools:mock-when processor="salesforce:query">
+				<munit-tools:with-attributes>
+					<munit-tools:with-attribute whereValue="c2bd2492-700d-471e-aeea-d7bf2d775558" attributeName="doc:id"/>
+				</munit-tools:with-attributes>
+				<munit-tools:then-return>
+					<munit-tools:payload value='[{"Id": "0010Q00001GA6RwQAL"}]'/>
+				</munit-tools:then-return>
+			</munit-tools:mock-when>
+		</munit:behavior>
+
+		<munit:execution>
+			<set-variable value="${sfdc.query.account}" variableName="sfdcQuery"/>
+			<flow-ref name="sfdc-query-common-sub-flow"/>
+		</munit:execution>
+
+		<munit:validation>
+			<munit-tools:assert-equals 
+				actual="#[vars.sfdcQuery]" 
+				expected="${sfdc.query.account}" 
+				message="Assert Failed at SFDC query flow"/>
+		</munit:validation>
+	</munit:test>
+</mule>

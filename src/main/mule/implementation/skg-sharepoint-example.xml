@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:sharepoint="http://www.mulesoft.org/schema/mule/sharepoint"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/sharepoint http://www.mulesoft.org/schema/mule/sharepoint/current/mule-sharepoint.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	<flow name="skg-sharepoint-exampleFlow" doc:id="5a325831-d491-4c7c-b278-48a3024927c8" >
+		<http:listener doc:name="Listener" doc:id="b586b7a0-56ee-49f2-b183-d99a94a938bc" config-ref="HttpListenerConfig" path="/get-file"/>
+		<sharepoint:file-get-content doc:name="File get content" doc:id="2be669b8-1392-4277-8d1b-4beb1a343df9" fileServerRelativeUrl="/sites/MulesoftProjectSite/Shared Documents/iamtestfile.txt" config-ref="Sharepoint_Sharepoint_online"/>
+		<ee:transform doc:name="Transform Message" doc:id="519baa4c-1050-42e1-a5f6-b8536ff06b7f" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+	<flow name="list-files-Flow" doc:id="a1b2c3d4-e5f6-7890-abcd-ef1234567890" >
+		<http:listener doc:name="Listener" doc:id="f9e8d7c6-b5a4-3210-fedc-ba0987654321" config-ref="HttpListenerConfig" path="/list-files"/>
+		<sharepoint:file-query doc:name="File query" doc:id="a278e42e-d64c-423e-9877-580b86aa7a77" recursive="true" config-ref="Sharepoint_Sharepoint_online">
+			<sharepoint:query ><![CDATA[Shared Documents?$select=Name,ServerRelativeUrl,Length,TimeLastModified
+]]></sharepoint:query>
+		</sharepoint:file-query>
+		<ee:transform doc:name="Extract file names" doc:id="abcdef12-3456-7890-abcd-ef1234567890" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+</mule>

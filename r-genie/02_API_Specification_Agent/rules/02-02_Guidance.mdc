@@ -1,0 +1,403 @@
+---
+description: Consolidated API Specification Guidance - RAML & OpenAPI Patterns
+author: Cheppali Shaik Sohail
+version: 2.1.0
+alwaysApply: false
+tags: [guidance, patterns, quality, security, raml, openapi]
+appliesTo: [api-specification, raml-generation, oas-generation]
+priority: MEDIUM
+---
+
+# API SPECIFICATION GUIDANCE (RAML & OpenAPI)
+
+> **RAML Example**: `examples/customer-system-api/`
+> **OpenAPI Example**: `examples/customer-system-api-oas/`
+> **Follow the example patterns exactly for consistency**
+
+---
+
+## 1. API-LED CONNECTIVITY LAYERS
+
+| Layer | Purpose | Security | Base URI | Consumers |
+|-------|---------|----------|----------|-----------|
+| **Experience** | Consumer-facing, channel-optimized | OAuth 2.0, OIDC | `/experience/v1` | Mobile, Web, Partners |
+| **Process** | Business orchestration | Client Credentials, JWT | `/process/v1` | Experience APIs, BPM |
+| **System** | Direct data access, canonical models | API Key, Basic | `/system/v1` | Process APIs, Internal |
+
+### Layer Selection
+- **External consumers?** → Experience API
+- **Business logic/orchestration?** → Process API
+- **Direct system data access?** → System API
+
+---
+
+## 2. PROJECT STRUCTURE
+
+### RAML Structure
+```
+{api-name}/
+├── {api-name}.raml              # Main specification
+├── fragments/
+│   ├── libraries/               # uses: reference
+│   ├── traits/                  # !include or uses:
+│   └── security-schemes/        # !include ONLY
+└── examples/
+```
+
+### OpenAPI Structure
+```
+{api-name}/
+├── {api-name}.yaml              # Main specification
+├── components/
+│   ├── schemas/                 # $ref: reference
+│   ├── parameters/              # $ref: reference
+│   ├── responses/               # $ref: reference
+│   └── security/                # $ref: reference
+└── examples/
+```
+
+---
+
+## 3. FRAGMENT TYPES & HEADERS
+
+| Fragment Type | Header | Use For | Reference Method |
+|---------------|--------|---------|------------------|
+| Library | `#%RAML 1.0 Library` | Shared type collections | `uses:` |
+| DataType | `#%RAML 1.0 DataType` | Single self-contained type | `!include` |
+| SecurityScheme | `#%RAML 1.0 SecurityScheme` | Auth mechanisms | `!include` ⚠️ |
+| Trait | `#%RAML 1.0 Trait` | Reusable behaviors | `uses:` or `!include` |
+
+### Critical Rules
+```yaml
+# ✅ CORRECT - Security via !include
+securitySchemes:
+  api_key: !include fragments/security-schemes/api-key-auth.raml
+
+# ❌ WRONG - Will fail!
+securitySchemes:
+  api_key: SecuritySchemes.ApiKeyAuth
+```
+
+### Trait-Based Architecture for Cross-Cutting Concerns
+
+Use traits to encapsulate cross-cutting concerns (pagination, rate limiting, error handling, tracking) and apply them consistently across endpoints:
+
+```yaml
+# ✅ GOOD - Reusable traits
+traits:
+  pageable: !include fragments/traits/pageable.raml
+  rateLimited: !include fragments/traits/rate-limited.raml
+  errorResponses: !include fragments/traits/error-responses.raml
+  trackable: !include fragments/traits/trackable.raml
+
+# Apply to endpoints:
+get:
+  is: [pageable, rateLimited, errorResponses, trackable]
+  responses:
+    200:
+      description: Success
+```
+
+**Benefits:** Eliminates 100+ lines of duplication, ensures consistency across all endpoints, simplifies maintenance.
+
+---
+
+## 4. SECURITY BY LAYER
+
+| Layer | Primary | Secondary | Fragment |
+|-------|---------|-----------|----------|
+| Experience | OAuth 2.0 (Auth Code) | OpenID Connect | `oauth2-auth.raml` |
+| Process | Client Credentials | JWT | `client-credentials.raml` |
+| System | API Key | Basic Auth | `api-key-auth.raml` |
+
+**All security schemes MUST:**
+- Have `#%RAML 1.0 SecurityScheme` header
+- Include `type` property (mandatory)
+- Be referenced with `!include` (NOT library reference)
+- Include 401 error response
+
+---
+
+## 5. QUALITY SCORING (105 Points)
+
+| Category | Points | Key Criteria |
+|----------|--------|--------------|
+| RAML Syntax | 15 | Valid header, HTTPS, imports resolve |
+| Structure | 20 | Fragments organized, security via !include |
+| Documentation | 20 | API + resources + methods documented |
+| Security | 15 | Layer-appropriate, all endpoints secured |
+| RESTful Design | 15 | Correct methods, status codes, nouns |
+| API-Led Compliance | 10 | Correct layer pattern, base URI |
+| Enterprise | 5 | Health endpoint, correlation ID, RFC 7807 |
+| Organization | 5 | Directory structure, metadata file |
+
+### Thresholds
+| Score | Status | Action |
+|-------|--------|--------|
+| 95-105 | 🏆 Perfect | Deploy immediately |
+| 85-94 | 🌟 Excellent | Production ready |
+| 75-84 | ✅ Good | Review recommendations |
+| <75 | ⚠️ Needs Work | Apply improvements |
+
+**Minimum for production: 85 points**
+
+---
+
+## 6. RFC 7807 ERROR FORMAT (5 Required Properties)
+
+```json
+{
+  "type": "/errors/not-found",
+  "title": "Not Found",
+  "status": 404,
+  "detail": "Customer with ID 'xyz' not found",
+  "instance": "/customers/xyz"
+}
+```
+
+| Property | Required | Most Forgotten |
+|----------|----------|----------------|
+| `type` | ✅ | |
+| `title` | ✅ | |
+| `status` | ✅ | |
+| `detail` | ✅ | |
+| `instance` | ✅ | **YES - Often missed!** |
+
+---
+
+## 7. CRITICAL PITFALLS
+
+| # | Pitfall | ❌ Wrong | ✅ Correct |
+|---|---------|---------|-----------|
+| 1 | Inline examples | Embedded in RAML | `!include examples/...` |
+| 2 | Security refs | `SecuritySchemes.X` | `!include fragments/security-schemes/...` |
+| 3 | Missing RFC 7807 | Forgetting `instance` | All 5 properties |
+| 4 | Over-engineering | 12 endpoints | Confirm needs first |
+| 5 | DataType deps | Extending library types | Self-contained fragments |
+| 6 | Large RAML | Inline everything | Externalize to fragments |
+| 7 | Missing headers | No fragment header | `#%RAML 1.0 DataType` etc. |
+| 8 | Repeated error blocks | 30 lines × 5 endpoints | Consolidate into error-responses trait |
+| 9 | Trait path resolution | `!include examples/...` in trait | `!include ../examples/...` from trait location |
+
+---
+
+## 8. HEADER TEMPLATES
+
+### RAML Header
+```yaml
+#%RAML 1.0
+title: {API Name} {Layer} API
+description: |
+  {Purpose description}
+  API-Led Layer: {Experience|Process|System}
+version: v1
+baseUri: https://api.company.com/{layer}/v1
+mediaType: application/json
+protocols: [HTTPS]
+
+uses:
+  CommonTypes: fragments/libraries/common-types.raml
+
+securitySchemes:
+  api_key: !include fragments/security-schemes/api-key-auth.raml
+
+securedBy: [api_key]
+```
+
+### OpenAPI Header
+```yaml
+openapi: 3.0.3
+info:
+  title: {API Name} {Layer} API
+  description: |
+    {Purpose description}
+    API-Led Layer: {Experience|Process|System}
+  version: v1
+
+servers:
+  - url: https://api.company.com/{layer}/v1
+
+security:
+  - ApiKeyAuth: []
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      $ref: './components/security/api-key.yaml'
+```
+
+---
+
+## 9. HTTP METHODS & STATUS CODES
+
+| Method | Use | Idempotent | Success Code |
+|--------|-----|------------|--------------|
+| GET | Retrieve | Yes | 200 |
+| POST | Create | No | 201 |
+| PUT | Replace | Yes | 200 |
+| PATCH | Update | Yes | 200 |
+| DELETE | Remove | Yes | 204 |
+
+### Required Error Codes
+- **400** - Validation errors
+- **401** - Unauthorized
+- **403** - Forbidden
+- **404** - Not found
+- **500** - Server error
+
+---
+
+## 10. ENTERPRISE PATTERNS
+
+### Health Endpoint (MANDATORY)
+```yaml
+/health:
+  get:
+    securedBy: []  # Public
+    responses:
+      200:
+        body:
+          application/json:
+            example: !include examples/responses/health.json
+```
+
+### Correlation ID (MANDATORY)
+```yaml
+headers:
+  X-Correlation-Id?:
+    type: string
+    description: Request tracing ID
+```
+
+---
+
+## 11. MULTI-API PROJECT ORGANIZATION
+
+**For 2+ APIs:** Each API folder is self-contained with all its files.
+
+```
+output_02_api/
+├── system-api/                    # API 1 - Complete & Independent
+│   ├── {api-name}-sapi.raml
+│   ├── fragments/
+│   │   ├── libraries/
+│   │   ├── traits/
+│   │   ├── security-schemes/
+│   │   └── data-types/
+│   └── examples/
+├── process-api/                   # API 2 - Complete & Independent
+│   ├── {api-name}-papi.raml
+│   ├── fragments/
+│   │   ├── libraries/
+│   │   ├── traits/
+│   │   ├── security-schemes/
+│   │   └── data-types/
+│   └── examples/
+```
+
+---
+
+## QUICK CHECKLIST
+
+Before completing RAML:
+
+**Structure:**
+- [ ] Follow `examples/customer-system-api/` pattern
+- [ ] All fragments have correct headers
+- [ ] Security schemes use `!include`
+- [ ] Examples externalized
+
+**Quality:**
+- [ ] RFC 7807 errors (all 5 properties)
+- [ ] Health endpoint present
+- [ ] Correlation ID support
+- [ ] Layer-appropriate security
+
+**Documentation:**
+- [ ] API description with layer info
+- [ ] All resources documented
+- [ ] All methods have examples
+
+---
+
+## 12. EVIDENCE-BOUND OUTPUTS
+
+Every specification decision must cite its source from customer/user-stated facts:
+
+| Decision Type | Evidence Format |
+|---------------|----------------|
+| Endpoint inclusion | "Added {endpoint} — Design doc specifies '{requirement}'" |
+| Security scheme | "Using {scheme} — {Layer} API layer requires per API-Led standards" |
+| Data model field | "Field {name}: {type} — Per design doc section '{reference}'" |
+| Assumption | "⚠️ ASSUMPTION: {value} — Design doc unclear on '{detail}'" |
+| Gap entry | "GAP-{N}: Unable to confirm {detail} (asked {X} times)" |
+
+> If you cannot cite a source, flag as assumption. Never present assumptions as confirmed spec decisions.
+
+---
+
+## 13. TREE OF THOUGHT (Ambiguous Decisions)
+
+For decisions with multiple valid paths, evaluate branches before choosing:
+
+```
+<thinking>
+Branch A: [Option] — fits because [evidence]. Risk: [risk].
+Branch B: [Option] — fits because [evidence]. Risk: [risk].
+Best path: [chosen] — Confidence: {HIGH/MEDIUM/LOW}
+</thinking>
+```
+
+**Common ambiguous decisions in API specification:**
+- RAML 1.0 vs OpenAPI 3.0 (when user has no preference)
+- Library vs DataType fragment for shared types
+- OAuth 2.0 vs Client Credentials for process layer
+- Single resource vs sub-resource hierarchy
+
+---
+
+## 14. FEW-SHOT PATTERNS
+
+### Security Scheme Reference
+
+❌ BAD - Library reference (will fail):
+```yaml
+securitySchemes:
+  api_key: SecuritySchemes.ApiKeyAuth
+```
+
+✅ GOOD - Include reference:
+```yaml
+securitySchemes:
+  api_key: !include fragments/security-schemes/api-key-auth.raml
+```
+
+**Why**: Security schemes MUST use `!include`, never library dot-notation.
+
+### Example Externalization
+
+❌ BAD - Inline example:
+```yaml
+example:
+  id: "123"
+  name: "John"
+```
+
+✅ GOOD - Externalized example:
+```yaml
+example: !include examples/responses/customer.json
+```
+
+**Why**: Inline examples bloat RAML and prevent reuse across endpoints.
+
+---
+
+## QUICK REFERENCE
+
+| Need | Reference |
+|------|----------|
+| Phase workflow | `@02-01_Phase_Orchestration.mdc` |
+| Stop points | `@02-08_Mandatory_Stop_Points.mdc` |
+| Template config | `@02-00_Template_Configuration.mdc` |
+| RAML example | `examples/customer-system-api/` |
+| OAS example | `examples/customer-system-api-oas/` |

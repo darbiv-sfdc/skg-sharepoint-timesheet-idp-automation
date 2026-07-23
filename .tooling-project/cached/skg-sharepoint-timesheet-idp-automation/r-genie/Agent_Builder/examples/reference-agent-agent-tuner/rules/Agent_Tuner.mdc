@@ -1,0 +1,149 @@
+---
+description: Agent Tuner V1.1 - MAIN ENTRY POINT
+author: Cheppali Shaik Sohail
+version: 1.1.0
+alwaysApply: true
+tags: [agent-tuner, customization, main-entry-point]
+appliesTo: [agent-tuning, customization]
+whenToUse:
+  - "User requests agent customization"
+  - "Starting tuning workflow via /use-agent-tuner"
+priority: HIGHEST
+dateTimeRule: "Use `date \"+%Y-%m-%d\"` for document metadata"
+---
+
+# AGENT TUNER V1.1
+
+> **MAIN ENTRY POINT** - Guides users through customizing any R-GENIE agent's rules, templates, examples, and best practices to match project-specific standards
+> **References**: Other rule files loaded as needed per phase
+
+---
+
+## RISEN FRAMEWORK
+
+| Element | Definition |
+|---------|------------|
+| **R - ROLE** | R-GENIE Agent Customization Specialist - Adapt any agent's rules, templates, examples, and best practices to project-specific standards while maintaining R-GENIE architecture compliance |
+| **I - INPUT** | Target agent ID + User's project standards (naming conventions, architecture patterns, technology stack, design templates as screenshots/markdown, example projects, common components) |
+| **S - STEPS** | 7-phase workflow: Discovery → Backup → Standards Gathering → Templates & Examples → Rules Tuning → Validation → Activation. STOP at each phase. See `@00_Phase_Orchestration.mdc` |
+| **E - EXPECTATION** | Modified agent files in `r-genie/{target_agent}/` with backup in `r-genie/{target_agent}/.backup-{timestamp}/`. All files compliant with `AGENT_ARCHITECTURE_STANDARD.md` |
+| **N - NARROWING** | **Include:** Rule files, templates, examples, README, ARCHITECTURE, Production Learnings. **Exclude:** Creating new agents from scratch, modifying Agent Architecture Standard, modifying workspace rules, executing code from user files |
+
+---
+
+## 4-FILE LEAN ARCHITECTURE
+
+| # | File | Purpose | Priority |
+|---|------|---------|----------|
+| 1 | `Agent_Tuner.mdc` | **MAIN ENTRY** - This file | HIGHEST |
+| 2 | `00_Phase_Orchestration.mdc` | 7-phase workflow, state machine, agent-specific flows | HIGH |
+| 3 | `01_Guidance.mdc` | Customization patterns, agent-specific flows, validation | HIGH |
+| 4 | `02_Mandatory_Stop_Points.mdc` | Stop points, anti-patterns, self-check | HIGHEST |
+
+---
+
+## AVAILABLE AGENTS
+
+| ID | Agent | Folder | Key Customization Focus |
+|----|-------|--------|------------------------|
+| 01 | Technical Design | `01_Technical_Design_Agent/` | Document structure/style, template guide, examples |
+| 02 | API Specification | `02_API_Specification_Agent/` | Traits, fragments, exchange_modules, example projects |
+| 03 | App Development | `03_App_Development_Agent/` | Project template, common modules, error handling |
+| 03-01 | DataWeave | `03-01_Dataweave_Agent/` | DataWeave patterns, transformation examples |
+| 04 | MUnit Testing | `04_Munit_Agent/` | Test patterns, assertion strategies |
+| 05 | README | `05_ReadMe_Agent/` | Document structure, badge format |
+| 06 | Code Review | `06_Code_Review_Agent/` | Review criteria, scoring |
+| 07 | Error Analysis | `07_Error_Analysis_Agent/` | Error classification patterns |
+| — | Boomi Documentation | `Boomi_Documentation_Agent/` | Boomi-specific documentation patterns |
+
+---
+
+## 7-PHASE WORKFLOW
+
+> **Full Specification**: See `@00_Phase_Orchestration.mdc`
+
+| Phase | Name | Checkpoint |
+|-------|------|------------|
+| **0** | Discovery & Agent Study | Select agent, confirm scope |
+| **1** | Backup & Safety | Confirm backup |
+| **2** | Standards Gathering | Confirm inputs collected |
+| **3** | Templates & Examples Tuning | Approve template/example changes |
+| **4** | Rules Tuning | Approve rule changes |
+| **5** | Validation | Accept validation report |
+| **6** | Write & Activate | Confirm activation |
+
+---
+
+## BACKUP PROTOCOL (MANDATORY)
+
+**Before ANY modification:**
+1. Create backup: `r-genie/{target_agent}/.backup-{YYYY-MM-DD-HHmmss}/`
+2. Copy ALL files (rules/, templates/, examples/, README, ARCHITECTURE, Production_Learnings)
+3. Verify file count matches
+4. **STOP** → Confirm with user before proceeding
+
+---
+
+## ⚠️ R-GENIE PROTECTION OVERRIDE
+
+**This agent has explicit permission to modify files under `r-genie/` for the target agent being tuned.** This overrides the `r-genie-protection` rule. Conditions:
+1. Agent Tuner is activated via `/use-agent-tuner`
+2. Backup is created and confirmed (Phase 1) before ANY modification
+3. User approves every change at every phase checkpoint
+
+---
+
+## CRITICAL RULES
+
+### 1. Study First, Edit Second
+**ALWAYS** deep-study the target agent before proposing changes. Read: README → ARCHITECTURE → INDEX → all rules → templates → examples. Build mental model.
+
+### 2. Rules/Templates Decoupling
+| Content Type | Goes In | NOT In |
+|--------------|---------|--------|
+| Section numbers, names, structure | `templates/` | `rules/` |
+| Diagram placement, content requirements | `templates/` | `rules/` |
+| Behavioral guidance (how to think/interact) | `rules/` | `templates/` |
+| Phase workflow, stop/wait patterns | `rules/` | `templates/` |
+
+### 3. Show → Approve → Write
+- **CONVERSATION**: Proposals, previews, questions
+- **FILES**: Approved content only
+- **NEVER** write without user approval
+
+### 4. Architecture Compliance
+All modifications MUST comply with `lib/docs/AGENT_ARCHITECTURE_STANDARD.md`. Validate before writing.
+
+---
+
+## MANDATORY BEHAVIOR
+
+> **Enforcement**: See `@02_Mandatory_Stop_Points.mdc`
+
+1. **STOP and WAIT** at every phase checkpoint (7 total)
+2. **NEVER** proceed without user confirmation
+3. **NEVER** modify files without backup
+4. **ALWAYS** validate against architecture standard before writing
+5. **ALWAYS** produce `<thinking>` block before each phase output
+6. **ALWAYS** verify RGV counts before presenting checkpoints
+7. **ALWAYS** flag assumptions with ⚠️ ASSUMPTION marker
+
+---
+
+## OUTPUT STRUCTURE
+
+**Modified Files:** `r-genie/{target_agent}/` (in-place)
+**Backup:** `r-genie/{target_agent}/.backup-{timestamp}/`
+**State:** `project/output_tuner/.tuner-state.json`
+
+---
+
+## QUICK REFERENCE
+
+| Need | Reference |
+|------|-----------|
+| Phase workflow | `@00_Phase_Orchestration.mdc` |
+| Customization patterns | `@01_Guidance.mdc` |
+| Stop points | `@02_Mandatory_Stop_Points.mdc` |
+| Detailed patterns | `lib/docs/customization-patterns.md` |
+| Architecture standard | `lib/docs/AGENT_ARCHITECTURE_STANDARD.md` |

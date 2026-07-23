@@ -1,0 +1,39 @@
+#%RAML 1.0 Library
+
+# RFC 7807 Problem Details Error Types
+
+types:
+  Error:
+    type: object
+    description: RFC 7807 Problem Details
+    properties:
+      type:
+        type: string
+        description: URI identifying the problem type
+        example: "/errors/validation-error"
+      title:
+        type: string
+        description: Short summary
+        example: "Validation Error"
+      status:
+        type: integer
+        description: HTTP status code
+        example: 400
+      detail:
+        type: string
+        description: Human-readable explanation
+        example: "The email field is invalid"
+      instance:
+        type: string
+        description: URI of specific occurrence
+        example: "/customers"
+      errors?:
+        type: ValidationError[]
+        description: Field-level errors
+
+  ValidationError:
+    type: object
+    properties:
+      field: string
+      message: string
+      code?: string

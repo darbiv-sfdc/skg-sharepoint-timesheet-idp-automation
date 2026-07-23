@@ -1,0 +1,328 @@
+---
+description: Boomi Documentation Agent V4.0 - Extraction Guidance & Patterns
+author: Cheppali Shaik Sohail
+version: 4.1.0
+priority: HIGH
+---
+
+# EXTRACTION GUIDANCE & PATTERNS
+
+> RGV loop (single source of truth), field inventory pattern, XML extraction patterns, few-shot examples.
+> For detailed XML element patterns, see `lib/docs/xml-patterns-reference.md`.
+
+---
+
+## 1. RGV LOOP PATTERN (SINGLE SOURCE — DRY)
+
+This is the core execution pattern for the entire agent. Phases 1-4 in `@00_Phase_Orchestration.mdc` all reference this section — the pattern is defined here ONCE.
+
+### The 6-Step RGV Loop
+
+```
+FOR EACH section to generate:
+  STEP 1: RE-READ  — Fresh Read tool call on ALL relevant XML files for this section
+  STEP 2: INVENTORY — Count target elements in XML, list names, COMMIT to count N
+  STEP 3: GENERATE — Produce section content (must contain exactly N items)
+  STEP 4: VERIFY  — Count generated items, compare to N
+  STEP 5: FIX     — If mismatch → RE-READ XML, find missing, fix BEFORE proceeding
+  STEP 6: CHECKPOINT — Emit micro-checkpoint with counts, write to file, proceed
+```
+
+### Why Each Step Matters
+
+| Step | What It Prevents |
+|------|------------------|
+| RE-READ | Stale context — Phase 0 reads are for classification only |
+| INVENTORY | Generates without knowing the target count → summarization |
+| GENERATE | — |
+| VERIFY | Undetected missing rows — the root cause of summarized tables |
+| FIX | Errors propagating to the next section |
+| CHECKPOINT | No audit trail of what was documented |
+
+### VERIFY Is Not Optional
+
+**VERIFY is the step that prevents summarization.** Without it, the agent can generate 20 of 161 mappings and move on, unaware rows are missing. With VERIFY, the agent compares 20 ≠ 161, stops, re-reads, and fixes.
+
+---
+
+## 2. FIELD INVENTORY PATTERN (CRITICAL)
+
+Before generating ANY table (mappings, shapes, fields, rows), the agent MUST create an inventory.
+
+### Pattern
+
+```
+1. READ the XML file
+2. COUNT target elements (e.g., <Mapping>, <shape>, <DataElement>)
+3. COMMIT: "This {component} has N {elements}. I will generate exactly N rows."
+4. GENERATE the table with N rows
+5. VERIFY: Generated rows = N
+```
+
+### Few-Shot: Mapping Inventory
+
+❌ **BAD:** Read map XML → immediately generate table from memory → miss 141 of 161 rows
+
+✅ **GOOD:**
+```
+1. Read map XML → count: 161 <Mapping> elements
+2. Commit: "This map has 161 mappings. I will generate exactly 161 rows."
+3. Read source profile XML → get source field paths
+4. Read target profile XML → get target field paths
+5. Read function XMLs → get transformation details
+6. Generate rows 1-161 (ALL rows, no summarization)
+7. Verify: 161 rows generated ✅ MATCH
+```
+
+**Why:** The COMMIT step creates a contract. The VERIFY step enforces it. Together they make summarization impossible.
+
+---
+
+## 3. EXTRACTION METHOD
+
+### FORBIDDEN: Script-Based Extraction
+
+❌ **NEVER:**
+```python
+for shape in root.findall('.//shape'):
+    print(shape.get('shapetype'))  # MISSES: position, cacheEnabled, nested configs
+```
+
+✅ **ALWAYS:** Use Read tool to open XML, examine EVERY element and attribute, extract nested configurations completely.
+
+**Why scripts fail:** Miss `position`, `cacheEnabled`, `allowSimultaneous`, `mode`, unmapped profile fields, cross-reference row data.
+
+---
+
+## 4. FORENSIC EXTRACTION CHECKLIST
+
+| Component | Must Extract | Often Missed |
+|-----------|-------------|--------------|
+| **Process** | allowSimultaneous, version, enableUserLog, ALL shapes | allowSimultaneous, version |
+| **Shape** | shapetype, userlabel, x/y positions, complete config, dragpoints | position attributes |
+| **Function** | position, cacheEnabled, isReset, COMPLETE script code | cacheEnabled, isReset |
+| **Profile** | ALL fields (mapped AND unmapped), data types, constraints | Unmapped fields |
+| **Connector** | mode, batchSize, batchCount, maxConcurrentExecutions | mode, batch settings |
+| **Cross-Ref** | Column definitions, ALL row data | Row data ("0 rows") |
+| **Map** | optimizeExecutionOrder, default values, cache joins | Default values |
+
+---
+
+## 5. SHAPE EXTRACTION (Few-Shot)
+
+### Start Shape
+
+❌ **BAD:** `Listen on Solace connector`
+
+✅ **GOOD:**
+```markdown
+| Setting | Value |
+|---------|-------|
+| **Action Type** | Listen |
+| **Connector Type** | solacetpp-VMLLNA-solace-prod |
+| **Connection ID** | `7a48de43-...` |
+| **Operation ID** | `ca4ebe70-...` |
+| **Connection Override** | true |
+| **Operation Override** | true |
+| **Next Shape** | shape9 |
+```
+
+**Why:** Includes overrides, full UUIDs, and connector details.
+
+### Document Properties Shape
+
+❌ **BAD:** `Assign 6 properties`
+
+✅ **GOOD:**
+```markdown
+| # | Property | ID | Type | Source Details |
+|---|----------|----|----- |----------------|
+| 1 | DPP_FWK_BusinessProcess | process.DPP_FWK_BusinessProcess | crossref | Table: `75d8a3ee-...`, Output: BusinessProcess, Input: InterfaceNumber=28350 |
+| 2 | DPP_FWK_EntityType | process.DPP_FWK_EntityType | static | `FinalPrices` |
+```
+
+**Why:** Every property with complete source configuration.
+
+---
+
+## 6. PROFILE EXTRACTION - ALL FIELDS
+
+❌ **BAD:** Document only 7 mapped fields from a 49-field profile
+
+✅ **GOOD:**
+```markdown
+**Total Fields:** 49 | **Mapped:** 7 | **Unmapped:** 42
+
+| Key | Name | Path | Type | Mapped | Target |
+|-----|------|------|------|--------|--------|
+| 5 | name | Root/.../name | character | ❌ | - |
+| 6 | priceListKey | Root/.../priceListKey | character | ✅ | UDF_Pricebook2id |
+```
+
+**Why:** Unmapped fields are available for future use; must be documented.
+
+---
+
+## 7. CONNECTOR/OPERATION EXTRACTION
+
+❌ **BAD:** `Solace connector with queue`
+
+✅ **GOOD:**
+```markdown
+| Setting | Value |
+|---------|-------|
+| **Mode** | PERSISTENT_TRANSACTED |
+| **Batch Size** | 1 |
+| **Receive Timeout** | 10000 ms |
+| **Max Concurrent Executions** | 1 |
+| **Destination/Queue** | HNK/COMMERCE/FINALPRICE/ES/SALESFORCE |
+```
+
+**Why:** Includes mode, batch settings, timeouts — all operational details.
+
+---
+
+## 8. CROSS-REFERENCE EXTRACTION
+
+❌ **BAD:** `0 rows` or `rows not in export`
+
+✅ **GOOD:** Extract actual data if present, document columns if data not in export.
+```markdown
+**Data (7 rows):**
+| Opco | CountryCode |
+|------|-------------|
+| Spain | ESID |
+
+**Usage:** Function `UDF_ProductID` uses lookup: Input=Opco, Output=CountryCode
+```
+
+---
+
+## 9. FIELD MAPPING RULES (CRITICAL)
+
+### ALL Mappings — NEVER Summarize
+
+Document **every** mapping from the map XML. NEVER use:
+- "Key mappings" or "representative samples"
+- "Showing X of Y mappings"
+- Summarized or abbreviated tables
+- Collapsed rows for similar patterns
+
+❌ **BAD:**
+```markdown
+**Key Mappings (showing 5 of 22):**
+| # | Source | Target | Type |
+|---|--------|--------|------|
+| 1-5 shown... | (remaining 17 follow same pattern) |
+```
+
+✅ **GOOD:**
+```markdown
+#### Field Mappings
+
+| # | Source Field | Source Path | Target Field | Target Path | Type |
+|---|-------------|-------------|--------------|-------------|------|
+| 1 | ... | ... | ... | ... | Direct |
+...
+| 22 | ... | ... | ... | ... | Direct |
+```
+
+### Mapping Count Verification
+
+Use **both** Read tool + grep to count before documenting:
+1. READ map XML to understand structure
+2. `rg -c '<Mapping ' {map_file}.xml`
+3. COMMIT to exact count N (RGV step 2)
+4. Generate exactly N rows (RGV step 3)
+5. Verify documented count = N (RGV step 4)
+6. If mismatch → re-read and reconcile (RGV step 5)
+
+### Source/Target Path Verification
+
+Verify each mapping individually. Paths may differ for field relocations or function transformations. Document differences — do not assume identical paths.
+
+---
+
+## 10. VALUE TYPES REFERENCE
+
+| Type | XML Element | Extract |
+|------|-------------|---------|
+| static | `<staticparameter staticproperty="{val}"/>` | Literal value |
+| crossref | `<crossrefparameter crossRefTableId="{id}" outputParamName="{col}">` | Table ID, column, ALL inputs |
+| profile | `<profileparameter elementId="{id}" profileId="{uuid}"/>` | Element name AND path |
+| execution | `<executionparameter executionproperty="{prop}"/>` | Property name |
+| track | `<trackparameter propertyId="{path}" defaultValue="{val}"/>` | Path AND default value |
+| process | `<processparameter processproperty="{name}"/>` | Property name |
+
+---
+
+## 11. COMMON MISTAKES
+
+| Mistake | Correct Approach |
+|---------|------------------|
+| Using Python/Bash for extraction | Use Read tool directly |
+| Generating table without INVENTORY step | Count elements first, COMMIT to N (RGV §1) |
+| Proceeding without VERIFY step | Count generated rows, compare to N (RGV §1) |
+| Summarized/abbreviated mapping tables | Document ALL mappings, every row |
+| Assuming identical source/target paths | Verify each mapping individually |
+| Missing `position` attribute | Extract for execution order |
+| Missing `cacheEnabled` | Extract for each function step |
+| Only mapped profile fields | Document ALL fields |
+| "0 rows" for cross-ref | Extract actual data if present |
+| Summarizing script code | Include COMPLETE code |
+| Generic action descriptions | List ALL properties with values |
+| Verification counts in main doc | Counts go ONLY in verification-checklist.md |
+| Generating profiles/functions in Phase 2 | Profiles/functions → Phase 3, connectors → Phase 4 |
+
+---
+
+## QUICK REFERENCE
+
+| Need | Reference |
+|------|-----------|
+| Main entry | `@Boomi_Documentation.mdc` |
+| Phase workflow | `@00_Phase_Orchestration.mdc` |
+| Anti-patterns & rules | `@02_Mandatory_Stop_Points.mdc` |
+| XML patterns (detailed) | `lib/docs/xml-patterns-reference.md` |
+| Output formats | `lib/docs/template-configuration.md` |
+| Example output | `examples/01_pricing_sync/` |
+
+---
+
+**Version:** 4.1.0 | April 2026 | RGV Loop (DRY Source) + Field Inventory Pattern + LLM Gap Countermeasures
+
+---
+
+## 12. EVIDENCE-BOUND OUTPUTS
+
+Every extraction decision must cite its source:
+
+| Decision Type | Evidence Format |
+|---------------|----------------|
+| Element count | "Counted {N} `<{element}>` in `{file}.xml`" |
+| Attribute value | "Extracted `{attr}={value}` from `{element}` in `{file}.xml`" |
+| Classification | "Classified as `{type}` — `<bns:Component type=\"{type}\">` in `{file}.xml`" |
+| Missing data | "⚠️ ASSUMPTION: {value} — Element `{element}` not found in `{file}.xml`" |
+| Gap entry | "GAP: `{component}` referenced by `{referencing_file}` but not in export" |
+
+> If you cannot cite an XML element, flag as assumption. Never present inferences as confirmed extractions.
+
+---
+
+## 13. TREE OF THOUGHT (Ambiguous Decisions)
+
+For decisions with multiple valid interpretations, evaluate branches before choosing:
+
+```
+<thinking>
+Branch A: [Interpretation] — fits because [XML evidence]. Risk: [risk].
+Branch B: [Interpretation] — fits because [XML evidence]. Risk: [risk].
+Best path: [chosen] — Confidence: {HIGH/MEDIUM/LOW}
+</thinking>
+```
+
+**Common ambiguous decisions in Boomi documentation:**
+- Element purpose unclear: configuration vs runtime parameter
+- Cross-reference usage: lookup table vs routing table
+- Connector setting: default value vs intentional configuration
+- Profile field: unused vs future-use placeholder

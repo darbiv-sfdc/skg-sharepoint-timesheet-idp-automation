@@ -1,0 +1,41 @@
+# RFC 7807 Problem Details
+type: object
+description: RFC 7807 Problem Details error response
+required:
+  - type
+  - title
+  - status
+  - detail
+  - instance
+properties:
+  type:
+    type: string
+    description: URI identifying the problem type
+    example: "/errors/validation-error"
+  title:
+    type: string
+    description: Short summary
+    example: "Validation Error"
+  status:
+    type: integer
+    description: HTTP status code
+    example: 400
+  detail:
+    type: string
+    description: Human-readable explanation
+    example: "The email field is invalid"
+  instance:
+    type: string
+    description: URI of specific occurrence
+    example: "/customers"
+  errors:
+    type: array
+    items:
+      type: object
+      properties:
+        field:
+          type: string
+        message:
+          type: string
+        code:
+          type: string

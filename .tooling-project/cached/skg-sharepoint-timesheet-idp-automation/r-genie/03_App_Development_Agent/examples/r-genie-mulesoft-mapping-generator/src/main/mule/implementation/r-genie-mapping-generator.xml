@@ -1,0 +1,219 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mule xmlns:file="http://www.mulesoft.org/schema/mule/file"
+	xmlns:validation="http://www.mulesoft.org/schema/mule/validation"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="
+		http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+		http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+		http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+		http://www.mulesoft.org/schema/mule/validation http://www.mulesoft.org/schema/mule/validation/current/mule-validation.xsd
+		http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/file/current/mule-file.xsd">
+
+	<!-- =============================================== -->
+	<!-- CONFIGURATION                                  -->
+	<!-- =============================================== -->
+	
+	<!-- Configurations are defined in global.xml -->
+
+
+
+	<!-- =============================================== -->
+	<!-- MAPPING GENERATION API FLOW                    -->
+	<!-- =============================================== -->
+
+	<!-- =============================================== -->
+	<!-- HEALTH CHECK FLOW                              -->
+	<!-- =============================================== -->
+
+	<!-- =============================================== -->
+	<!-- CORS PREFLIGHT FLOW                            -->
+	<!-- =============================================== -->
+	<sub-flow name="r-genie-mapping-generator-sub-flow" doc:id="4b8f9912-bd74-441d-9e9c-e7d4bef99161" >
+		<logger level="INFO" doc:name="Log Request Start" doc:id="log-request-start" message="🚀 Starting mapping sheet generation request" />
+		<ee:transform doc:name="var: requestData" doc:id="parse-request-data">
+			<ee:message>
+			</ee:message>
+			<ee:variables>
+				<ee:set-variable variableName="requestData"><![CDATA[%dw 2.0
+output application/json
+var formData = payload.parts
+---
+{
+	inputData: formData.inputExample.content as String,
+	expectedOutput: formData.outputExample.content as String,
+	contextInstructions: formData.instructions.content as String default "",
+	generationMode: formData.generationMode.content as String default "balanced",
+	excelFilename: formData.excelFilename.content as String default "",
+	targetDirectory: formData.targetDirectory.content as String default "",
+	boomiMappingFile: if (formData.boomiMapping?) formData.boomiMapping else null,
+	timestamp: now()
+}]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<!-- [STUDIO:"Process Boomi File"]<choice doc:name="Process Boomi File" doc:id="process-boomi-file">
+			<when expression="#[vars.requestData.boomiMappingFile != null&#93;">
+				<ee:transform doc:name="var: boomiData" doc:id="bd45728b-3a09-4638-99b2-ede5b3755034">
+					<ee:message>
+					</ee:message>
+					<ee:variables>
+						<ee:set-variable variableName="boomiData"><![CDATA[%dw 2.0
+output application/json
+var boomiFile = vars.requestData.boomiMappingFile
+&#45;&#45;-
+{
+	hasBoomiFile: !isEmpty(boomiFile) ,
+	filename: boomiFile.filename default 'uploaded-boomi-file.xlsx',
+	size: boomiFile.size default 0,
+	contentType: boomiFile.contentType default 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+	processedAt: now(),
+	status: 'processed',
+	enhancements: [
+		'Additional field mappings from Boomi',
+		'Business rules from existing mapping', 
+		'Validation rules enhancement'
+	&#93;,
+	extractedData: 'Boomi mapping analysis will be enhanced in future versions'
+}&#93;&#93;></ee:set-variable>
+					</ee:variables>
+				</ee:transform>
+			</when>
+		</choice> [STUDIO] -->
+		<set-variable value='#[%dw 2.6&#10;output text/plain&#10;---&#10;readUrl("classpath://prompts/mapping-sheet-generator.txt", "text/plain")]' doc:name="promptTemplate" doc:id="2b8c4860-2621-48dd-bc02-f0dd77b43da1" variableName="promptTemplate" />
+		<ee:transform doc:name="vars: enrichedPrompt, llmConfig" doc:id="e569f501-e5bf-43c1-b507-ed1f88708f2c">
+			<ee:message />
+			<ee:variables>
+				<ee:set-variable variableName="llmConfig"><![CDATA[%dw 2.0
+output application/json
+var mode = vars.requestData.generationMode
+var modeConfigs = {
+	fast: {
+		provider: "gemini",
+		model: "gemini-2.5-flash",
+		fallbackModel: "gemini-2.5-flash",
+		temperature: 0.3,
+		maxTokens: 8000,
+		timeout: 90000
+	},
+	pro: {
+		provider: "gemini",
+		model: "gemini-2.5-pro", 
+		fallbackModel: "gemini-2.5-flash",
+		temperature: 0.1,
+		maxTokens: 32000,
+		timeout: 300000
+	}
+}
+---
+modeConfigs[mode] default modeConfigs.fast]]></ee:set-variable>
+				<ee:set-variable variableName="enrichedPrompt" ><![CDATA[%dw 2.0
+output text/plain
+var basePrompt = vars.promptTemplate default "Generate comprehensive mapping documentation"
+var inputData = vars.requestData.inputData
+var outputData = vars.requestData.expectedOutput
+var instructions = vars.requestData.contextInstructions default ""
+var mode = vars.requestData.generationMode
+var boomiData = vars.boomiData
+---
+basePrompt 
+	replace "{{INPUT_DATA}}" with inputData
+	replace "{{OUTPUT_DATA}}" with outputData  
+	replace "{{CONTEXT_INSTRUCTIONS}}" with instructions
+	replace "{{GENERATION_MODE}}" with mode
+	replace "{{TIMESTAMP}}" with (now() as String)
+	replace "{{#if BOOMI_MAPPING_DATA}}" with (if (boomiData != null) "" else "<!--")
+	replace "{{BOOMI_MAPPING_DATA}}" with (write(boomiData, "application/json") default "null")
+	replace "{{/if}}" with (if (boomiData != null) "" else "-->")]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<ee:transform doc:name="Prepare Gemini Request" doc:id="4c4837fa-0729-48f8-bb17-0a1161c817e1">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+var config = vars.llmConfig
+var promptContent = vars.enrichedPrompt default "Generate mapping documentation based on the provided input and output examples."
+---
+{
+	contents: [
+		{
+			parts: [
+				{
+					text: "You are an expert data mapping analyst. " ++ promptContent ++ "\n\nPlease respond with valid JSON only."
+				}
+			]
+		}
+	],
+	generationConfig: {
+		temperature: config.temperature,
+		maxOutputTokens: config.maxTokens,
+		responseMimeType: "application/json"
+	}
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<http:request method="POST" doc:name="Call Gemini API" doc:id="74e62308-3219-47f3-bfb9-c8058870f6f0" config-ref="Gemini_HTTP_Request_config" path="#['/v1beta/models/' ++ vars.llmConfig.model ++ ':generateContent']" responseTimeout="300000">
+			<http:headers><![CDATA[#[{
+				"Content-Type": "application/json",
+				"User-Agent": "R-Genie-MuleSoft/1.0.0"
+			}]]]></http:headers>
+			<http:query-params><![CDATA[#[{
+				key: p('gemini.api.key')
+			}]]]></http:query-params>
+		</http:request>
+		<validation:is-true doc:name="Not isEmpty Field Mappings" doc:id="f806bb02-7b0c-47d3-b7e6-8e0649bf6fa8" expression="#[!isEmpty(read(payload.candidates[0].content.parts[0].text, &quot;application/json&quot;).'Field Mappings')]" message='"Gemini Output Validation Failed"'/>
+		<ee:transform doc:name="vars: writeFilePath, writePayload" doc:id="83476065-7cfb-477e-abc4-2af3b0791069" >
+			<ee:message >
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="writeFilePath" ><![CDATA[%dw 2.0
+output application/java
+var fileName = if ( !isEmpty(vars.requestData.excelFilename) ) if ( lower(vars.requestData.excelFilename) endsWith ".xlsx" ) vars.requestData.excelFilename else (vars.requestData.excelFilename ++ ".xlsx") else "/Mapping_Sheet_$(now() as Number {unit: "milliseconds"}).xlsx"
+var folderPath = if ( !isEmpty(vars.requestData.targetDirectory) ) vars.requestData.targetDirectory else p('file.output.defaultDirectory')
+---
+(folderPath ++ "/" ++ fileName) replace "//" with "/"]]></ee:set-variable>
+				<ee:set-variable variableName="writePayload" ><![CDATA[%dw 2.6 
+output application/xlsx
+---
+read(payload.candidates[0].content.parts[0].text, "application/json")]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<file:write doc:name="Mapping Excel Sheet" doc:id="ceb778c3-8449-46ca-922a-8367898e1cf7" config-ref="File_Config" path="#[vars.writeFilePath]" >
+			<file:content ><![CDATA[#[vars.writePayload]]]></file:content>
+		</file:write>
+		<ee:transform doc:name="Success Response" doc:id="7f984c6f-d851-4b0f-8eb3-01d4704b4f1c" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	success: true,
+	message: "Mapping sheet generated successfully",
+	filename: (vars.writeFilePath splitBy "/")[-1] ,
+	filePath: vars.writeFilePath,
+	generationMode: vars.requestData.generationMode,
+	boomiIntegrated: vars.boomiData != null,
+	metadata: {
+		timestamp: vars.requestData.timestamp,
+		generationTime: (now() - vars.requestData.timestamp) as String,
+		version: "1.0.0"
+	},
+	summary: vars.mappingData.summary.recommendedApproach default "Mapping sheet generated with comprehensive field mappings and business rules."
+}]]></ee:set-payload>
+				<ee:set-attributes ><![CDATA[%dw 2.0
+output application/java
+---
+{
+	statusCode: 200,
+	headers: {
+		"Content-Type": "application/json",
+		"Access-Control-Allow-Origin": "*"
+	}
+}]]></ee:set-attributes>
+			</ee:message>
+		</ee:transform>
+		<logger level="INFO" doc:name="Log Success" doc:id="d9bb578e-7538-4418-a212-d237aaadcd80" message="✅ Mapping sheet generation completed successfully" />
+	</sub-flow>
+</mule>

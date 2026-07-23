@@ -1,0 +1,57 @@
+http:
+  port: "8081"
+  private: 
+    port: "8091"
+https:
+  port: "8082"
+api: 
+  id: "2699159"
+
+# Salesforce Configuration
+salesforce:
+  tokenUrl: "https://login.microsoftonline.com/538f4f4e-ffdb-47b6-818d-cdb243067ad0/oauth2/v2.0/token"
+
+#IDP Configuration
+idp:
+    host: "idp-rt.eu-central-1.eu1.anypoint.mulesoft.com"
+    port: "443"
+    protocol: "HTTPS"
+    action:
+        id: "idp-skg-salaries-pjc"
+        version: "1.0.0"
+        max_checks: "20"
+
+#SharePoint Folder Structure
+sharepoint:
+    site:
+        url: "https://skgtechoffice.sharepoint.com/sites/MulesoftProjectSite"
+        # Server-relative root of the site (prefix for absolute file paths used by file-move / file-add / file-get-content)
+        serverRelativePath: "/sites/MulesoftProjectSite"
+    path:
+        source: "IDP Root Library/Manual Uploads/01-Inbound"
+        processing: "IDP Root Library/Manual Uploads/02-Processing"
+        output: "IDP Root Library/Manual Uploads/03-Output"
+        processed: "IDP Root Library/Manual Uploads/04-Processed"
+        error: "IDP Root Library/Manual Uploads/99-Error"
+    filter:
+        extension: "pdf"
+
+#Scheduler
+scheduler:
+    cron: "0 0 0/1 * * ?"
+    initialState: "stopped"   # dev: HTTP /trigger-ingest only; cron scheduler disabled
+
+#VM Persistent Queue
+vm:
+    queue:
+        name: "idp-timesheet-queue"
+    poll:
+        sleepMillis: "30000"
+
+
+anypoint:
+    clientId: "7341fdfed4da4e9b9a9edec484d3c97d"
+    clientSecret: "A6de5f71E8884083BD77b6bFbcd3fd31"
+
+log:
+  level: "DEBUG"

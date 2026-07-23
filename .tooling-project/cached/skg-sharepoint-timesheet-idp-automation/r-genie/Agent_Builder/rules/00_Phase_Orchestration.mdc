@@ -1,0 +1,913 @@
+---
+description: Agent Builder - Phase Orchestration & Workflow State Management
+author: Cheppali Shaik Sohail
+version: 1.5.0
+alwaysApply: false
+tags: [phase, orchestration, workflow, agent-builder]
+appliesTo: [agent-building]
+whenToUse:
+  - "Managing agent creation phase transitions"
+  - "Tracking builder workflow state"
+priority: HIGH
+---
+
+# PHASE ORCHESTRATION V1.5.0
+
+> **Purpose**: Manage 8-phase agent creation workflow with user checkpoints
+> **Enforcement**: See `@02_Mandatory_Stop_Points.mdc`
+
+---
+
+## WORKFLOW STATE MACHINE
+
+```mermaid
+stateDiagram-v2
+    [*] --> Phase0: /use-agent-builder
+    Phase0 --> CP0: Goal Understood
+    CP0 --> Phase1: Confirmed
+    Phase1 --> CP1: Architecture Designed
+    CP1 --> Phase2: Approved
+    Phase2 --> CP2: RISEN + Phases Designed
+    CP2 --> Phase3: Approved
+    Phase3 --> CP3: Rule Files Generated
+    CP3 --> Phase4: Approved
+    Phase4 --> CP4: Examples/Templates Ready
+    CP4 --> Phase5: Approved
+    Phase5 --> CP5: Docs Generated
+    CP5 --> Phase6: Approved
+    Phase6 --> CP6: Validation Passed
+    CP6 --> Phase7: Accepted
+    Phase7 --> [*]: Agent Created
+```
+
+---
+
+## PHASE 0: Goal Discovery & Workflow Proposal
+
+**Tasks:**
+
+### 0A. Author Collection (BEFORE goal questions)
+
+Collect agent author info as a dedicated step before goal discovery:
+```
+🏗️ AGENT BUILDER — Author Information
+
+Before we begin, who should be credited as the author of this agent?
+→ Provide your name (this will appear in all generated files)
+
+```
+
+Store as `agentAuthor` in state file. This name will appear in:
+- Frontmatter `author:` field of every generated `.mdc` file
+- Footer attribution of every generated file
+
+### 0B. Goal Discovery
+
+1. ASK user to describe what the agent should do
+2. If goal is vague → help refine: suggest specific scopes, ask "Did you mean X or Y?"
+3. ASK about audience, inputs, outputs, interaction model
+4. Clarify scope (include vs exclude)
+5. **PROPOSE a high-level workflow** based on goal analysis — suggest steps/phases the agent could follow
+6. **PROPOSE an agent name** derived from the goal
+7. Summarize understanding including proposed workflow
+
+<thinking>
+1. Key inputs received: [list data/answers for this phase]
+2. Decisions I am making: [choice, strategy, rationale]
+3. Evidence from source: [cite specific user answers or goal description]
+4. Risks/gaps identified: [what could go wrong, what is missing]
+5. Confidence: HIGH / MEDIUM / LOW [with justification]
+6. Production learnings applicable: [check Production_Learnings.md]
+</thinking>
+
+**Goal Discovery Format:**
+```
+🏗️ AGENT BUILDER — Let's Create Your Agent
+
+To build your agent, I need to understand:
+
+1. **What should this agent do?**
+   → Describe the goal in detail
+
+2. **Who is the audience?**
+   → Who will use this agent?
+
+3. **What inputs will it receive?**
+   → Files, text, screenshots, conversation, or a mix?
+
+4. **What should it produce?**
+   → Documents, code, reports, analysis, configs?
+
+5. **How interactive should it be?**
+   → Fully guided (stop at every step) or semi-autonomous?
+
+→ Start by describing your agent's goal
+```
+
+**After collecting answers — Goal Summary with Workflow Proposal:**
+```
+📋 GOAL SUMMARY
+
+**Agent Author:** {agent-author-name}
+**Agent Name (proposed):** {derived-name}
+**Goal:** {1-2 sentence summary}
+**Audience:** {who}
+**Inputs:** {what}
+**Outputs:** {what}
+**Interaction:** {model}
+
+**Proposed Workflow (high-level):**
+Based on your goal, here's how I envision the agent working:
+1. {Step 1} — {what happens}
+2. {Step 2} — {what happens}
+3. {Step 3} — {what happens}
+...
+
+Does this align with your vision?
+→ "confirmed" to proceed
+→ "adjust" + describe changes to the workflow
+→ Suggest a different agent name
+
+Waiting for your confirmation...
+```
+
+**Scripts/Tools Pillar Assessment (AFTER Goal Summary confirmed):**
+
+> The R-GENIE framework has three pillars: **Scripts** (programmatic validation), **AI + Rules + LLM** (intelligence), and **Human** (review/HITL). Pillar 2 and 3 are built into every agent. Pillar 1 must be explicitly assessed.
+
+```
+🔧 SCRIPTS PILLAR — Does your agent need programmatic validation?
+
+The R-GENIE framework's strongest agents use external scripts/tools 
+to validate AI-generated output — not just LLM self-checking.
+
+**Advantages of adding a Scripts layer:**
+✅ Deterministic validation — scripts catch errors LLMs can't self-detect
+✅ Repeatable quality gates — same checks run every time, no drift
+✅ Domain-specific tools — leverage existing CLIs, linters, compilers, test runners
+✅ Trust layer — users trust script output over LLM self-assessment
+✅ Automation — scripts can orchestrate multi-step validation pipelines
+
+**Example:** The DataWeave Agent uses 17 scripts (Requirements Analyzer, 
+Enhanced Validation Suite, Quality Gates, Security Scanner) to validate 
+every AI-generated transformation before delivery.
+
+**Does your domain have tools that could validate this agent's output?**
+Examples: CLI validators, linters, compilers, test runners, format checkers, 
+API testers, schema validators, diff tools, static analyzers
+
+→ Reply "yes" + describe the tools/validations available
+→ Reply "not sure" — I'll recommend based on your domain
+→ Reply "no scripts needed" — agent will rely on LLM + human review only
+
+Waiting for your input...
+```
+
+> Based on user's response, set `scriptsPillar` in state file:
+> - `"full"` → user confirmed scripts are needed, design `lib/` ecosystem
+> - `"light"` → user unsure, recommend minimal validation hooks
+> - `"none"` → user opted out, rely on LLM self-checks + HITL only
+>
+> If `scriptsPillar` is `"full"` or `"light"`, carry this forward to Phase 1 Architecture Proposal and Phase 2 phase design. See `@01_Guidance.mdc` Section 9 for Scripts Pillar patterns.
+
+**State Persistence Assessment (AFTER Scripts Pillar Assessment):**
+
+> LLMs are stateless. A runtime state file (JSON) serves as external memory so the agent can resume across sessions and track phase transitions. But not every agent needs one — single-session flows fit comfortably in the LLM's context window, and a state file adds maintenance overhead with no benefit.
+
+```
+💾 STATE PERSISTENCE — Does your agent need a runtime state file?
+
+State files act as external memory for the LLM. They help when:
+✅ Multi-session work (user resumes tomorrow or next week)
+✅ Cross-phase data dependencies (Phase 5 needs data from Phase 2)
+✅ Long flows where the full draft won't fit in context
+✅ Explicit resume capability is required
+
+They're unnecessary overhead when:
+❌ Single-session flow (user completes in one chat)
+❌ In-context draft fits comfortably
+❌ No resume requirement (user restarts if interrupted)
+❌ Post-hoc audit snapshot (`run_metadata.json`) is sufficient
+
+**Your agent's flow profile:**
+- Session model: {single-session | multi-session}
+- Draft size: {fits in context | larger than context}
+- Resume needed: {yes | no}
+
+→ Reply "stateful" + describe persistence needs
+→ Reply "stateless" — agent will skip runtime state file (may still write `run_metadata.json` as post-run audit)
+→ Reply "unsure" — I'll recommend based on your flow profile
+
+Waiting for your input...
+```
+
+> Based on user's response, set `stateful` in state file:
+> - `true` → generate full state file + State File Update Protocol + Resume Capability in the generated agent
+> - `false` → skip runtime state file; generate optional `run_metadata.json` audit snapshot at Phase N (last phase); skip Resume Capability
+>
+> **Precedent:** The WSR Email Composer Agent is `stateful: false` (single-session, in-context draft, optional post-run snapshot). The Technical Design Agent is `stateful: true` (multi-session document generation with cross-phase dependencies).
+>
+> Carry this forward to Phase 3 (Phase Orchestration file generation). See `@01_Guidance.mdc` Section 2 for the conditional state file pattern and `lib/docs/skeleton-templates.md` §3 for the conditional skeleton block.
+
+**Progressive Documentation v2 Assessment (AFTER State Persistence Assessment):**
+
+> **v1.5.0 reform (2026-05-12):** The previous v1.4.0 "Long-Form Output Assessment" was too narrow — it only triggered Pattern #20 when the deliverable exceeded ~300 lines. The CSA v1.7.0 healthcare-recommendations run proved that even a 200-line HLD built across 6+ phases hits the same context-window-exhaustion and positional-bias failure modes when all content is held in chat until a single final write. **Pattern #20 v2 (Template-First / Per-Phase Write Contract) is now the DEFAULT for any multi-phase agent that produces a structured deliverable, regardless of total length.**
+>
+> See `@01_Guidance.mdc` Section 10 (Progressive Documentation v2 — Five Mechanics), `lib/docs/prompt-engineering-patterns.md` Pattern #20 v2, and the CSA v1.7.0 `Production_Learnings.md` Learning #1.1 (Progressive Documentation v2 origin).
+
+```
+📄 PROGRESSIVE DOCUMENTATION v2 — Pattern #20 v2 Assessment
+
+Does your agent produce a STRUCTURED DELIVERABLE built across MULTIPLE PHASES?
+(e.g., a Markdown design doc, HLD, analysis report, panel deck, advisory artifact,
+ multi-section config bundle — anything with named sections that gets assembled
+ across more than one generation phase)
+
+Pattern #20 v2 (Template-First + Per-Phase Write Contract) is required when:
+✅ Deliverable is a structured document with named sections (any size)
+✅ Content is built across ≥3 generation phases
+✅ Each phase contributes specific section(s) to the final artifact
+
+It is OPTIONAL when:
+🟡 Deliverable is short-form (<150 lines) AND generated in a single phase
+🟡 Deliverable has no stable section structure (free-form output)
+
+It is NOT required when:
+❌ Output is a single short response (email, JSON config, single function)
+❌ Goal is purely conversational / advisory with no persisted artifact
+❌ Output is a one-shot generation with no per-phase assembly
+
+→ Reply "yes — apply Pattern #20 v2"   → I'll set progressiveDocV2: true
+→ Reply "no — single-phase / short-form" → standard generation, no progressive pattern
+→ Reply "unsure" — I'll infer from your archetype + phase design
+
+ADDITIONAL FLAG — Is the deliverable also >300 lines (long-form)?
+✅ Yes → I'll ALSO set longFormOutput: true (preserves the v1 trigger for compatibility
+         with Critical Rule #6 size budgets in Main Entry)
+❌ No  → Pattern #20 v2 still applies, but longFormOutput stays false
+
+Waiting for your input...
+```
+
+> Based on user's response, set state fields:
+> - `progressiveDocV2: true` (DEFAULT for any multi-phase agent producing a structured deliverable):
+>   - Generated agent's Phase 0 creates the deliverable skeleton(s) with named placeholders
+>   - Every generation phase has an explicit `**Artifact Writes (Phase N):**` task block
+>   - Final phase is reframed as **Consolidate & Polish** (not from-scratch generation)
+>   - Stop Points file includes the Per-Phase Write Self-Check (see Pattern #20 v2 embed)
+>   - Main Entry references Critical Rule #6 (Progressive File Writing) AND Critical Rule #7 (Template-First/Example-Based)
+> - `progressiveDocV2: false` → standard generation pattern; no skeleton-first requirement (only short-form single-phase agents)
+> - `longFormOutput: true` (separate flag, set in addition to `progressiveDocV2`) → enforces ≤300 lines/edit budget and skeleton+placeholder convention even more strictly
+>
+> **Two canonical precedents:**
+> - **Technical Design Agent** (`progressiveDocV2: true`, `longFormOutput: true`) — 600-1000 line design documents via 6-phase progressive pattern
+> - **Cloud Success Architect v1.7.0** (`progressiveDocV2: true`, `longFormOutput: false`) — 190-300 line HLDs via 9-phase progressive pattern (medium-form precedent that proved the v2 reform)
+> - **WSR Email Composer** (`progressiveDocV2: false`) — single-phase email generation (canonical opt-out)
+>
+> Also set `exampleAnchorPath` in state file when applicable — path to a canonical example output the generated agent will benchmark verbosity against (§10.5 Example-Anchored Conciseness in Guidance). Replaces hard line caps.
+
+**Vague Goal Refinement (if needed):**
+```
+🤔 Your goal seems broad. Let me help narrow it down:
+
+Did you mean:
+A) {specific interpretation 1}
+B) {specific interpretation 2}
+C) Something else — describe more specifically
+
+→ Pick an option or describe further
+```
+
+**Complexity Assessment (internal — include in `<thinking>` block):**
+
+| Complexity | Indicators | Recommended Phases | File Limits |
+|------------|-----------|-------------------|-------------|
+| **Simple** | Single input → single output, linear flow, no branching | 4-5 | Standard |
+| **Medium** | Multiple inputs, some branching, scoring/assessment | 5-7 | Standard |
+| **Complex** | Iterative loops, multi-pass verification, external tools, 8+ decision points | 7-10 | Complex (use `lib/docs/` for overflow) |
+
+> Use this assessment in Phase 1 to right-size archetype recommendation and phase count. Share complexity assessment with user in the Architecture Proposal.
+
+**Input Complexity Assessment (internal — include in `<thinking>` block):**
+
+Assess whether the generated agent will process lengthy inputs that require forensic processing:
+
+| Input Profile | Indicators | Forensic Processing |
+|--------------|-----------|---------------------|
+| **Light** | Short text, single config, conversation-only, <500 lines total | Not required |
+| **Medium** | Multi-file input, 500-2000 lines total, structured docs | Recommended — section-level RGV |
+| **Heavy** | Large codebase (2000+ lines), multi-page documents, mixed media | **Required** — full forensic protocol |
+
+> If Input Profile is Medium or Heavy → embed Forensic Input Processing patterns in the generated agent's Phase Orchestration and Guidance files. See `@01_Guidance.mdc` Section 8. Store as `inputComplexity` in state file.
+
+**Checkpoint:** STOP. Confirm goal + proposed workflow.
+
+---
+
+## PHASE 1: Architecture Design
+
+**Tasks:**
+1. Recommend archetype based on goal analysis
+2. Determine rule file count (4 or 5)
+3. ASK user to choose agent location:
+   - `r-genie/{Name}_Agent/` — first-class R-GENIE agent (**NO numeric prefix** — see naming convention below)
+   - Custom path — user specifies
+4. **Folder naming (modern convention — MANDATORY for all new agents)**: Use `{PascalCase_Name}_Agent/` (e.g., `Cloud_Success_Architect_Agent/`, `Security_Scanner_Agent/`). **Do NOT prefix with a numeric sequence** (`01_`, `11_`, etc.). Numeric prefixes are frozen-in-place on legacy agents `00_Master_Orchestrator_System/` through `07_Error_Analysis_Agent/` (plus `03-01_Dataweave_Agent/`) only. Modern agents (Agent_Builder, Agent_Tuner, WSR_Email_Composer_Agent, Boomi_Documentation_Agent, WebMethods_Documentation_Agent) use name-only folders and this is the required pattern going forward. See `AGENT_ARCHITECTURE_STANDARD.md` §1 and §12.
+5. If `r-genie/`, enable in `.cursorignore`/`.windsurfignore` for creation
+6. **Scenario-Based LLM Gap Detection** — cross-reference agent goal + input profile against LLM gaps
+
+### Scenario-Based LLM Gap Detection
+
+Cross-reference the agent's goal and Input Profile (from Phase 0) against high-risk LLM behavioral gaps. Auto-embed countermeasures in the generated agent:
+
+| Agent Scenario | High-Risk Gaps | Auto-Embed in Generated Agent |
+|---------------|---------------|-------------------------------|
+| Processes lengthy docs/code | #1 Attention Drift, #9 Positional Bias, #11 Error Cascade | Forensic Input Processing (mind map + section-level RGV + within-phase chunking) |
+| Multi-step reasoning chains | #4 Shallow Reasoning, #11 Error Cascade | Step-level verification, enhanced `<thinking>` blocks |
+| Generates long-form output | #12 Verbosity Bias, #3 Hallucination | Output section RGV, evidence-bound per section |
+| Processes numerical data | #13 Numerical Dyslexia | External calculation notes, double-verify numbers |
+| User provides subjective input | #8 Sycophancy | Anti-sycophancy directive, evidence-over-opinion |
+
+> Store detected scenarios in state file `scenarioGaps[]`. These automatically inject additional patterns into the generated agent's rule files during Phase 3. Include scenario detection results in the Architecture Proposal.
+
+**Archetype Selection Logic:**
+
+| Goal Pattern | Archetype | Files |
+|-------------|-----------|-------|
+| Produce structured documents | Document Generator | 5 |
+| Generate code/configs/specs | Code Generator | 4 |
+| Analyze input, score, report | Analyzer | 4 |
+| Discovery interview, progressive output | Conversational | 4 or 5 |
+
+**Architecture Proposal Format:**
+```
+🎯 ARCHITECTURE RECOMMENDATION
+
+**Agent Name:** {name}
+**Archetype:** {archetype}
+**Rule Files:** {4 or 5}
+
+**Complexity Tier:** {Simple / Medium / Complex}
+  - Indicators that drove this: {cite 2-3 from the Complexity Assessment table}
+  - Recommended phase range for this tier: {4-5 / 5-7 / 7-10}
+
+**Proposed Phase Count:** {N} phases
+  - Why {N} (not more, not less): {2-3 sentence justification grounded in the goal}
+  - Alternative sizing considered: "{N-1} phases by merging X+Y" or "{N+1} phases by splitting Z"
+  - ⚠️ ANCHORING CHECK: I did NOT default to 8 because Agent Builder itself uses 8 phases.
+    The above is right-sized to this agent's complexity and goal.
+
+**Interaction Model:** {model}
+**Input Profile:** {Light/Medium/Heavy} → {forensic processing: not required / recommended / required}
+**Scripts Pillar:** {full / light / none} → {lib/ ecosystem planned / validation hooks only / LLM + HITL only}
+
+**Archetype Rationale:** {why this archetype}
+
+**Scenario-Based Gap Detection:**
+- {Detected scenario 1} → Will embed: {countermeasure}
+- {Detected scenario 2} → Will embed: {countermeasure}
+- (or "No high-risk scenarios detected")
+
+**Location:**
+A) `r-genie/{Name}_Agent/` — First-class R-GENIE agent *(name-based, no numeric prefix — e.g., `Cloud_Success_Architect_Agent/`)*
+B) Custom path — Specify location
+
+→ Reply "approved" or suggest changes
+→ Push back on phase count if {N} feels too many or too few — I will re-right-size.
+```
+
+> **Phase Count Right-Sizing Rule (MANDATORY):**
+> - Derive the proposed phase count from the Complexity Tier recommended range (4-5 / 5-7 / 7-10), NOT from the default Agent Builder workflow (which itself is 8).
+> - Every phase MUST map to a **distinct user-visible deliverable and a decision-value checkpoint**. If two "phases" share a deliverable or the second doesn't need separate user approval, merge them.
+> - Floor is 3 phases (below this, use a simple workflow, not a full agent). Ceiling is 10 (above this, decompose into multiple agents).
+> - NEVER propose 8 phases just because Agent Builder has 8 phases. The target agent's phase count is independent of Agent Builder's.
+
+**Checkpoint:** STOP. Confirm architecture.
+
+---
+
+## PHASE 2: RISEN & Phases Design
+
+**Tasks — Conversational, element by element:**
+
+### 2A. RISEN Framework (ask per element)
+
+For EACH RISEN element, propose and ask:
+```
+📋 RISEN — Element: {R/I/S/E/N}
+
+Recommendation:
+**{Element}:** {proposed definition}
+
+Does this capture your intent?
+→ "approved" or describe changes
+```
+
+### 2B. Phase Design
+
+**Two sub-steps: (i) lock total phase count up-front, (ii) then design each phase.**
+
+#### 2B.i — Phase Count Lock (BEFORE per-phase iteration)
+
+> Purpose: prevent the "just add one more phase" drift that biases every agent toward 8 phases. Lock the total first; only propose merge/split adjustments, not incremental phase additions.
+
+```
+📋 PHASE COUNT — Let's lock the total before designing each one.
+
+From Phase 1 Architecture Proposal:
+  Complexity: {Simple / Medium / Complex}
+  Recommended range: {4-5 / 5-7 / 7-10}
+  Proposed count: {N} phases
+
+**Proposed {N}-phase outline:**
+1. {Phase 1 name} — {1-line purpose}
+2. {Phase 2 name} — {1-line purpose}
+...
+{N}. {Phase N name} — {1-line purpose}
+
+⚠️ SANITY CHECK:
+  - Does each phase produce a distinct deliverable? {yes/no per phase}
+  - Does each phase need its own user approval (decision-value)? {yes/no per phase}
+  - If any "no" → merge that phase into an adjacent one
+  - Does the count feel like a default-8 anchor? → re-evaluate against Complexity Tier
+
+**Options:**
+→ "approved — {N} phases" to proceed to per-phase design
+→ "merge X+Y into one phase" (count drops)
+→ "split Z into two phases" (count grows)
+→ "simplify to {M} phases" or "expand to {M} phases" with reasoning
+```
+
+STOP. Wait for the total phase count to be locked before proceeding to 2B.ii.
+
+#### 2B.ii — Per-Phase Design (ask per phase)
+
+Once total count is locked, for EACH of the {N} phases:
+```
+📋 PHASE {i} of {N}: {Name}
+
+- **Purpose:** {what this phase accomplishes}
+- **Tasks:** {what the agent does}
+- **User Interaction:** {what it asks the user}
+- **Checkpoint:** {what user approves}
+
+Does this phase make sense?
+→ "approved", "modify", or "remove"
+```
+
+> **Note:** Phase ADDITIONS at this point should be rare — the total was locked in 2B.i. If the user proposes adding a phase here, ask: "Should we split an existing phase instead, or genuinely expand the total count?" Update the locked total explicitly rather than silently drifting up.
+
+### 2C. Stop Points Design
+
+Present proposed stop points table, ask for confirmation.
+
+### 2D. Domain Intelligence Gathering
+
+**Purpose:** Systematically collect domain knowledge BEFORE generating rule files. This data directly feeds into the Guidance file (few-shot patterns, decision matrices, quality checklist).
+
+```
+📋 DOMAIN INTELLIGENCE GATHERING
+
+To make your agent's Guidance file truly domain-specific, I need:
+
+1. **Top 3 mistakes in your domain**
+   → These become the agent's ❌ BAD few-shot patterns
+   → Example: "Developers often hardcode credentials instead of using secure properties"
+
+2. **What does excellent output look like?**
+   → These become the agent's ✅ GOOD few-shot patterns
+   → Share an example or describe the key qualities
+
+3. **Key decision points with ambiguity**
+   → These become the agent's decision matrices
+   → Example: "When to use batch vs real-time processing"
+
+4. **How do you measure quality?**
+   → These become the agent's quality checklist
+   → Example: "All endpoints must have error handling, 85%+ test coverage"
+
+5. **Common edge cases or exceptions**
+   → These become error handling guidance
+   → Example: "Large file processing requires pagination"
+
+→ Provide examples, describe them, or say "infer from goal" for any item
+```
+
+If user can't provide after 3 attempts → mark with `⚠️ DEFAULT` and infer from goal + archetype patterns.
+
+**Checkpoint:** STOP. Confirm complete RISEN + phases + stop points + domain intelligence.
+
+---
+
+## PHASE 3: Rule Files Generation
+
+**Generate rule files ONE AT A TIME. WRITE each file to the output directory, then show a SHORT summary in chat. User reviews the file in their IDE — NOT in chat.**
+
+> **⚠️ PROGRESSIVE FILE WRITING (MANDATORY):**
+> - **DO:** Write file → show 3-5 line summary + file path → ask user to review the file
+> - **DON'T:** Dump entire file contents as a code block in chat
+> - This follows the same pattern as the Technical Design Agent — content goes in files, not in conversation
+
+> **Why per-file checkpoints?** Generating all 4-6 files in one pass causes Attention Drift (LLM Gap #1) and Error Cascade (LLM Gap #11). Each file builds on the previous — errors in Main Entry propagate to Phase Orchestration, then to Guidance and Stop Points. Per-file review catches issues early.
+
+> **Reference agents** (study the one matching the selected archetype):
+> - Document Generator → `examples/reference-agent-01-technical-design/` (full agent, all files)
+> - Code Generator → `examples/reference-agent-03-app-development/` (Main Entry + README)
+> - Analyzer → `examples/reference-agent-04-munit-testing/` (Main Entry + README)
+> - Conversational → `examples/reference-agent-agent-tuner/` (Main Entry + README)
+>
+> **Architecture standard**: `lib/docs/AGENT_ARCHITECTURE_STANDARD.md`
+> **Skeleton templates**: See `@01_Guidance.mdc` Section 2
+> **Prompt techniques**: See `@01_Guidance.mdc` Section 3
+
+**Output directory for drafts:** `project/output_builder/{agent-name}/`
+Files are written here first, then moved to final location in Phase 7.
+
+**Generation order (one file at a time — WRITE TO FILE, not chat):**
+
+### 3A. Main Entry (`{ID}_{Agent}.mdc`)
+- Frontmatter (description, author, version, alwaysApply: true, priority: HIGHEST)
+- RISEN framework table (from Phase 2)
+- Lean architecture table
+- Phase workflow table
+- Critical rules
+- Mandatory behavior
+- Output structure
+- Quick reference
+
+**Sub-checkpoint 3A:** WRITE file to `project/output_builder/{agent-name}/rules/{ID}_{Agent}.mdc`. Then show in chat:
+```
+✅ FILE WRITTEN: rules/{ID}_{Agent}.mdc (Main Entry)
+
+📄 Contains: RISEN framework, {N}-phase workflow table, {N} critical rules, 
+   {N} mandatory behaviors, output structure, quick reference
+📏 Lines: ~{count} | Priority: HIGHEST | alwaysApply: true
+
+👉 Please open and review the file, then reply:
+→ "approved" to proceed to next file
+→ Describe specific changes needed (I'll update the file)
+```
+STOP. Wait for approval before proceeding to 3B.
+
+### 3B. Template Configuration (`{ID}-00_Template_Configuration.mdc`) — 5-file agents only
+- Template location
+- Pre-generation checklist
+- Template structure
+- Template-driven rules
+
+**Sub-checkpoint 3B:** WRITE file to output directory. Show short summary + file path in chat. STOP. Wait for approval before proceeding to 3C. (Skip for 4-file agents.)
+
+### 3C. Phase Orchestration (`0X_Phase_Orchestration.mdc`)
+- State machine diagram (Mermaid `stateDiagram-v2`) — **MUST follow `@lib/docs/mermaid-diagram-best-practices.md` §2 (ten rules), §5 (layout control via declaration order), §12 (state diagram specifics), §14 (pre-emit self-check)**. States declared in phase order; `[*]` for start/end; transitions labeled with trigger events (`user approved`), not actions.
+- Phase specifications (per phase from Phase 2)
+- `<thinking>` block template
+- Confidence Calibration table
+- RGV pattern per generation phase
+- State file JSON schema
+- Error recovery table
+- Quick reference
+- **If `progressiveDocV2: true` (DEFAULT for multi-phase analytical agents):**
+  - PROGRESSIVE DOCUMENTATION v2 — PER-PHASE WRITE CONTRACT section (table mapping Phase → Section(s) Written → Marker(s) → Mode). See `@01_Guidance.mdc` §10.4 for the embeddable template.
+  - Phase 0 task list MUST include "Create deliverable skeleton with named placeholders" as Step 1.
+  - Every generation phase MUST include an explicit `**Artifact Writes (Phase N — Progressive Documentation v2):**` task block citing the section marker(s) it writes to.
+  - The final-output phase MUST be reframed as "Consolidate & Polish" (not "Generate Final {document}") with explicit CONSOLIDATE-mode task list (re-read file, cross-section consistency edits, terminology alignment, residual-placeholder check, final style/length self-check against `exampleAnchorPath`).
+  - See `lib/docs/prompt-engineering-patterns.md` Pattern #20 v2 for the canonical block to embed.
+
+**Sub-checkpoint 3C:** WRITE file to output directory. Show short summary + file path in chat. STOP. Wait for approval before proceeding to 3D.
+
+### 3D. Guidance (`0X_Guidance.mdc`)
+- Domain-specific patterns
+- Few-shot examples (bad→good) for the agent's domain
+- Decision matrices (if applicable)
+- Quality checklist — **MUST include an Example-Anchored Conciseness item if `progressiveDocV2: true`**: "Output verbosity benchmarked against `{exampleAnchorPath}`; structural budgets (sentence counts per executive section, table density, K-word quote rule) preferred over hard line caps." See `@01_Guidance.mdc` §10.5.
+- **Mermaid Diagram Standards section** — embed the template from `@01_Guidance.mdc` §12.2, adapted to the agent's domain. Reference either the Agent Builder canonical at `@r-genie/Agent_Builder/lib/docs/mermaid-diagram-best-practices.md` OR copy the doc into the agent's own `lib/docs/` and reference locally. This is MANDATORY for any agent whose output includes Mermaid diagrams.
+- **Progressive Documentation v2 Section (if `progressiveDocV2: true`)** — embed an adapted version of `@01_Guidance.mdc` §10 (Five Mechanics + Skeleton Convention + Per-Phase Write Contract Template + Example-Anchored Conciseness) into the generated agent's Guidance file. Adapt the section markers, file names, and phase-to-section mapping to the agent's domain.
+- Quick reference
+
+**Sub-checkpoint 3D:** WRITE file to output directory. Show short summary + file path in chat. STOP. Wait for approval before proceeding to 3E.
+
+### 3E. Stop Points (`{ID}-0X_Mandatory_Stop_Points.mdc`)
+- Stop points table (from Phase 2)
+- Self-check checklist
+- Constitutional principles (4 ranked)
+- Semantic anti-autopilot table
+- Forbidden/required phrases
+- Contradiction handling
+- Graceful degradation
+- Input sanitization
+- **If `progressiveDocV2: true`** — embed the PER-PHASE WRITE SELF-CHECK block (see `lib/docs/prompt-engineering-patterns.md` Pattern #20 v2 — the 5 bullet-point block that asks: did Phase 0 create skeleton? did this phase write to its section marker? was preview shown before write? is chat confirmation ≤5 lines? is final phase in CONSOLIDATE mode?).
+- Quick reference
+
+**Sub-checkpoint 3E:** WRITE file to output directory. Show short summary + file path in chat. STOP. Wait for approval before proceeding to 3F.
+
+### 3F. INDEX.md
+- Quick reference table
+- Rule dependency map (Mermaid `flowchart TD`) — **MUST follow `@lib/docs/mermaid-diagram-best-practices.md` §2/§3/§5/§14**. Start with `%%{ init: { 'flowchart': { 'curve': 'linear' } } }%%`; declare Main Entry first, child rule files as downstream nodes; `<br/>` for line breaks; styles at end.
+- Phase workflow diagram (Mermaid `flowchart LR`) — **same Mermaid standards**. Declare phases in execution order; solid `-->` for forward progression.
+- File details
+- Cross-reference matrix
+
+**Checkpoint 3 (Final):** WRITE INDEX.md to output directory. Show summary of ALL files written so far + file paths. STOP. Wait for final Phase 3 approval.
+
+---
+
+## PHASE 4: Examples & Templates
+
+**WRITE all files to output directory. Show short summary + file paths in chat. User reviews files in IDE.**
+
+**Archetype-dependent:**
+
+**Document Generator:**
+- WRITE `templates/{domain}-style.yaml` — section structure, inclusion flags
+- WRITE `templates/{domain}-template-guide.md` — section-by-section content guide
+- WRITE 1 example output document in `examples/`
+
+**Code Generator:**
+- WRITE example project structure in `examples/`
+- WRITE `pattern.md` or `README.md` describing the example
+
+**Analyzer:**
+- WRITE example analysis output in `examples/`
+
+**Conversational:**
+- WRITE example session transcript in `examples/`
+
+**All archetypes:**
+- WRITE `examples/README.md` — example index
+
+**Checkpoint:** STOP. Show summary of all examples/templates written + file paths. Ask user to review files. Wait for approval.
+
+---
+
+## PHASE 5: Documentation
+
+**WRITE all documentation files to output directory. Show short summary + file paths in chat. User reviews files in IDE.**
+
+**Generate (WRITE TO FILES):**
+1. WRITE `README.md` — Overview, RISEN summary, quick start, workflow table, tips, version history
+2. WRITE `ARCHITECTURE.md` — Overview (3 paragraphs), workflow steps (What/How/Why/Approach per phase), flow diagram (Mermaid `flowchart LR` — **MUST follow `@lib/docs/mermaid-diagram-best-practices.md` §2/§3/§5/§6/§14**; start with `%%{ init: { 'flowchart': { 'curve': 'linear' } } }%%`; declare workflow steps upstream→downstream; use solid `-->` for forward progression and dashed `-.->` only for back-edges/retries), key patterns, state management, error recovery
+3. WRITE `Production_Learnings.md` — Empty template *(modern: no `{ID}_` prefix; legacy agents 00–08: `{ID}_Production_Learnings.md`)*
+
+**Checkpoint:** STOP. Show summary of all docs written + file paths. Ask user to review files. Wait for approval.
+
+---
+
+## PHASE 6: Validation
+
+**Two-tier validation: structural compliance + semantic quality.**
+
+### 6A. Structural Validation (against `AGENT_ARCHITECTURE_STANDARD.md`)
+
+| Check | What |
+|-------|------|
+| RISEN Complete | All 5 elements defined |
+| Dual-Author Attribution | All files have R-GENIE framework footer + agent author footer |
+| Quick Reference | Every rule file has table |
+| File Size | Main ≤200, Phase ≤400, Guidance ≤600, Stops ≤450 |
+| Cross-References | All `@file.mdc` valid |
+| Version Consistency | All files same version |
+| Frontmatter | All .mdc files have required fields |
+| Prompt Techniques | All 14 techniques present |
+| Rules/Templates Decoupling | No section numbers in rules (5-file agents) |
+| Mermaid Diagram Standards | Every `flowchart`/`graph` block has `%%{ init: { 'flowchart': { 'curve': 'linear' } } }%%` directive; zero `\n` in labels; styles at end in node-declaration order; runs the §14 self-check in `@lib/docs/mermaid-diagram-best-practices.md`. Applies to ALL emitted diagrams: Phase Orchestration state machine, INDEX.md Rule Dependency Map + Phase Workflow, ARCHITECTURE.md flow diagram, and any domain deliverable diagrams. |
+| Progressive Documentation v2 Embedding (if `progressiveDocV2: true`) | Generated Phase Orchestration contains PER-PHASE WRITE CONTRACT section (Phase → Section table); every generation phase has `**Artifact Writes (Phase N):**` block; final phase is reframed as Consolidate & Polish; Phase 0 task list includes "Create deliverable skeleton with named placeholders" as Step 1; Stop Points file contains PER-PHASE WRITE SELF-CHECK block; Guidance file contains adapted §10 (Five Mechanics + Example-Anchored Conciseness). See `@01_Guidance.mdc` §10 and `lib/docs/prompt-engineering-patterns.md` Pattern #20 v2. |
+
+### 6B. Semantic Validation (substance, not just format)
+
+| Check | What | Fail Condition |
+|-------|------|----------------|
+| RISEN Specificity | Each RISEN element uses domain-specific language | Generic phrases like "Expert who helps users" or "User provides stuff" |
+| Phase Distinctness | Each phase has a unique purpose and deliverable | Two phases with overlapping tasks or identical deliverables |
+| Few-Shot Relevance | BAD/GOOD examples reference the stated domain | Generic examples unrelated to user's goal from Phase 0 |
+| Stop Point Decision-Value | Each stop justifies why user judgment matters | Stops at trivial/mechanical steps where no human decision is needed |
+| Domain Keyword Presence | Generated rules contain domain-specific terminology from Phase 0 | Rule files could apply to any domain (no domain fingerprint) |
+| Cross-File Coherence | RISEN in Main Entry matches phase tasks in Orchestration | Main Entry says "5-phase" but Orchestration defines 7 phases |
+| Constitutional Principle #4 | 4th principle is domain-adapted, not generic | Uses default "COMPLETENESS over brevity" without considering the domain |
+
+### 6C. Ecosystem Validation (if inside `r-genie/`)
+
+| Check | What |
+|-------|------|
+| Folder Name Uniqueness | `{Name}_Agent/` folder doesn't collide with existing agents in `AGENT_ARCHITECTURE_STANDARD.md` §12 (e.g., `Cloud_Success_Architect_Agent/` is fine if no existing folder matches) |
+| Output Path Uniqueness | `project/output_{agent-slug}/` path doesn't overlap with existing agents (e.g., `project/output_cloud_success_architect/`) |
+| Activation File Names | `use-{agent-slug}.md` in `.windsurf/workflows/` and `.cursor/commands/` has no naming conflict with existing files |
+| No Numeric Prefix | Generated folder is NOT prefixed with a numeric sequence (`11_`, `12_`, etc.) — this is a Phase 1 guardrail; legacy `XX_` prefixes are frozen on agents 00–08 only |
+
+**Checkpoint:** STOP. Show validation report (structural + semantic results). Flag any semantic failures for user decision: fix or accept.
+
+---
+
+## PHASE 7: Registration & Activation
+
+**All files already exist in `project/output_builder/{agent-name}/` from Phases 3-5. This phase moves them to the final location and creates activation infrastructure.**
+
+**Tasks:**
+1. **Move/copy** all approved files from `project/output_builder/{agent-name}/` to chosen location (from Phase 1)
+2. **Verify dual-author attribution** is present in every file (should already be embedded during Phase 3-5 generation):
+   - Frontmatter: `author: {agentAuthor}`
+   - Footer: `> 🧞‍♂️ R-GENIE Agent Framework by Cheppali Shaik Sohail` + `> ✍️ Agent Author: {agentAuthor} | v{version} | {date}`
+3. Generate activation workflow files using skeleton template (see `lib/docs/skeleton-templates.md` §6):
+   - `.windsurf/workflows/use-{agent-slug}.md` *(kebab-case slug of agent name; e.g., `use-cloud-success-architect.md` — **no numeric prefix**)*
+   - `.cursor/commands/use-{agent-slug}.md`
+4. Generate standardized display block (Header → HOW TO USE → PRO TIPS → GENERAL → CTA) per `AGENT_ARCHITECTURE_STANDARD.md` §14
+5. Register in `.cursorignore` and `.windsurfignore` (disabled by default)
+6. If inside `r-genie/` → update `AGENT_ARCHITECTURE_STANDARD.md` Section 12
+7. Show activation summary with first-run smoke test guide
+
+**Checkpoint:** STOP. Agent created.
+
+---
+
+## STATE FILE
+
+**Location:** `project/output_builder/.builder-state.json`
+
+```json
+{
+  "agentAuthor": "",
+  "agentName": "",
+  "agentFolderName": "",
+  "agentSlug": "",
+  "archetype": "",
+  "archetypeSecondary": null,
+  "complexity": "",
+  "inputComplexity": "",
+  "scenarioGaps": [],
+  "forensicProcessingRequired": false,
+  "scriptsPillar": "none",
+  "scriptsTools": [],
+  "stateful": true,
+  "longFormOutput": false,
+  "progressiveDocV2": false,
+  "exampleAnchorPath": "",
+  "location": "",
+  "currentPhase": 0,
+  "risen": {
+    "R": { "value": "", "status": "PENDING" },
+    "I": { "value": "", "status": "PENDING" },
+    "S": { "value": "", "status": "PENDING" },
+    "E": { "value": "", "status": "PENDING" },
+    "N": { "value": "", "status": "PENDING" }
+  },
+  "phases": [],
+  "stopPoints": [],
+  "domainIntelligence": {
+    "topMistakes": [],
+    "goodOutputQualities": [],
+    "ambiguousDecisions": [],
+    "qualityCriteria": [],
+    "edgeCases": []
+  },
+  "generatedFiles": [],
+  "phaseStatuses": {
+    "phase0": "PENDING",
+    "phase1": "PENDING",
+    "phase2": "PENDING",
+    "phase3": "PENDING",
+    "phase4": "PENDING",
+    "phase5": "PENDING",
+    "phase6": "PENDING",
+    "phase7": "PENDING"
+  }
+}
+```
+
+**State file content update rules:**
+- **Phase 0:** Populate `agentAuthor`, `agentName`, `complexity`, `inputComplexity`, `scriptsPillar`, `scriptsTools`, `stateful`, `longFormOutput`, `progressiveDocV2`, `exampleAnchorPath`
+- **Phase 1:** Populate `agentFolderName` (e.g., `Cloud_Success_Architect_Agent`), `agentSlug` (e.g., `cloud-success-architect`), `archetype`, `archetypeSecondary` (null if pure archetype, secondary name if Hybrid), `location`, `scenarioGaps`, `forensicProcessingRequired`. **Do NOT set any numeric-sequence ID field** — modern agents are identified by their folder name, not by a sequence number.
+- **Phase 2:** Populate `risen` elements (each with `value` + `status`), `phases`, `stopPoints`, `domainIntelligence`
+- **Phase 3-5:** Append to `generatedFiles` as each file is approved
+- **Backward navigation:** Set affected downstream phases to `"NEEDS_REVIEW"`
+
+---
+
+## PHASE EXECUTION RULES
+
+**Before each phase:**
+- Verify previous phase completed and approved
+- Load relevant rule file for this phase
+- Produce a `<thinking>` block (see template in Phase 0)
+
+**During each phase:**
+- Follow phase-specific tasks
+- Apply RGV cycle for generation phases (see below)
+- Assess Confidence before presenting checkpoint
+
+**After each phase:**
+- Present checkpoint, STOP and WAIT
+- Update state file on approval (see State File Update Protocol)
+
+---
+
+## CONFIDENCE CALIBRATION
+
+| Confidence | When to Use | Action |
+|------------|------------|--------|
+| **HIGH** | Clear goal, proven archetype pattern | Proceed with recommendation |
+| **MEDIUM** | Partial info, reasonable inference | Flag assumptions, recommend user validation |
+| **LOW** | Vague goal, multiple interpretations | **STOP** — request clarification before proceeding |
+
+---
+
+## RGV (READ-GENERATE-VERIFY) PATTERN
+
+Apply for Phases 3, 4, and 5 (phases that produce files):
+
+```
+1. READ: [user decisions from Phases 0-2 / reference agent files] → Expected: [count/list]
+2. GENERATE: [rule files / examples / docs] → Expected: [count/list]
+3. VERIFY: "Processed {X}/{Y} items from source"
+4. FIX: Any gaps before presenting checkpoint to user
+```
+
+> If X ≠ Y, do NOT present the checkpoint. Fix the gap first.
+
+---
+
+## FORENSIC INPUT PROCESSING PROTOCOL (FOR GENERATED AGENTS)
+
+When Input Profile is **Medium or Heavy** (from Phase 0 assessment), the generated agent's Phase Orchestration MUST include enhanced forensic processing alongside standard RGV. The protocol has 5 steps:
+
+1. **INVENTORY** — Build input mind map (structural index as verification baseline)
+2. **SECTION-BY-SECTION** — Process each section in isolation with its own RGV cycle
+3. **POSITIONAL BIAS SCAN** — Re-read middle sections (30%-70%) to catch missed items
+4. **COMPLETENESS VERIFICATION** — Compare processed count against mind map baseline
+5. **CROSS-SECTION COHERENCE** — Verify consistency across sections, flag contradictions
+
+> **Embeddable patterns (single source of truth):** `lib/docs/prompt-engineering-patterns.md` Patterns #15-18
+> **Guidance on when/how to embed:** `@01_Guidance.mdc` Section 8
+> **Skeleton template with conditional block:** `lib/docs/skeleton-templates.md` §3
+
+---
+
+## STATE FILE UPDATE PROTOCOL (MANDATORY — for Builder's own state)
+
+**Update state file after EVERY phase completion** (not just at end).
+After user approves each phase:
+1. Update `currentPhase` to next phase number
+2. Set completed phase status to `"COMPLETED"`
+3. Add `completedAt` timestamp
+
+Enables resume capability and error recovery.
+
+> **Note:** This protocol applies to the Builder's own `.builder-state.json`. For **generated agents**, State File Update Protocol and Resume Capability are conditional on `stateful: true` from Phase 0 assessment. Stateless generated agents skip both (see `@01_Guidance.mdc` Section 2 for the conditional pattern).
+
+---
+
+## RESUME CAPABILITY
+
+**On Activation (Builder itself):**
+1. Check for existing state file
+2. If exists → show last completed phase, offer: resume / restart
+3. If not → start fresh from Phase 0
+
+> **For generated agents:** Include Resume Capability only if `stateful: true`. Stateless agents omit this section and rely on user restarting a fresh session.
+
+---
+
+## BACKWARD NAVIGATION
+
+Users may realize a design decision was wrong after advancing. Support iterative refinement:
+
+| User Says | Action | Cascade Effect |
+|-----------|--------|----------------|
+| "revise phase N" | Re-enter Phase N from its beginning | Mark all phases after N as `"NEEDS_REVIEW"` in state file |
+| "revise RISEN" | Re-enter Phase 2A (RISEN design) | Mark Phases 3-7 as `"NEEDS_REVIEW"` — rule files need regeneration |
+| "revise phases" | Re-enter Phase 2B (phase design) | Mark Phases 3-7 as `"NEEDS_REVIEW"` |
+| "change archetype" | Re-enter Phase 1 | Mark Phases 2-7 as `"NEEDS_REVIEW"` — full redesign |
+
+**Rules:**
+- After backward navigation, re-present the target phase with previous answers pre-filled as defaults
+- User can modify or re-approve each element
+- All downstream phases marked `"NEEDS_REVIEW"` must be re-executed before Phase 7
+- State file tracks which phases need review
+
+---
+
+## ERROR RECOVERY
+
+| Situation | Action |
+|-----------|--------|
+| Phase fails | Save state, inform user, offer: retry / restart phase / abort |
+| User disconnects | State preserved, resume on next activation |
+| Invalid input | Stay in current phase, request correction |
+| Validation fails | Return to Phase 3 for fixes |
+| File write error | Report error, offer retry |
+
+---
+
+## QUICK REFERENCE
+
+| Need | Reference |
+|------|-----------|
+| Main entry | `@Agent_Builder.mdc` |
+| Archetype patterns & generation | `@01_Guidance.mdc` |
+| Stop points | `@02_Mandatory_Stop_Points.mdc` |
+| Skeleton templates | `lib/docs/skeleton-templates.md` |
+| Prompt techniques | `lib/docs/prompt-engineering-patterns.md` |
+| Progressive Documentation v2 (Pattern #20 v2) | `@01_Guidance.mdc` §10 + `lib/docs/prompt-engineering-patterns.md` Pattern #20 v2 |
+
+---
+
+> 🧞‍♂️ R-GENIE Agent Framework by Cheppali Shaik Sohail
+> ✍️ Agent Tuner attribution: v1.5.0 | 2026-05-12 | Progressive Documentation v2 reform — Template-First / Per-Phase Write Contract is now the DEFAULT for any multi-phase analytical agent (informed by CSA v1.7.0 healthcare-recommendations run)

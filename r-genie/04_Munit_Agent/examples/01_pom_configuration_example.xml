@@ -1,0 +1,169 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 🧞‍♂️ R-GENIE MUNIT POM CONFIGURATION EXAMPLE -->
+<!-- Extracted from: s-sfdc-commerce-mst-api-at project -->
+
+<project xmlns="http://maven.apache.org/POM/4.0.0">
+    <modelVersion>4.0.0</modelVersion>
+    
+    <!-- ✅ PRODUCTION-VALIDATED PROPERTIES FOR MUNIT + COMPATIBLE VERSIONS -->
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+        <java.version>17</java.version>
+        
+        <!-- 🎯 BATTLE-TESTED VERSIONS (Proven working in production) -->
+        <app.runtime>4.9.0</app.runtime>
+        <mule.maven.plugin.version>4.5.1</mule.maven.plugin.version>
+        <maven.clean.plugin.version>3.3.2</maven.clean.plugin.version>
+        <munit.version>3.4.0</munit.version>
+        <mule.assertions.version>2.9.0</mule.assertions.version>
+    </properties>
+
+    <build>
+        <plugins>
+            <!-- ✅ MAVEN CLEAN PLUGIN -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-clean-plugin</artifactId>
+                <version>${maven.clean.plugin.version}</version>
+            </plugin>
+            
+            <!-- ✅ MULE MAVEN PLUGIN -->
+            <plugin>
+                <groupId>org.mule.tools.maven</groupId>
+                <artifactId>mule-maven-plugin</artifactId>
+                <version>${mule.maven.plugin.version}</version>
+                <extensions>true</extensions>
+                <configuration>
+                    <classifier>mule-application</classifier>
+                </configuration>
+            </plugin>
+            
+            <!-- ✅ MUNIT MAVEN PLUGIN CONFIGURATION -->
+            <plugin>
+                <groupId>com.mulesoft.munit.tools</groupId>
+                <artifactId>munit-maven-plugin</artifactId>
+                <version>${munit.version}</version>
+                <executions>
+                    <execution>
+                        <id>test</id>
+                        <phase>test</phase>
+                        <goals>
+                            <goal>test</goal>
+                            <goal>coverage-report</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <coverage>
+                        <runCoverage>true</runCoverage>
+                        <formats>
+                            <format>html</format>
+                        </formats>
+                        <!-- 🎯 ADD FOR 85% COVERAGE VALIDATION -->
+                        <!-- 
+                        <failBuild>true</failBuild>
+                        <requiredApplicationCoverage>85</requiredApplicationCoverage>
+                        -->
+                    </coverage>
+                </configuration>
+            </plugin>
+        </plugins>
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+            </resource>
+        </resources>
+    </build>
+
+    <dependencies>
+        <!-- ✅ MUNIT TEST DEPENDENCIES -->
+        <dependency>
+            <groupId>com.mulesoft.munit</groupId>
+            <artifactId>munit-runner</artifactId>
+            <version>${munit.version}</version>
+            <classifier>mule-plugin</classifier>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.mulesoft.munit</groupId>
+            <artifactId>munit-tools</artifactId>
+            <version>${munit.version}</version>
+            <classifier>mule-plugin</classifier>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.mule.weave</groupId>
+            <artifactId>assertions</artifactId>
+            <version>${mule.assertions.version}</version>
+            <scope>test</scope>
+        </dependency>
+        
+        <!-- ✅ EXAMPLE PROJECT CONNECTORS -->
+        <dependency>
+            <groupId>com.mulesoft.connectors</groupId>
+            <artifactId>mule-salesforce-connector</artifactId>
+            <version>10.22.5</version>
+            <classifier>mule-plugin</classifier>
+        </dependency>
+        <dependency>
+            <groupId>com.solace.connector</groupId>
+            <artifactId>solace-mulesoft-connector</artifactId>
+            <classifier>mule-plugin</classifier>
+        </dependency>
+        <dependency>
+            <groupId>org.mule.connectors</groupId>
+            <artifactId>mule-http-connector</artifactId>
+            <classifier>mule-plugin</classifier>
+        </dependency>
+    </dependencies>
+</project>
+
+<!-- 
+🧞‍♂️ COMPATIBILITY TROUBLESHOOTING GUIDE
+
+🚨 DEPENDENCY RESOLUTION FAILURES:
+
+❌ Error: "Could not find artifact com.mulesoft.mule.distributions:mule-runtime-impl-no-services-bom"
+✅ Solution: Switch to Community Edition compatible versions (uncomment CE block above)
+
+❌ Error: "Cannot create embedded container"
+✅ Solution: Use Java 8 + Mule 4.4.0 + MUnit 2.3.6 configuration
+
+❌ Error: "BundleDependenciesResolutionException"
+✅ Solution: Add customer portal credentials or use public CE versions
+
+🎯 VERSION COMPATIBILITY MATRIX:
+
+ENTERPRISE (Requires Customer Portal):
+- Java 17 + Mule 4.9.0 + MUnit 3.4.0 ✅ BEST
+- Java 17 + Mule 4.6.7 + MUnit 3.4.0 ⚠️  BOM Issues
+- Java 17 + Mule 4.9.0 + MUnit 3.5.0 ⚠️  Less Stable
+
+COMMUNITY EDITION (Public):
+- Java 8  + Mule 4.4.0 + MUnit 2.3.6 ✅ RELIABLE
+- Java 11 + Mule 4.4.0 + MUnit 2.3.6 ✅ WORKS
+- Java 17 + Mule 4.4.0 + MUnit 2.3.6 ❌ INCOMPATIBLE
+
+🔧 QUICK FIXES:
+
+1. Enterprise Access Issues:
+   mvn clean test -Dmule.test.timeoutSecs=300 -Dmule.maven.plugin.version=4.5.1
+
+2. Community Edition Fallback:
+   - Change app.runtime to 4.4.0
+   - Change java.version to 8
+   - Change munit.version to 2.3.6
+   - Change mule.maven.plugin.version to 3.8.0
+
+3. Repository Issues:
+   Add to pom.xml repositories:
+   <repository>
+       <id>mule-public</id>
+       <url>https://repository.mulesoft.org/nexus/content/repositories/public/</url>
+   </repository>
+
+4. Clean Dependency Resolution:
+   mvn dependency:purge-local-repository -DmanualInclude="com.mulesoft.mule.distributions:*"
+   mvn clean test -U ✨
+-->

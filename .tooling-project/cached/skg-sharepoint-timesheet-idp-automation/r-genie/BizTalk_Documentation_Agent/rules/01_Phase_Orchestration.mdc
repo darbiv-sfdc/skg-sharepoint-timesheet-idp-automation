@@ -1,0 +1,207 @@
+---
+description: BizTalk Documentation Agent - Phase Orchestration & Workflow
+author: Cheppali Shaik Sohail
+version: 1.1.0
+alwaysApply: false
+tags: [biztalk, phase, orchestration, rgv, forensic, workflow]
+appliesTo: [biztalk-documentation]
+whenToUse:
+  - "Executing the 6-phase documentation workflow"
+  - "Managing per-section RGV and state"
+priority: HIGH
+---
+
+# PHASE ORCHESTRATION
+
+> **Purpose:** Drive the 6-phase forensic documentation workflow with per-section RGV loops and progressive file writing.
+> **Enforcement:** See `@03_Mandatory_Stop_Points.mdc`
+
+---
+
+## WORKFLOW STATE MACHINE
+
+```mermaid
+stateDiagram-v2
+    [*] --> P0: Start
+    P0 --> P1: Inventory complete
+    P1 --> P2: Orchestrations documented
+    P2 --> P3: Schemas & Maps documented
+    P3 --> P4: Pipelines, Ports & Helpers documented
+    P4 --> P5: Replication-readiness assessed
+    P5 --> [*]: Zero data loss certified
+```
+
+---
+
+## DELIBERATION TRIGGER
+
+Before EVERY phase and EVERY section, produce a `<thinking>` block. Slow down: an omission becomes a defect in the rebuilt MuleSoft integration. Think before you extract.
+
+```
+<thinking>
+1. Inputs received: [files/elements in scope for this section]
+2. Decisions: [what to extract, where logic lives (.btm vs .xsl), how to structure]
+3. Evidence from source: [cite file + element/OID/LinkID]
+4. Risks/gaps: [missing assembly? UTF-16? external schema? encrypted value?]
+5. Confidence: HIGH / MEDIUM / LOW [justify]
+6. Error premortem: [most likely way this section is wrong → how I prevent it]
+</thinking>
+```
+
+---
+
+## PER-PHASE WRITE CONTRACT (Progressive Documentation v2)
+
+Skeleton-first, then write one bounded section group per phase. Never regenerate the whole file to edit one section — use targeted edits.
+
+| Phase | Writes To (file) | Section / Marker | Mode |
+|-------|------------------|------------------|------|
+| 0 | main doc + `artifact-inventory.md` | `<!-- SECTION:1 -->`, `<!-- SECTION:2 -->` | Create skeleton (all 7 markers) + fill 1-2 |
+| 1 | main doc + `orchestration-flows.md` | `<!-- SECTION:3 -->` | Append per-orchestration |
+| 2 | main doc + `schema-structures.md` + `map-mappings.md` | `<!-- SECTION:4 -->` | Append per-schema / per-map |
+| 3 | main doc + `pipeline-helper-reference.md` | `<!-- SECTION:5 -->` | Append per-pipeline / per-helper |
+| 4 | main doc + `replication-gap-report.md` | `<!-- SECTION:6 -->` | Append mapping + gaps |
+| 5 | main doc + `verification-checklist.md` | `<!-- SECTION:7 -->` | **Consolidate & Polish** (reconcile, do NOT regenerate prior sections) |
+
+> **Phase 0 Step 1 = create the main-doc skeleton** with named placeholders for all 7 sections, then fill Sections 1-2.
+
+---
+
+## RGV (READ-GENERATE-VERIFY) PATTERN
+
+Apply per section in Phases 1-4. Full definition (DRY) in `@02_Guidance.mdc §1`.
+
+```
+1. RE-READ   — Fresh Read on ALL relevant artifact files for this section
+2. INVENTORY — Count target elements, COMMIT to N (e.g., "Process_X has 14 shapes")
+3. GENERATE  — Produce content with exactly N items
+4. VERIFY    — Count generated, compare to N → "Processed N/N"
+5. FIX       — If N≠generated, RE-READ, find missing, fix before checkpoint
+6. CHECKPOINT— Emit count-verified micro-checkpoint, write to file, proceed
+```
+
+> If counts don't match, do NOT proceed. Fix first.
+
+---
+
+## FORENSIC INPUT PROCESSING (Heavy input — REQUIRED)
+
+BizTalk exports are large and heterogeneous. Counter Attention Drift / Positional Bias / Error Cascade:
+
+1. **INVENTORY (mind map)** — In Phase 0 build a structural index of every artifact (type, name, path, references). This is the verification baseline.
+2. **SECTION-BY-SECTION** — Process each orchestration/schema/map/pipeline/helper in isolation with its own RGV.
+3. **POSITIONAL BIAS SCAN** — For long `.odx`/`.xsl` files, re-read the middle 30%-70% to catch shapes/links missed on first pass.
+4. **COMPLETENESS VERIFICATION** — Compare processed counts against the Phase 0 mind map baseline.
+5. **CROSS-ARTIFACT COHERENCE** — Verify a map referenced by an orchestration exists; a schema referenced by a map exists; flag any dangling reference as 🔴 GAP.
+
+---
+
+## PHASE SPECIFICATIONS
+
+### PHASE 0 — Discovery & Inventory
+- **Read:** `.sln`/`.btproj` (project structure + assembly refs), then enumerate all `.odx`/`.btm`/`.xsl`/`.xsd`/`.btp`/`.cs`.
+- **Do:** classify + count each artifact type; build assembly-reference graph; identify referenced-but-absent assemblies/schemas; create main-doc skeleton (7 markers); fill Sections 1-2.
+- **Write:** main doc Sections 1-2, `artifact-inventory.md`.
+- **Checkpoint:** `✅ Phase 0: {app} — {X} orchestrations, {Y} maps, {Z} schemas, {P} pipelines, {H} helpers inventoried`.
+
+### PHASE 1 — Orchestration Documentation
+- **Per `.odx` (RGV):** count shapes; document each shape (Receive/Send/Construct/Transform/Decision/Loop/Scope/Call/Assignment/Parallel), ports, message + variable declarations, correlations, DNF filter predicates, complete inline expression code; build a Mermaid flow per orchestration.
+- **Write:** main doc Section 3, `orchestration-flows.md`.
+- **Checkpoint per orchestration:** `✅ 1.k: {OrchName} — {n}/{n} shapes`.
+
+### PHASE 2 — Schema & Map Documentation
+- **Per `.xsd` (RGV):** document field tree (element/attribute, type, occurrence, namespace), root + target-namespace. Handle UTF-16/BOM.
+- **Per map (RGV):** read the paired `.xsl` for transform logic AND the `.btm` for functoid graph/constants; document EVERY link (source XPath → target XPath + functoid/logic). Note `CustomXSLT` when used.
+- **Write:** main doc Section 4, `schema-structures.md`, `map-mappings.md`.
+- **Checkpoint per map:** `✅ 2.k: {MapName} — {n}/{n} links`.
+
+### PHASE 3 — Pipeline, Port & Helper Documentation
+- **Per `.btp` (RGV):** stages → components.
+- **Per `.cs` helper (RGV):** class, public method signatures, summarized logic + complete code; list orchestration call-sites. If a referenced helper has NO source, document the call-site/signature and flag 🔴 GAP.
+- **Write:** main doc Section 5, `pipeline-helper-reference.md`.
+- **Checkpoint:** `✅ Phase 3: {P}/{P} pipelines, {H}/{H} helpers documented`.
+
+### PHASE 4 — Replication-Readiness & Gap Assessment
+- **Do:** build the BizTalk-construct → MuleSoft-equivalent table; assign a verdict per artifact (🟢 replicable / 🟡 ambiguous / 🔴 blocked); list every replication gap with reason + recommended MuleSoft action.
+- **Write:** main doc Section 6, `replication-gap-report.md`.
+- **Checkpoint:** `✅ Phase 4: {G} replication gaps identified; verdicts assigned to {A}/{A} artifacts`.
+
+### PHASE 5 — Validation & Certification
+- **Do:** file-by-file reconciliation (elements found vs documented) using the Phase 0 mind map; aggregate coverage; emit certification. **Consolidate & Polish — do NOT regenerate prior sections.**
+- **Write:** main doc Section 7, `verification-checklist.md`.
+- **Checkpoint:** certification block (see `@00_Template_Configuration.mdc`).
+
+---
+
+## CONFIDENCE CALIBRATION
+
+| Confidence | When | Action |
+|------------|------|--------|
+| **HIGH** | Source artifact present + fully readable | Document directly with citations |
+| **MEDIUM** | Logic inferable but partial (e.g., functoid graph dense, `.xsl` clarifies) | Document + flag ⚠️ ASSUMPTION, cross-check both files |
+| **LOW** | Referenced artifact absent / encrypted / external | **Do NOT guess** — document call-site + flag 🔴 GAP |
+
+---
+
+## STATE FILE
+
+**Location:** `project/output_biztalk/{app_name}/.biztalk-state.json`
+
+```json
+{
+  "appName": "",
+  "inputPath": "",
+  "currentPhase": 0,
+  "inventory": {
+    "orchestrations": [], "maps": [], "schemas": [],
+    "pipelines": [], "helpers": [], "absentReferences": []
+  },
+  "counts": { "orchestrations": 0, "maps": 0, "schemas": 0, "pipelines": 0, "helpers": 0 },
+  "sectionStatus": {
+    "section1": "PENDING", "section2": "PENDING", "section3": "PENDING",
+    "section4": "PENDING", "section5": "PENDING", "section6": "PENDING", "section7": "PENDING"
+  },
+  "replicationGaps": [],
+  "phaseStatuses": {
+    "phase0": "PENDING", "phase1": "PENDING", "phase2": "PENDING",
+    "phase3": "PENDING", "phase4": "PENDING", "phase5": "PENDING"
+  }
+}
+```
+
+### State File Update Protocol
+After each phase/section completes: update `currentPhase`, set the section/phase status to `COMPLETED`, append discovered items to `inventory`/`replicationGaps`, add `completedAt` timestamp.
+
+### Resume Capability
+On activation: if `.biztalk-state.json` exists → show last completed phase, offer **resume** (continue from next PENDING) or **restart**. If absent → start fresh at Phase 0.
+
+---
+
+## PHASE EXECUTION RULES
+
+**Before each phase:** verify prior phase complete; load `@00_Template_Configuration.mdc`; produce `<thinking>` block.
+**During each phase:** follow phase tasks; apply RGV per section; write to file progressively (never dump full content in chat); assess confidence.
+**After each phase:** emit count-verified micro-checkpoint; update state file.
+
+---
+
+## ERROR RECOVERY
+
+| Situation | Action |
+|-----------|--------|
+| UTF-16/garbled read | Re-read as text, strip BOM, decode before parsing |
+| Map logic unclear from `.btm` | Read the paired `.xsl`; if still unclear → ⚠️ ASSUMPTION + note both files |
+| Referenced assembly/schema absent | Document call-site + 🔴 GAP; never invent |
+| Count mismatch (RGV) | RE-READ source, locate missing element, fix before checkpoint |
+| Interrupted run | State preserved; resume from last PENDING phase |
+
+---
+
+## QUICK REFERENCE
+
+| Need | Reference |
+|------|-----------|
+| Output structure | `@00_Template_Configuration.mdc` |
+| RGV loop (DRY) | `@02_Guidance.mdc` §1 |
+| Extraction patterns / matrices | `@02_Guidance.mdc` |
+| Stop points & self-checks | `@03_Mandatory_Stop_Points.mdc` |

@@ -1,0 +1,38 @@
+tracepoints:
+  beforeRequest: "Before Request"
+  afterRequest: "After Request"
+  afterTransform: "After Transfrom"
+  start: "Start"
+  end: "End"
+  exception: "Exception"
+
+anypointMq:
+
+  url: "<AMQ-url>"
+  reconnection:
+    frequency: "10000"
+    attempts: "5"
+  
+  pub:
+    transaction:
+      destination: "mu-field-sync-transactions-queue-v1-dev"
+    
+sapi:
+  notification:
+    basePath: "/api/v1/"
+    protocol: "HTTPS"
+    host: "<notification-host-api>"
+    port: "443"
+    responseTimeout: "30000"
+      
+transaction:
+
+  reprocessing:
+    reprocessableErrors: "ANYPOINT-MQ:CONNECTIVITY;HTTP:TOO_MANY_REQUESTS;HTTP:SERVICE_UNAVAILABLE;HTTP:TIMEOUT"
+    maxRetries: "5"
+    retriesDelay: "30000"
+  notification:
+    title: "Mulesoft - Transaction not recoverable error occurred"
+    recipients: ""
+    additionalRecipients: ""
+    message: "A non recoverable error occurred while processing a transaction. The error will be stored also inside the correspondant Table. \n "

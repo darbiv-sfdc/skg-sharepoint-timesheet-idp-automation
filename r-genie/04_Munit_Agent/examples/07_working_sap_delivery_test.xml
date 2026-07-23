@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 🧞‍♂️ R-GENIE WORKING TEST EXAMPLE -->
+<!-- Source: SAP Delivery API (s-sap-delivery-api-gr) - Production validated -->
+<!-- Pattern: Connector-only mocking, no flow-ref mocks -->
+
+<mule xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:munit="http://www.mulesoft.org/schema/mule/munit"
+	xmlns:munit-tools="http://www.mulesoft.org/schema/mule/munit-tools"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+		http://www.mulesoft.org/schema/mule/munit http://www.mulesoft.org/schema/mule/munit/current/mule-munit.xsd
+		http://www.mulesoft.org/schema/mule/munit-tools http://www.mulesoft.org/schema/mule/munit-tools/current/mule-munit-tools.xsd">
+
+	<munit:config name="solace-listener-delivery-gr-test-suite.xml" />
+	
+	<global-property doc:name="Global Property" name="mule.env" value="dev" />
+	<global-property doc:name="Global Property" name="region" value="eu" />
+
+	<!-- ✅ SUCCESS TEST - Connector-Only Mocking Pattern -->
+	<munit:test name="test-delivery-case1-success" description="Test delivery case1 with connector mocks only">
+		<munit:behavior>
+			<!-- ✅ MOCK EXTERNAL CONNECTORS ONLY -->
+			<!-- Mock Solace publish connector -->
+			<munit-tools:mock-when doc:name="Mock Solace Publish" processor="solace:publish">
+				<munit-tools:with-attributes>
+					<munit-tools:with-attribute attributeName="doc:id" whereValue="0459095c-4b81-45f5-9d41-7e6b0c97c823"/>
+				</munit-tools:with-attributes>
+			</munit-tools:mock-when>
+			
+			<!-- Mock reply-to publish connector -->
+			<munit-tools:mock-when doc:name="Mock Reply To Publish" processor="solace:publish">
+				<munit-tools:with-attributes>
+					<munit-tools:with-attribute attributeName="doc:id" whereValue="0b86ee07-5ba1-4e36-b1dd-3fd00459ef9a"/>
+				</munit-tools:with-attributes>
+			</munit-tools:mock-when>
+			
+			<!-- ⚠️ NO FLOW-REF MOCKS -->
+			<!-- Let business flows execute naturally:
+			     - set-tracing-variables-and-call-tracing-start-sub-flow
+			     - solace-publish-sub-flow  
+			     - tracing-end-sub-flow
+			     - reply-to-application-handler-sub-flow
+			     
+			     These all execute with mocked connectors.
+			-->
+		</munit:behavior>
+
+		<munit:execution>
+			<munit:set-event doc:name="Set case1 event">
+				<!-- ✅ Load test data from file -->
+				<munit:payload value='#[%dw 2.0 output application/xml --- readUrl("classpath://delivery/case1-delivery-input-payload.xml", "application/xml")]' encoding="UTF-8" mediaType="application/xml"/>
+				<munit:attributes value='#[{
+					"userProperties": {"correlation_id": "test-123", "tracking_id": "456"},
+					"destination": "topic/sap/delivery/gr/v1",
+					"messageReferenceId": "msg-ref-789"
+				}]'/>
+			</munit:set-event>
+			
+			<!-- ✅ Call implementation sub-flow directly -->
+			<flow-ref doc:name="Call implementation flow" name="solace-listener-delivery-gr-implementation-sub-flow"/>
+		</munit:execution>
+
+		<munit:validation>
+			<!-- ✅ Basic assertion - test completes without error -->
+			<munit-tools:assert-that doc:name="Assert success" expression="#[true]" is="#[MunitTools::equalTo(true)]"/>
+		</munit:validation>
+	</munit:test>
+
+</mule>

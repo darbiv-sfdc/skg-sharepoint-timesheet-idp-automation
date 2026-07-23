@@ -1,0 +1,42 @@
+---
+alwaysApply: true
+---
+
+# 🧞‍♂️ **R-GENIE SYSTEM-SPECIFIC STRUCTURE**
+
+**ALL R-GENIE operations follow this SYSTEM-SPECIFIC STRUCTURE**
+
+## 📁 **MANDATORY USER WORKSPACE LOCATIONS**
+
+**✅ ALWAYS USE SYSTEM-SPECIFIC FOLDERS:**
+```
+project/
+├── input_01_design/         # DESIGN SYSTEM INPUTS
+├── output_01_design/        # DESIGN SYSTEM OUTPUTS
+├── input_02_api/           # API SPECIFICATION INPUTS
+├── output_02_api/          # API SPECIFICATION OUTPUTS
+├── input_03_app/           # APP DEVELOPMENT INPUTS
+├── output_03_app/          # APP DEVELOPMENT OUTPUTS
+├── input_03_01_dataweave/  # DATAWEAVE INPUTS
+├── output_03_01_dataweave/ # DATAWEAVE OUTPUTS
+├── input_04_munit/         # MUNIT TESTING INPUTS
+├── output_04_munit/        # MUNIT TESTING OUTPUTS
+├── input_05_readme/        # DOCUMENTATION INPUTS
+├── output_05_readme/       # DOCUMENTATION OUTPUTS
+├── input_06_review/        # CODE REVIEW INPUTS
+└── output_06_review/       # CODE REVIEW OUTPUTS
+```
+
+**❌ NEVER CREATE IN SUBSYSTEMS:**
+- `r-genie/{subsystem}/input/` or `output/`
+- `r-genie/{subsystem}/template/` or `example/`
+
+**R-GENIE SUBSYSTEMS contain ONLY:**
+- ✅ `rules/` - AI agent behavior rules
+- ✅ `lib/` - Processing scripts (if applicable)
+- ✅ `README.md` - System documentation
+
+## 🚨 **ENFORCEMENT**
+
+**✅ ALWAYS:** Use system-specific input_{system}/output_{system} folders, keep subsystems clean  
+**❌ NEVER:** Create input/output in r-genie subsystems, mix user content with system files

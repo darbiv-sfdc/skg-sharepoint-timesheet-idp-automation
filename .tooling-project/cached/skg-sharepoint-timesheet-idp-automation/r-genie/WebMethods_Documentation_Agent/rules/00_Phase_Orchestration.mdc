@@ -1,0 +1,390 @@
+---
+version: 1.0.0
+author: MuleSoft PS EMEA
+watermark: "R-GENIE-CS150893"
+alwaysApply: false
+priority: HIGH
+---
+
+# Phase Orchestration — webMethods Documentation Agent (09)
+
+7-phase workflow for generating AS-IS specifications from webMethods project artifacts.
+
+---
+
+## `<thinking>` BLOCK (MANDATORY Before Every Phase/Section Output)
+
+```
+<thinking>
+1. Key inputs received: [list artifact files read for this section]
+2. Decisions I am making: [artifact classification, extraction strategy]
+3. Evidence from source: [cite specific file names, element names, attribute values, counts]
+4. Risks/gaps identified: [what could be missed, what is ambiguous]
+5. Confidence: HIGH / MEDIUM / LOW [with justification]
+6. Production learnings applicable: [check Production_Learnings.md]
+</thinking>
+```
+
+---
+
+## CONFIDENCE CALIBRATION
+
+| Confidence | When to Use | Action |
+|------------|------------|--------|
+| **HIGH** | Clear artifact structure, all elements present | Proceed with extraction |
+| **MEDIUM** | Unusual structure, ambiguous element purpose | Flag assumptions, note in verification |
+| **LOW** | Missing artifact data, contradictory elements | **STOP** — flag as gap, document what IS present |
+
+---
+
+## PHASE 0: DISCOVERY & PLANNING
+
+**Action:** Scan project folder(s) recursively. Classify every file by artifact type. Build a reading plan with element counts.
+
+**Tasks:**
+1. **SCAN** project folder recursively — list all files with extensions and paths
+2. **CLASSIFY** each file into artifact type: FLOW, NDF, IDF, ACL, WSDL, XSD, JAVA, Config, API Gateway, or UNKNOWN
+3. **Detect extensionless WSDL** — read content of files without recognized extensions (e.g., `wsdl0`) to check for WSDL XML content
+4. **Classify NDF subtypes** — for each `node.ndf`, read content to determine: flow service, docType, schema, web-service connector, response service, or adapter service (use `svc_type`, `rec_ref`, `parentWsd`, and similar attributes)
+5. **COUNT** artifacts per type and elements per artifact where applicable
+6. **BUILD** reading plan: ordered list of artifacts to process per phase
+7. **GENERATE** Sections 1-2 of main document:
+   - Section 1: Overview (package name, description, scope)
+   - Section 2: Architecture (artifact inventory summary, package hierarchy from IDF)
+8. **CREATE** `supporting-docs/component-inventory.md` with full artifact table
+
+### Component Inventory Format
+
+```markdown
+| # | File | Type | Subtype | Name/Path | Elements |
+|---|------|------|---------|-----------|----------|
+| 1 | ns/.../flow.xml | FLOW | Flow Service | pub.myService | 14 steps |
+| 2 | ns/.../node.ndf | NDF | docType | pub.myDocType | 8 fields |
+```
+
+**Checkpoint:** STOP. Present inventory summary + reading plan. User confirms scope before deep analysis.
+
+### File Actions
+1. CREATE: Main document with Sections 1-2
+2. CREATE: `supporting-docs/component-inventory.md`
+3. CREATE: `.webmethods-state.json`
+
+---
+
+## PHASE 1: FLOW DOCUMENTATION
+
+**Action:** For EACH `flow.xml`, apply the RGV loop (`@01_Guidance.mdc §1`).
+
+### Per Flow Service — RGV Loop
+1. **RE-READ** `flow.xml` using Read tool
+2. **INVENTORY:** Count flow steps (MAP, INVOKE, BRANCH, SEQUENCE, LOOP, EXIT, REPEAT, TRY/CATCH, etc.) → COMMIT to count N
+3. **EXTRACT** for each step:
+   - Step name/label, step type, functional description
+   - Key properties and configured values (ignore non-functional coordinates)
+   - Previous step(s) that pass control/data into this step
+   - Output terminal/branch/condition expression (in natural language) and next step(s)
+   - Service invocation targets (fully qualified names if derivable)
+   - Pipeline effects: variables read, created, updated, dropped
+4. **DETERMINE** execution order — preserve true control-flow semantics (SEQUENCE, BRANCH, LOOP, TRY/CATCH, EXIT/REPEAT behavior)
+5. **GENERATE** Section 3.x for this flow:
+   - Overview and purpose
+   - Step-by-step execution in strict runtime order (success path first, then error/alternate paths)
+   - Component inventory subsection (all steps with connectivity embedded per component — NO separate "connections" section)
+6. **VERIFY:** Documented step count = N
+7. **CHECKPOINT:** `✅ 3.x: {ServiceName} — N/N flow steps`
+
+### File Actions
+1. APPEND: Section 3 to main document (per-flow subsections)
+2. CREATE: `supporting-docs/flow-configuration.md` (detailed step properties)
+3. UPDATE: `.webmethods-state.json` (current_phase: 1, micro-checkpoints)
+
+---
+
+## PHASE 2: MAPPING & SIGNATURE DOCUMENTATION
+
+**Action:** For EACH `node.ndf`, apply the RGV loop (`@01_Guidance.mdc §1`).
+
+### Per NDF — RGV Loop
+1. **RE-READ** `node.ndf` using Read tool
+2. **CLASSIFY** from content: flow service | docType | schema | web-service connector | response service | adapter service
+3. **INVENTORY:** Count signature fields (inputs/outputs), properties, references → COMMIT to count N
+4. **EXTRACT** based on subtype:
+   - **Flow Service NDF:** input/output signature, `svc_type`, `svc_subtype`, runtime flags, referenced services
+   - **DocType NDF:** field definitions (ALL fields — name, type, optional/required, constraints), `rec_ref` references
+   - **Schema NDF:** structure definition, validation constraints
+   - **Web-Service Connector NDF:** `parentWsd`, operation bindings, endpoint references
+   - **Response Service NDF:** linked operations, response structure
+   - **Adapter Service NDF:** backend operation type, connection template, query/statement behavior
+5. **GENERATE** Section 4.x for this NDF:
+   - Object type and functional role
+   - Contract/signature details
+   - Key runtime/config flags
+   - Backend/query details if present (natural language: entities, fields, conditions)
+   - Relationship to FLOW/WSDL/DocType artifacts
+6. **VERIFY:** Documented field/property count = N
+7. **CHECKPOINT:** `✅ 4.x: {ArtifactName} — N/N fields`
+
+### Field Mapping Extraction (from MAP steps + NDF signatures)
+- Where FLOW MAP steps or NDF signatures reveal input→output field mappings:
+  - Document EVERY mapping row — NEVER summarize or abbreviate
+  - Use markdown table format: `| # | Source Field | Source Path | Target Field | Target Path | Type | Notes |`
+  - Mark uncertain mappings as: *"Needs verification"*
+
+### File Actions
+1. APPEND: Section 4 to main document
+2. CREATE: `supporting-docs/service-signatures.md`
+3. CREATE: `supporting-docs/mapping-tables.md` (ALL field mappings)
+4. UPDATE: `.webmethods-state.json` (current_phase: 2, micro-checkpoints)
+
+---
+
+## PHASE 3: PROFILE & CONTRACT DOCUMENTATION
+
+**Action:** For EACH WSDL/XSD/DocType artifact and IDF file, apply the RGV loop (`@01_Guidance.mdc §1`).
+
+### Per WSDL/wsdl0 — RGV Loop
+1. **RE-READ** WSDL file using Read tool (detect extensionless files by content)
+2. **INVENTORY:** Count operations, message definitions, schema types → COMMIT to counts
+3. **EXTRACT:**
+   - Target namespace, service name, port type
+   - Operations: name, input message, output message, fault messages
+   - Schema types: complex types, elements, constraints (mandatory/optional where derivable)
+   - Binding details: SOAP action, transport, style
+4. **GENERATE** Section 5.x for this artifact
+5. **VERIFY:** Operation count and type count match
+6. **CHECKPOINT:** `✅ 5.x: {WSDLName} — N/N operations, M/M types`
+
+### Per XSD — RGV Loop
+1. **RE-READ** XSD file
+2. **INVENTORY:** Count types and elements
+3. **EXTRACT:** complex types, simple types, elements, constraints, import/include references
+4. **GENERATE** and **VERIFY**
+5. **CHECKPOINT:** `✅ 5.x: {SchemaName} — N/N types`
+
+### Per IDF — Hierarchy Contribution
+1. **RE-READ** each `node.idf`
+2. **EXTRACT:** namespace, folder type, parent references, contained services/artifacts
+3. **GENERATE:** Namespace/package hierarchy tree showing service organization
+4. **Map** exposed vs internal services, shared utilities, domain partitioning
+
+### File Actions
+1. APPEND: Section 5 to main document
+2. CREATE: `supporting-docs/contract-schemas.md`
+3. UPDATE: `.webmethods-state.json` (current_phase: 3, micro-checkpoints)
+
+---
+
+## PHASE 4: SECURITY & SUPPORTING DOCUMENTATION
+
+**Action:** For EACH ACL, JAVA, and supporting artifact, apply the RGV loop (`@01_Guidance.mdc §1`).
+
+### Per ACL — RGV Loop
+1. **RE-READ** ACL XML file
+2. **INVENTORY:** Count node-to-ACL mappings → COMMIT to count N
+3. **EXTRACT:**
+   - Node/service to ACL mapping
+   - execute/read/write/list ACL names per node
+   - Runtime security implications: externally callable vs internal-only where inferable
+4. **GENERATE** Section 6.x for ACL
+5. **VERIFY:** Mapping count = N
+6. **CHECKPOINT:** `✅ 6.x: {ACLFile} — N/N ACL mappings`
+
+### Per JAVA Service — RGV Loop
+1. **RE-READ** Java file
+2. **EXTRACT:**
+   - Methods/functions and high-level purpose
+   - Key APIs used (IData/IDataCursor, service invocations)
+   - Pipeline interactions (inputs read, outputs written, field manipulation)
+   - External calls (services, libraries, endpoints, DB operations)
+   - SQL/query logic in natural language if present
+   - Input→output mapping table if transformation logic exists
+3. **GENERATE** Section 6.x for Java Service
+4. **VERIFY** method/function count
+
+### Per Supporting Artifact (config, ACDL, policy, manifest)
+1. **RE-READ** artifact file
+2. **EXTRACT** only behavior-impacting facts: routing, security, policy, deployment/runtime constraints, API exposure
+3. **GENERATE** brief summary (do not over-index on governance metadata unless runtime-impacting)
+
+### File Actions
+1. APPEND: Section 6 to main document
+2. CREATE: `supporting-docs/security-summary.md`
+3. UPDATE: `.webmethods-state.json` (current_phase: 4, micro-checkpoints)
+
+---
+
+## PHASE 5: CROSS-ARTIFACT SYNTHESIS
+
+**Action:** Synthesize across ALL documented artifacts from Phases 1-4. RE-READ artifact files as needed to resolve cross-references.
+
+**Tasks:**
+1. **End-to-end call chain** — ordered service invocation graph (entry → internal services → connector/adapter/external calls → response services)
+2. **Functional summary** — business capability delivered by the integration in natural language
+3. **Interface/contract summary** — consolidated major input/output contracts across service boundaries
+4. **Dependency summary** — databases, adapters, external SOAP/REST services, shared utility services, policy dependencies
+5. **Mapping summary tables** — consolidated output→input field mappings across all transformations. Include mandatory/optional/conditional mappings. Mark uncertain mappings as: *"Needs verification"*
+6. **Success vs error emphasis** — prioritize successful business flow explanation. Keep logging/exception handling brief unless behavior-critical
+
+### File Actions
+1. APPEND: Section 7 (Cross-Artifact Synthesis) to main document
+2. UPDATE: `.webmethods-state.json` (current_phase: 5)
+
+**Checkpoint:** STOP after synthesis. User reviews call chain and mapping summary before validation.
+
+---
+
+## PHASE 6: VALIDATION & CERTIFICATION
+
+**Action:** RE-READ EVERY artifact file for file-by-file verification + Gap Analysis.
+
+### Detect Referenced-but-Missing Components
+Scan flow/NDF/WSDL artifacts for references to components NOT in the project:
+- Service invocations referencing services outside the scanned folder
+- NDF `rec_ref` or `parentWsd` pointing to missing artifacts
+- WSDL import/include referencing missing schemas
+
+### Per Artifact File (MUST RE-READ each file)
+1. RE-READ file using Read tool (fresh context for verification)
+2. COUNT elements in artifact, COMPARE to documented count from micro-checkpoints
+3. CHECK for missed attributes or properties
+4. If ANY mismatch: RE-READ again, find missing element, update documentation
+
+### File Actions
+1. APPEND: Section 8 (Validation & Gap Analysis) to main document
+2. CREATE: `supporting-docs/verification-checklist.md` (includes all counts, file-by-file reconciliation, certification)
+3. UPDATE: `.webmethods-state.json` (status: COMPLETED)
+
+**Checkpoint:** STOP. Present certification summary. User accepts final report.
+
+---
+
+## CHECKPOINT FORMATS
+
+### Micro-Checkpoint (per section — Phases 1-5)
+```
+  ✅ 3.1: visualiserPartenaireREST — 14/14 flow steps
+  ✅ 4.1: pub.visualiserPartenaire (docType) — 8/8 fields
+  ✅ 5.1: visualiserPartenaire.wsdl0 — 3/3 operations
+  ✅ 6.1: nodesACL — 12/12 ACL mappings
+```
+
+### Phase Checkpoint (per phase)
+```
+╭──────────────────────────────────────────────────────────────╮
+│ ✅ PHASE {n} COMPLETE: {Phase Name}                          │
+├──────────────────────────────────────────────────────────────┤
+│ {Summary metrics with micro-checkpoint rollup}                │
+│ 💾 State saved to .webmethods-state.json                      │
+│ → Proceeding automatically to Phase {n+1}...                  │
+╰──────────────────────────────────────────────────────────────╯
+```
+
+**CRITICAL:** After EVERY phase checkpoint, UPDATE `.webmethods-state.json` with:
+- `current_phase` incremented
+- Phase status set to `"done"`
+- Micro-checkpoint counts recorded in `checkpoints` array
+
+---
+
+## STATE FILE FORMAT
+
+**RULE:** UPDATE `.webmethods-state.json` after EVERY phase completion. Enables resume on interruption.
+
+```json
+{
+  "package_name": "{name}",
+  "input_folder": "{path}",
+  "status": "IN_PROGRESS|COMPLETED",
+  "current_phase": 2,
+  "last_updated": "2026-04-13T12:00:00Z",
+  "phases": {
+    "0": {
+      "status": "done",
+      "artifacts": {
+        "flows": 0,
+        "ndfs": 0,
+        "idfs": 0,
+        "acls": 0,
+        "wsdls": 0,
+        "xsds": 0,
+        "java": 0,
+        "config": 0,
+        "api_gateway": 0,
+        "unknown": 0
+      }
+    },
+    "1": {
+      "status": "done",
+      "checkpoints": [
+        "✅ 3.1: ServiceName — 14/14 flow steps"
+      ]
+    },
+    "2": { "status": "in_progress", "checkpoints": [] },
+    "3": { "status": "pending" },
+    "4": { "status": "pending" },
+    "5": { "status": "pending" },
+    "6": { "status": "pending" }
+  }
+}
+```
+
+---
+
+## PHASE EXECUTION RULES
+
+**Before each phase:**
+- Verify previous phase completed
+- Produce a `<thinking>` block
+- Load relevant artifact files fresh
+
+**During each phase:**
+- Follow phase-specific tasks
+- Apply RGV cycle for extraction phases
+- Assess Confidence before proceeding
+
+**After each phase:**
+- Emit phase checkpoint
+- Update `.webmethods-state.json`
+- Proceed automatically to next phase (except Phase 0 and Phase 5 which require user confirmation)
+
+---
+
+## RESUME CAPABILITY
+
+**On Activation:**
+1. Check for existing `.webmethods-state.json`
+2. If exists → show last completed phase, offer: resume / restart
+3. If not → start fresh from Phase 0
+
+---
+
+## ERROR RECOVERY
+
+| Situation | Action |
+|-----------|--------|
+| Missed attribute | RE-READ artifact, extract missing (RGV step 5) |
+| Count mismatch | STOP, RE-READ, find missing, fix before proceeding |
+| Unknown artifact type | Classify from content, document with all attributes + ⚠️ flag |
+| Stale context | RE-READ artifact fresh — never generate from memory |
+| Extensionless file | Read content to determine type — never skip |
+| NDF subtype unclear | Read content attributes (`svc_type`, `rec_ref`, `parentWsd`) to classify |
+
+---
+
+## QUICK REFERENCE
+
+| Need | Reference |
+|------|-----------|
+| Main entry | `@WebMethods_Documentation.mdc` |
+| RGV loop pattern (DRY) | `@01_Guidance.mdc` §1 |
+| Artifact extraction patterns | `@01_Guidance.mdc` |
+| Anti-patterns & rules | `@02_Mandatory_Stop_Points.mdc` |
+
+---
+
+**Version:** 1.0.0 | April 2026 | 7-Phase RGV Architecture + LLM Gap Countermeasures
+
+---
+
+> 🧞‍♂️ R-GENIE Agent Framework by Cheppali Shaik Sohail
+> ✍️ Agent Author: MuleSoft PS EMEA | v1.0.0 | 2026-04-13

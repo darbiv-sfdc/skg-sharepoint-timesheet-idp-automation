@@ -1,0 +1,11 @@
+description: Not Found
+content:
+  application/json:
+    schema:
+      $ref: '../schemas/Error.yaml'
+    example:
+      type: "/errors/not-found"
+      title: "Not Found"
+      status: 404
+      detail: "Customer with ID 'cust-invalid' not found"
+      instance: "/customers/cust-invalid"

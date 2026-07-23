@@ -1,0 +1,141 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:idp-timesheet-130="http://www.mulesoft.org/schema/mule/idp-timesheet-130"
+	xmlns:vm="http://www.mulesoft.org/schema/mule/vm"
+	xmlns:sharepoint="http://www.mulesoft.org/schema/mule/sharepoint"
+	xmlns:scripting="http://www.mulesoft.org/schema/mule/scripting"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/sharepoint http://www.mulesoft.org/schema/mule/sharepoint/current/mule-sharepoint.xsd
+http://www.mulesoft.org/schema/mule/vm http://www.mulesoft.org/schema/mule/vm/current/mule-vm.xsd
+http://www.mulesoft.org/schema/mule/scripting http://www.mulesoft.org/schema/mule/scripting/current/mule-scripting.xsd
+http://www.mulesoft.org/schema/mule/idp-timesheet-130 http://www.mulesoft.org/schema/mule/idp-timesheet-130/current/mule-idp-timesheet-130.xsd">
+
+	<!--
+		FLOW 2 - VM Subscriber / IDP Result Poller
+		Consumes async tracking messages from the persistent VM queue (one consumer for ordered,
+		single-replica processing) and for each message:
+		  - if pollCount exceeded max_checks -> move file to Error (timeout)
+		  - else call IDP GetDocumentAction:
+		      SUCCEEDED   -> flatten result to CSV, write to Output, move file Processing -> Processed
+		      FAILED      -> move file Processing -> Error
+		      (any other) -> throttle (sleep) then re-publish with pollCount+1 (resilient poll loop)
+		Poison-pill / ghost-file resiliency is handled by the flow-level error handler.
+	-->
+	<flow name="subscriber-vm-idp-result-flow" doc:id="b2000001-0001-4002-8002-idpsubflow0001">
+		<vm:listener doc:name="Tracking Queue Listener" doc:id="b2000001-0002-4002-8002-idpsublistener"
+			config-ref="VM_Config" queueName="${vm.queue.name}" numberOfConsumers="1" />
+
+		<set-variable variableName="executionId" value="#[payload.executionId]" doc:name="executionId" doc:id="b2000001-0003-4002-8002-idpsubvexec" />
+		<set-variable variableName="fileName" value="#[payload.fileName]" doc:name="fileName" doc:id="b2000001-0004-4002-8002-idpsubvname" />
+		<set-variable variableName="processingUrl" value="#[payload.processingUrl]" doc:name="processingUrl" doc:id="b2000001-0005-4002-8002-idpsubvproc" />
+		<set-variable variableName="pollCount" value="#[payload.pollCount default 0]" doc:name="pollCount" doc:id="b2000001-0006-4002-8002-idpsubvpoll" />
+
+		<choice doc:name="Timeout?" doc:id="b2000001-0007-4002-8002-idpsubchktmo">
+			<when expression="#[(vars.pollCount as Number) &gt;= (p('idp.action.max_checks') as Number)]">
+				<logger level="ERROR" doc:name="Log Poll Timeout" doc:id="b2000001-0008-4002-8002-idpsublogtmo"
+					message="#['[IDP-SUBSCRIBER][TIMEOUT] executionId=' ++ (vars.executionId default '') ++ ' file=' ++ (vars.fileName default '') ++ ' exceeded max_checks (' ++ p('idp.action.max_checks') ++ ')']" />
+				<sharepoint:file-move doc:name="Move to Error (Timeout)" doc:id="b2000001-0009-4002-8002-idpsubmvtmo"
+					config-ref="Sharepoint_Sharepoint_online"
+					fileServerRelativeUrl="#[vars.processingUrl]"
+					newFileServerRelativeUrl="#[p('sharepoint.site.serverRelativePath') ++ '/' ++ p('sharepoint.path.error') ++ '/' ++ vars.fileName]"
+					flag="1" />
+			</when>
+			<otherwise>
+				<!-- Poll IDP for the execution result -->
+				<idp-timesheet-130:getdocumentactionexecution doc:name="IDP Get Result" doc:id="b2000001-000a-4002-8002-idpsubget"
+					config-ref="IDP___Timesheet___1_3_0_Config"
+					execution-id="#[vars.executionId]"
+					value-only="true" />
+
+				<choice doc:name="Evaluate Status" doc:id="b2000001-000b-4002-8002-idpsubchkstatus">
+					<when expression="#[upper((payload.status default '')) == 'SUCCEEDED']">
+						<set-variable variableName="outputBaseName" value="#[((payload.documentName default vars.fileName) as String) replace /\.[^.]*$/ with '']" doc:name="outputBaseName" doc:id="b2000001-000c-4002-8002-idpsubvout" />
+
+						<!-- Flatten the IDP result into CSV (one row per timeSheetData line item) -->
+						<ee:transform doc:name="Flatten Result to CSV" doc:id="b2000001-000d-4002-8002-idpsubtxcsv">
+							<ee:message>
+								<ee:set-payload resource="dw/idp-result-to-csv.dwl" />
+							</ee:message>
+						</ee:transform>
+
+						<!-- Write the CSV to the Output folder -->
+						<sharepoint:file-add doc:name="Write CSV to Output" doc:id="b2000001-000e-4002-8002-idpsubaddcsv"
+							config-ref="Sharepoint_Sharepoint_online"
+							fileServerRelativeUrl="#[p('sharepoint.site.serverRelativePath') ++ '/' ++ p('sharepoint.path.output') ++ '/idp-results-' ++ vars.outputBaseName ++ '.csv']"
+							overwrite="true">
+							<sharepoint:file-content-stream><![CDATA[#[payload]]]></sharepoint:file-content-stream>
+						</sharepoint:file-add>
+
+						<!-- Archive the source file Processing -> Processed -->
+						<sharepoint:file-move doc:name="Move to Processed" doc:id="b2000001-000f-4002-8002-idpsubmvdone"
+							config-ref="Sharepoint_Sharepoint_online"
+							fileServerRelativeUrl="#[vars.processingUrl]"
+							newFileServerRelativeUrl="#[p('sharepoint.site.serverRelativePath') ++ '/' ++ p('sharepoint.path.processed') ++ '/' ++ vars.fileName]"
+							flag="1" />
+
+						<logger level="INFO" doc:name="Log Success" doc:id="b2000001-0010-4002-8002-idpsublogok"
+							message="#['[IDP-SUBSCRIBER] SUCCEEDED file=' ++ (vars.fileName default '') ++ ' -> idp-results-' ++ (vars.outputBaseName default '') ++ '.csv']" />
+					</when>
+					<when expression="#[upper((payload.status default '')) == 'FAILED']">
+						<logger level="ERROR" doc:name="Log IDP Failed" doc:id="b2000001-0011-4002-8002-idpsublogfail"
+							message="#['[IDP-SUBSCRIBER][FAILED] IDP reported FAILED for executionId=' ++ (vars.executionId default '') ++ ' file=' ++ (vars.fileName default '')]" />
+						<sharepoint:file-move doc:name="Move to Error (Failed)" doc:id="b2000001-0012-4002-8002-idpsubmvfail"
+							config-ref="Sharepoint_Sharepoint_online"
+							fileServerRelativeUrl="#[vars.processingUrl]"
+							newFileServerRelativeUrl="#[p('sharepoint.site.serverRelativePath') ++ '/' ++ p('sharepoint.path.error') ++ '/' ++ vars.fileName]"
+							flag="1" />
+					</when>
+					<otherwise>
+						<!-- Still processing: throttle, then re-publish with an incremented poll count -->
+						<logger level="DEBUG" doc:name="Log Still Processing" doc:id="b2000001-0013-4002-8002-idpsublogwait"
+							message="#['[IDP-SUBSCRIBER] status=' ++ (payload.status default 'UNKNOWN') ++ ' file=' ++ (vars.fileName default '') ++ ' pollCount=' ++ (vars.pollCount as String) ++ ' - requeueing']" />
+						<scripting:execute engine="groovy" doc:name="Throttle (sleep)" doc:id="b2000001-0014-4002-8002-idpsubsleep">
+							<scripting:code><![CDATA[sleep(${vm.poll.sleepMillis} as long)
+payload]]></scripting:code>
+						</scripting:execute>
+						<ee:transform doc:name="Increment Poll Count" doc:id="b2000001-0015-4002-8002-idpsubtxinc">
+							<ee:message>
+								<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+	executionId: vars.executionId,
+	fileName: vars.fileName,
+	processingUrl: vars.processingUrl,
+	pollCount: (vars.pollCount as Number) + 1
+}]]></ee:set-payload>
+							</ee:message>
+						</ee:transform>
+						<vm:publish doc:name="Re-publish to Tracking Queue" doc:id="b2000001-0016-4002-8002-idpsubrepub"
+							config-ref="VM_Config" queueName="${vm.queue.name}" />
+					</otherwise>
+				</choice>
+			</otherwise>
+		</choice>
+
+		<error-handler>
+			<on-error-continue enableNotifications="true" logException="true" doc:name="Deflect Poison Message" doc:id="b2000001-0017-4002-8002-idpsuberr" type="ANY">
+				<logger level="ERROR" doc:name="Log Subscriber Failure" doc:id="b2000001-0018-4002-8002-idpsublogerr"
+					message="#['[IDP-SUBSCRIBER][ERROR] executionId=' ++ (vars.executionId default 'unknown') ++ ' file=' ++ (vars.fileName default 'unknown') ++ ' : ' ++ (error.description default '')]" />
+				<try doc:name="Best-Effort Move to Error" doc:id="b2000001-0019-4002-8002-idpsuberrtry">
+					<sharepoint:file-move doc:name="Move to Error" doc:id="b2000001-001a-4002-8002-idpsuberrmv"
+						config-ref="Sharepoint_Sharepoint_online"
+						fileServerRelativeUrl="#[vars.processingUrl]"
+						newFileServerRelativeUrl="#[p('sharepoint.site.serverRelativePath') ++ '/' ++ p('sharepoint.path.error') ++ '/' ++ vars.fileName]"
+						flag="1" />
+					<error-handler>
+						<on-error-continue doc:name="Ignore Move Failure" doc:id="b2000001-001b-4002-8002-idpsuberrignore" type="ANY">
+							<logger level="WARN" doc:name="Log Move-to-Error Failure" doc:id="b2000001-001c-4002-8002-idpsublogerr2"
+								message="#['[IDP-SUBSCRIBER][WARN] Could not move file to Error folder: ' ++ (vars.fileName default 'unknown')]" />
+						</on-error-continue>
+					</error-handler>
+				</try>
+			</on-error-continue>
+		</error-handler>
+	</flow>
+</mule>

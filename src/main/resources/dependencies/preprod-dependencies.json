@@ -1,0 +1,11 @@
+[
+	{
+		"name": "hello-cloud",
+		"tier": "system", 
+	     "protocol": "http",
+	     "host": "am-sample-system-api.de-c1.cloudhub.io",
+	     "port": "80",
+	     "basepath": "",
+	     "path": "/hello"
+     }
+]

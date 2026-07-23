@@ -1,0 +1,186 @@
+# BizTalk Documentation Agent - Output Style Configuration V1.1
+#
+# ZERO ASSUMPTION DOCUMENTATION
+# Goal: a developer can rebuild the integration in MuleSoft from this documentation alone.
+#
+# ⚠️ MANDATORY: Output MUST match the canonical example EXACTLY.
+#   Canonical full anchor: examples/01_oracle_changepo/
+#   Read this file + the canonical example BEFORE generating any output.
+#
+# If an artifact type is absent in the app, mark its section "Not applicable" (do NOT omit silently).
+
+version: "1.1.0"
+author: "Cheppali Shaik Sohail"
+
+# Core Principles
+principles:
+  zero_assumption: true
+  count_verification: true
+  source_references: true       # cite source file (+ OID/LinkID) for every item
+  progressive_file_writing: true
+  modular_output: true
+  match_example_exactly: true
+
+document:
+  main_file_pattern: "biztalk_design_{app_name}.md"
+  output_root: "project/output_biztalk/{app_name}/"
+
+# Main-document header (EXACT — 3 metadata fields required)
+header:
+  required_fields:
+    - "Source: `{source_path}`"
+    - "Generated: {date}"
+    - "Agent: BizTalk Documentation Agent v{version}"
+
+sections:
+  1_application_overview:     { enabled: true, marker: "<!-- SECTION:1 -->", phase: 0 }
+  2_architecture:            { enabled: true, marker: "<!-- SECTION:2 -->", phase: 0 }
+  3_orchestrations:          { enabled: true, marker: "<!-- SECTION:3 -->", phase: 1 }
+  4_schemas_and_maps:        { enabled: true, marker: "<!-- SECTION:4 -->", phase: 2 }
+  5_pipelines_ports_helpers: { enabled: true, marker: "<!-- SECTION:5 -->", phase: 3 }
+  6_replication_readiness:   { enabled: true, marker: "<!-- SECTION:6 -->", phase: 4 }
+  7_validation_certification:{ enabled: true, marker: "<!-- SECTION:7 -->", phase: 5 }
+
+supporting_docs:
+  artifact_inventory:        { enabled: true, phase: 0, required: true }
+  orchestration_flows:       { enabled: true, phase: 1, required: true }
+  schema_structures:         { enabled: true, phase: 2, required: true }
+  map_mappings:              { enabled: true, phase: 2, required: true }
+  pipeline_helper_reference: { enabled: true, phase: 3, required: true }
+  replication_gap_report:    { enabled: true, phase: 4, required: true }
+  verification_checklist:    { enabled: true, phase: 5, required: true }
+
+# Locked table columns (DO NOT rename, reorder, add, or drop columns)
+locked_columns:
+  s1_artifact_counts:        ["Type", "Count", "Notes"]
+  s2_assembly_graph:         ["Referenced Assembly", "Used For", "Source in export?"]
+  s3_shape_table:            ["#", "Shape", "Name", "Config / Expression", "OID"]
+  s4_map_links:              ["Link", "Source", "Target", "Logic"]
+  s6_replication:            ["BizTalk Construct", "MuleSoft Equivalent", "Verdict"]
+  s7_reconciliation:         ["File", "Found", "Documented"]
+  inv_files:                 ["#", "File", "Type", "Encoding", "Notes"]
+  inv_type_counts:           ["Artifact type", "Present", "Referenced-but-absent"]
+  inv_absent:                ["Reference", "Kind", "Referenced by"]
+  orch_ports:                ["Element", "Detail", "OID"]
+  orch_messages:             ["Message", "Type", "Direction", "OID"]
+  orch_variables:            ["Variable", "Type", "Initial value", "OID"]
+  orch_shapes:               ["#", "Shape Type", "Name", "Config / Expression", "Source OID"]
+  orch_helper_callsites:     ["Helper", "Signature (as called)", "Call-site shape"]
+  ports_table:               ["Port", "Kind", "Binding", "Notes"]
+  gap_register:              ["#", "Artifact", "Gap", "Why not replicable", "Recommended MuleSoft action"]
+  verif_reconciliation:      ["File", "Elements found", "Documented", "Status"]
+  verif_count_summary:       ["Metric", "Inventory (Phase 0)", "Documented", "Match"]
+
+# Section-1 artifact-counts fixed rows (always all five)
+artifact_count_rows:
+  - "Orchestrations (.odx)"
+  - "Maps (.btm/.xsl)"
+  - "Schemas (.xsd)"
+  - "Pipelines (.btp)"
+  - "Helpers (.cs)"
+
+# Reference format (blockquote + icon) — EXACT
+reference_format:
+  style: "blockquote"
+  pattern: "> **{icon} {title}:** See [`supporting-docs/{file}`](supporting-docs/{file}) for {description}."
+  icons:
+    artifact_inventory: "📦"
+    orchestration_flows: "🔀"
+    schema_structures: "🗂️"
+    map_mappings: "🔗"
+    pipeline_helper_reference: "🧩"
+    replication_gap_report: "🚧"
+    verification_checklist: "📋"
+
+# Diagram specifications
+diagrams:
+  init_directive: "%%{ init: { 'flowchart': { 'curve': 'linear' } } }%%"  # MANDATORY atop every flowchart
+  system_context:
+    type: "flowchart LR"
+    location: "Section 2"
+    required: true
+  orchestration_flow_per_odx:
+    type: "flowchart TD"
+    location: "Section 3 (one per .odx)"
+    required: true
+  line_break: "<br/>"        # NEVER \n
+  color_by: "semantic_role"  # sources/transforms/decisions/sends; style lines at end
+  curve: "linear"
+
+# Verdict legend (replication readiness)
+verdicts:
+  replicable: "🟢"
+  ambiguous: "🟡"
+  blocked: "🔴"
+
+# Style settings
+style:
+  heading_style: "Title Case"
+  table_format: "markdown"
+  code_format: "fenced"
+  diagram_format: "mermaid"
+  diagram_colors: "semantic"          # Material 200/300 by role
+  credential_mask: "[ENCRYPTED]"
+  env_marker: "[ENV]"
+  missing_data_marker: "[NOT IN EXPORT]"
+  gap_marker: "🔴 GAP"
+  assumption_marker: "⚠️ ASSUMPTION"
+
+# Extraction requirements
+extraction:
+  orchestration_shapes: { document_all: true, include_verbatim_expressions: true, cite_oid: true, count_verification: true }
+  map_links:            { document_all: true, consult_btm_and_xsl: true, prefer_xsl_for_logic: true, count_verification: true }
+  schema_fields:        { document_all: true, include_structure_tree: true, recover_fields_in_use_when_absent: true }
+  pipelines:            { document_all: true }
+  helpers:              { document_all: true, flag_absent_as_gap: true, never_invent_logic: true }
+  secrets:              { mask: true, credential_mask: "[ENCRYPTED]", env_marker: "[ENV]" }
+
+# Progressive document updates (skeleton-first, per-phase section writes)
+progressive_updates:
+  enabled: true
+  phases:
+    - { phase: 0, actions: ["CREATE main doc skeleton (7 markers)", "WRITE Sections 1-2", "CREATE artifact-inventory.md"] }
+    - { phase: 1, actions: ["APPEND Section 3", "CREATE orchestration-flows.md"] }
+    - { phase: 2, actions: ["APPEND Section 4", "CREATE schema-structures.md", "CREATE map-mappings.md"] }
+    - { phase: 3, actions: ["APPEND Section 5", "CREATE pipeline-helper-reference.md"] }
+    - { phase: 4, actions: ["APPEND Section 6", "CREATE replication-gap-report.md"] }
+    - { phase: 5, actions: ["APPEND Section 7 (consolidate & polish)", "CREATE verification-checklist.md"] }
+
+# Certification box (EXACT content lines — see template guide §7)
+certification:
+  required: true
+  format: "ASCII box"
+  required_lines:
+    - "BIZTALK DOCUMENTATION — COVERAGE CERTIFICATION"
+    - "App: {app_name}"
+    - "All present artifacts documented (shapes {n}/{n}, map links {n}/{n}, schemas {n}/{n}, helpers {n}/{n})"
+    - "{g} external/binding dependencies flagged as replication gaps"
+    - "RESULT: {COMPLETE for provided source | INCOMPLETE — see gaps}"
+  location: ["main doc Section 7", "verification-checklist.md"]
+
+rules:
+  cite_source_for_every_item: true
+  prefer_xsl_for_map_logic: true
+  flag_absent_dependencies_as_gap: true
+  mark_encrypted_values: true
+  never_summarize_links_or_shapes: true
+  benchmark_conciseness_against_examples: true
+  match_example_format_exactly: true
+
+# Critical output patterns (DO NOT MISS)
+critical_patterns:
+  main_document:
+    - "Header MUST include Source, Generated date, Agent version"
+    - "Section 1 artifact-counts table MUST use 3 columns (Type, Count, Notes) and the 5 fixed rows"
+    - "Section 3 MUST use the locked shape columns and one flowchart TD per orchestration"
+    - "Every section MUST end with the correct reference blockquote(s) + icon"
+    - "Section 7 MUST end with the EXACT certification box"
+    - "No section omitted — mark 'Not applicable' when an artifact type is absent"
+  supporting_docs:
+    - "All 7 supporting docs MUST be created"
+    - "orchestration-flows.md MUST include verbatim csharp code blocks for every expression shape"
+    - "map-mappings.md MUST document every link and consult both .btm and .xsl"
+    - "verification-checklist.md MUST end with the certification box"
+    - "Absent dependencies MUST be flagged 🔴 GAP; secrets masked [ENCRYPTED]/[ENV]"
+  references:
+    - "ALL references MUST use the blockquote + icon pattern with relative supporting-docs/ paths"

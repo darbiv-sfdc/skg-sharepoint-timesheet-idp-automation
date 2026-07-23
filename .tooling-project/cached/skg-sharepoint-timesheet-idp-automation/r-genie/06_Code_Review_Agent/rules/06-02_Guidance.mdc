@@ -1,0 +1,462 @@
+---
+description: Code Review Guidance - Mental Execution, Bug Detection, Scoring
+author: Cheppali Shaik Sohail
+version: 2.1.0
+alwaysApply: false
+tags: [guidance, bugs, scoring, mental-execution, analysis]
+appliesTo: [code-review]
+whenToUse:
+  - "Phase 3-5 review work"
+  - "Reference for analysis patterns"
+priority: HIGH
+---
+
+# CODE REVIEW GUIDANCE
+
+> **Focus:** Multi-pass forensic mental code execution → Systematic bug hunting → RGV convergence → Findings report
+
+---
+
+## 1. FLOW-BY-FLOW ANALYSIS
+
+**For each flow, document:**
+
+```
+Flow: {flow-name}
+File: {file-path}
+Trigger: {listener/scheduler/flow-ref}
+Purpose: {what this flow does}
+
+Execution Trace:
+1. [Line X] {Component} → {what it does}
+2. [Line Y] {Component} → {what it does}
+   └── ⚠️ BUG: {issue found}
+3. ...
+
+Bugs Found: X
+Status: ✅ Clean | ⚠️ Issues Found
+```
+
+### Flow Analysis Checklist
+
+For EACH flow file:
+
+```
+1. ENTRY POINT
+   ├── What triggers this flow? (HTTP, Solace, Scheduler, Flow-Ref)
+   ├── What is the expected input format?
+   └── Is input validated before processing?
+
+2. EXECUTION PATH
+   ├── Trace EVERY component in order
+   ├── Track payload/variable state at each step
+   ├── Identify all external calls (HTTP, DB, SFDC)
+   └── Check: What happens if step N fails?
+
+3. TRANSFORMATIONS
+   ├── List all DataWeave transformations
+   ├── Verify each field mapping
+   └── Check null safety on every field access
+
+4. ERROR HANDLING
+   ├── Does flow have <error-handler>?
+   ├── Are specific error types caught?
+   ├── What happens on ANY:CONNECTIVITY error?
+   └── Is error logged with context?
+
+5. EXIT POINTS
+   ├── What does success return?
+   ├── What does failure return?
+   └── Are all paths accounted for?
+```
+
+---
+
+## 2. BUG CATEGORIES
+
+Document findings with these categories:
+
+| Category | What to Check |
+|----------|---------------|
+| **Null Safety** | Array access `[0]`, filter results, chained `.` access |
+| **Configuration** | Flow name mismatches, initialState references, property bindings |
+| **Naming** | Typos in file names, inconsistent conventions |
+| **Error Handling** | Missing handlers, scatter-gather route failures, catch-all gaps |
+| **Data Validation** | Missing input validation, sizeOf() on wrong types |
+| **Type Safety** | Type mismatches, coercion without defaults, `contains` on wrong types |
+| **Code Quality** | Hardcoded values, inefficient patterns, duplicate code |
+| **Test Coverage** | Missing MUnit tests, untested flows, low coverage |
+| **Security** | Hardcoded secrets, PII in logs, missing HTTPS |
+
+---
+
+## 3. DATAWEAVE BUG PATTERNS
+
+| Pattern | Example | Severity |
+|---------|---------|----------|
+| Filter result `[0]` | `(array filter cond)[0]` | CRITICAL |
+| Direct array access | `payload.items[0]` | CRITICAL |
+| Array slice | `array[1 to -1]` | CRITICAL |
+| Nested array | `contacts[0].emails[0]` | CRITICAL |
+| Coercion no default | `value as Number` | HIGH |
+| `~=` on null | `field ~= "true"` | HIGH |
+| `contains` wrong type | `arr contains "x"` | HIGH |
+| Deep nested access | `a.b.c.d.e` without default | MEDIUM |
+
+---
+
+## 4. MULE FLOW BUG PATTERNS
+
+| Pattern | What to Check | Severity |
+|---------|---------------|----------|
+| Scatter-gather | Routes missing individual `<error-handler>` | HIGH |
+| Choice condition | `sizeOf()` on XML (may not work) | HIGH |
+| Flow initialState | Property key doesn't match flow name | HIGH |
+| File name typo | `listner` instead of `listener` | HIGH |
+
+---
+
+## 5. ADDITIONAL BUG PATTERNS (Quick Reference)
+
+| Pattern | Severity | How to Detect |
+|---------|----------|---------------|
+| Missing error handler | HIGH | Flow with external call but no `<error-handler>` |
+| Hardcoded credentials | CRITICAL | `password=`, `secret=` with literals (not `${...}`) |
+| No connection pool | HIGH | DB config missing `<pooling-profile>` |
+| Missing/long timeout | HIGH | HTTP config without timeout or > 60s |
+| Foreach variable overwrite | MEDIUM | `set-variable` inside `foreach` not accumulating |
+| PII in logs | MEDIUM | `#[payload]` in logger message |
+| O(n²) DataWeave | MEDIUM | `filter` inside `map` on large datasets |
+| No input validation | MEDIUM | `http:listener` → DB/API without validation |
+
+---
+
+## 6. FINDING STRUCTURE
+
+Every finding must have:
+
+```json
+{
+  "id": "CRITICAL-001",
+  "severity": "CRITICAL",
+  "category": "Null Safety",
+  "file": "src/main/resources/dw/mappings/account-mapping.dwl",
+  "line": 101,
+  "issue": "Array access without null check - accessing [0] on filter result",
+  "impact": "NullPointerException when filter returns empty array",
+  "pass": 1
+}
+```
+
+### Severity Classification
+
+| Severity | Criteria | Impact |
+|----------|----------|--------|
+| **CRITICAL** | Runtime crash, data loss, security hole | Production blocker |
+| **HIGH** | Logic error, configuration issue, type mismatch | Major issue |
+| **MEDIUM** | Code quality, hardcoded values, low coverage | Quality issue |
+| **LOW** | Naming, style, minor improvements | Minor issue |
+
+### ID Naming Convention
+
+- CRITICAL-001, CRITICAL-002, ... (sequential across ALL passes)
+- HIGH-001, HIGH-002, ...
+- MEDIUM-001, MEDIUM-002, ...
+- MAPPING-001, MAPPING-002, ... (for field mapping issues)
+
+**IDs are sequential across passes.** If Pass 1 ends at CRITICAL-002, Pass 2 starts at CRITICAL-003.
+
+---
+
+## 7. FIELD MAPPING VERIFICATION
+
+### Phase 4 Analysis Structure
+
+```
+Mappings Analyzed: 5
+Mappings Verified: 3
+Mapping Issues: 8
+Coverage: 60%
+Type Mismatches: 3
+Null Safety Issues: 5
+```
+
+### Per-Mapping Analysis
+
+| Mapping | Status | Issues Found |
+|---------|--------|--------------|
+| Account | ⚠️ Issues | 3 type/null safety issues |
+| Contact | ⚠️ Issues | 1 array slice validation |
+| Account Relations | ⚠️ Issues | 1 filter logic issue |
+| Account Team Member | ⚠️ Issues | 1 type mismatch |
+| Customer Master | ✅ Verified | No critical issues |
+
+### What to Check Per Mapping
+
+1. **Source field exists?** - Does the source path always have data?
+2. **Type compatible?** - String to String, Number to Number?
+3. **Null handled?** - Default value provided?
+4. **Array bounded?** - Index access validated?
+5. **Logic correct?** - Transform produces expected result?
+
+---
+
+## 8. QUALITY SCORING
+
+### Score Calculation Method
+
+```
+START: 100 points
+
+DEDUCTIONS:
+- Per CRITICAL bug: -6 points (Implementation Quality)
+- Per HIGH bug: -2 points (Implementation Quality)
+- Per MEDIUM bug: -1 point (Code Quality)
+- Missing requirements doc: -10 points (Requirements Compliance)
+- Low test coverage (<50%): -10 points (Code Quality)
+- Missing error handlers: -5 points (Architecture)
+- Hardcoded values: -2 points each (Code Quality)
+
+CATEGORY CAPS:
+- If 7+ critical bugs: Implementation Quality = 0
+- If no requirements: Requirements Compliance max = 15
+- If <30% test coverage: Code Quality max = 10
+```
+
+### Category Breakdown
+
+| Category | Max | How to Score |
+|----------|-----|--------------|
+| **Requirements Compliance** | 25 | Requirements met? (15 if no doc provided) |
+| **Implementation Quality** | 25 | Critical/High bugs found? (0 if 7+ critical) |
+| **Architecture & Design** | 20 | Patterns, error handling, separation |
+| **Code Quality & Tests** | 20 | Test coverage, clean code, no hardcoding |
+| **Security & Compliance** | 10 | Credentials externalized, PII protected |
+
+### Grade Thresholds
+
+| Score | Grade | Production Ready |
+|-------|-------|------------------|
+| 90-100 | EXCEPTIONAL | ✅ Yes |
+| 80-89 | EXCELLENT | ✅ Yes |
+| 70-79 | GOOD | ⚠️ Conditional |
+| 60-69 | ACCEPTABLE | ❌ No |
+| 0-59 | POOR | ❌ No |
+
+---
+
+## 9. TEST COVERAGE ANALYSIS
+
+### Coverage Table Format
+
+| Flow | Tests | Coverage | Status |
+|------|-------|----------|--------|
+| create-customer-flow | 4 | 72% | ⚠️ |
+| get-customer-flow | 3 | 85% | ✅ |
+| delete-customer-flow | 0 | 0% | ❌ |
+| error-handler-flow | 0 | 0% | ❌ |
+
+### What to Check
+
+- How many test files exist?
+- Which flows have NO tests?
+- What scenarios are covered?
+- What's the overall line coverage?
+
+---
+
+## 10. SECURITY ANALYSIS
+
+| Check | How to Verify |
+|-------|---------------|
+| Credentials externalized | Look for Azure Key Vault, secure properties |
+| HTTPS for external calls | Check http:request configurations |
+| Input validation | Validation before DB/API calls |
+| PII in logs | Check DEBUG log statements |
+| Authentication | JWT/OAuth validation present |
+
+---
+
+## 11. MENTAL EXECUTION CHECKLIST
+
+### Before Completing Phase 3 (EACH Pass)
+
+- [ ] Every flow traced from entry to exit (full sweep)
+- [ ] Every DataWeave transformation analyzed
+- [ ] All array access patterns checked for null safety
+- [ ] All filter results checked for empty array handling
+- [ ] Type coercions verified with defaults
+- [ ] Scatter-gather routes checked for individual handlers
+- [ ] Choice conditions validated for correct types
+- [ ] Flow names match initialState references
+- [ ] File names checked for typos
+- [ ] Error handlers present on all flows
+- [ ] External calls have timeouts/retries
+- [ ] Credentials externalized
+- [ ] Test coverage calculated
+- [ ] **All new findings tagged with current pass number**
+- [ ] **Delta summary prepared (new vs cumulative)**
+- [ ] **Convergence checked (zero new CRITICAL/MEDIUM?)**
+
+### Before Completing Phase 4 (EACH Pass)
+
+- [ ] All DataWeave mappings analyzed (full sweep)
+- [ ] Source-to-target field mappings verified
+- [ ] Type mismatches counted
+- [ ] Null safety issues counted
+- [ ] Coverage percentage calculated
+- [ ] **All new mapping findings tagged with current pass number**
+- [ ] **Delta summary prepared**
+- [ ] **Convergence checked**
+
+### Before Completing Phase 5
+
+- [ ] All findings have id, severity, category, file, line, issue, impact, **pass**
+- [ ] RGV Convergence Summary generated
+- [ ] Score calculated with deductions (ALL passes cumulative)
+- [ ] Grade determined
+- [ ] Production decision made
+- [ ] Blockers listed
+- [ ] All placeholders replaced (including RGV placeholders)
+
+---
+
+## 12. FINDINGS-ONLY RULES
+
+### INCLUDE in Report
+
+- Finding ID (CRITICAL-001, HIGH-001, etc.)
+- Severity classification
+- Category
+- File path and line number
+- Issue description
+- Impact statement
+- **Pass number** (which RGV pass discovered it)
+
+### EXCLUDE from Report
+
+- How to fix
+- Code solutions
+- Recommendations
+- Action plans
+
+### Format: Tables Over Text (with Pass column)
+
+```markdown
+❌ WRONG: "The account mapping has a potential null pointer issue..."
+
+✅ RIGHT:
+| ID | Severity | File | Line | Issue | Pass |
+|----|----------|------|------|-------|------|
+| CRITICAL-001 | CRITICAL | sap-to-sfdc-account-mapping.dwl | 101 | Array access without null check | 1 |
+| CRITICAL-003 | CRITICAL | process-order-flow.xml | 52 | Null payload after scatter-gather timeout | 2 |
+```
+
+---
+
+## 13. RGV MULTI-PASS ANALYSIS STRATEGY
+
+### Why Multi-Pass Works
+
+LLMs miss ~15-30% of issues in single pass due to:
+- **Attention drift** on long files (early content gets less scrutiny)
+- **Context window saturation** (too many files dilute focus)
+- **Pattern fixation** (finding one bug, missing adjacent ones in same file)
+- **Error handler path blindness** (focus on happy path, skip error paths)
+- **Cross-file interaction blindness** (miss how flows connect)
+
+### Per-Pass Guidelines
+
+| Rule | Why |
+|------|-----|
+| Full sweep of ALL files every pass | Don't assume prior pass was complete |
+| Don't re-read previous findings before starting | Avoid anchoring/confirmation bias |
+| Approach each pass as if first time | Fresh perspective catches more |
+| Focus on what COULD go wrong | Not what you already found |
+| Tag every finding with pass number | Delta tracking is mandatory |
+
+### Delta Detection Rules
+
+| Rule | Definition |
+|------|------------|
+| A finding is "new" | Not already reported in prior passes |
+| Compare by | file + line + issue category (not exact wording) |
+| Same file/line, DIFFERENT issue | Count as NEW |
+| Same issue, DIFFERENT line | Count as NEW |
+| Duplicate of prior pass | Do NOT count (skip it) |
+
+### Convergence Definition
+
+```
+converged = (new_critical_count == 0) AND (new_medium_count == 0)
+
+Note: new HIGH findings alone do NOT block convergence.
+Rationale: HIGH findings are important but don't indicate
+the review is still discovering fundamental issues.
+```
+
+### RGV Few-Shot Example
+
+❌ BAD — Skipping passes because "found enough":
+```
+Pass 1 found 8 bugs. That seems thorough enough, proceeding to Phase 4.
+```
+
+✅ GOOD — Always run default passes:
+```
+Pass 1: 8 findings (2C, 3H, 3M)
+Pass 2: 3 new findings (1C, 0H, 2M) — not converged
+Pass 3: 1 new finding (0C, 1H, 0M) — CONVERGED (0 new Critical/Medium)
+Total: 12 findings across 3 passes
+```
+
+❌ BAD — Anchoring on prior findings:
+```
+Pass 2: Re-checking the 8 bugs from Pass 1... all confirmed.
+No new bugs found. Converged.
+```
+
+✅ GOOD — Fresh perspective:
+```
+Pass 2: Full sweep of all flows with fresh eyes.
+Found CRITICAL-003 in process-order-flow.xml:52 —
+scatter-gather timeout propagates null to downstream transform.
+This was missed in Pass 1 due to focus on individual route errors.
+```
+
+---
+
+## 14. EVIDENCE-BOUND OUTPUTS
+
+Every finding must cite its source:
+
+| Decision Type | Evidence Format |
+|---------------|----------------|
+| Bug finding | "CRITICAL-{N}: {issue} — File `{file}` line {line}" |
+| Severity classification | "Classified as {severity} — {criteria from Section 6}" |
+| Mapping issue | "MAPPING-{N}: Source `{field}` → Target `{field}` — Type mismatch at `{file}:{line}`" |
+| Assumption | "⚠️ ASSUMPTION: {value} — Code intent unclear on '{detail}'" |
+| Gap entry | "GAP-{N}: Unable to confirm {detail} (asked {X} times)" |
+
+> If you cannot cite a file:line, flag as assumption. Never present assumptions as confirmed findings.
+
+---
+
+## 15. TREE OF THOUGHT (Ambiguous Decisions)
+
+For decisions with multiple valid paths, evaluate branches before choosing:
+
+```
+<thinking>
+Branch A: [Option] — fits because [evidence]. Risk: [risk].
+Branch B: [Option] — fits because [evidence]. Risk: [risk].
+Best path: [chosen] — Confidence: {HIGH/MEDIUM/LOW}
+</thinking>
+```
+
+**Common ambiguous decisions in code review:**
+- Classify as CRITICAL vs HIGH (runtime crash vs logic error)
+- Intentional pattern vs actual bug (e.g., deliberate `[0]` on known single-item array)
+- Missing error handler: design choice vs oversight
+- Hardcoded value: configuration vs constant
+

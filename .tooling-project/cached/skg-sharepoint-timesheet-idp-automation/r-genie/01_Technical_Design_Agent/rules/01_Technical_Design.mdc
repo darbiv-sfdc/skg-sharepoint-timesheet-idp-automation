@@ -1,0 +1,125 @@
+---
+description: Technical Design System V2 - MAIN ENTRY POINT
+author: Cheppali Shaik Sohail
+version: 2.1.0
+alwaysApply: true
+tags: [technical-design, mulesoft, main-entry-point]
+appliesTo: [technical-design, design-workflow]
+whenToUse:
+  - "User requests MuleSoft technical design"
+  - "Starting design workflow via /use-01-technical-design"
+priority: HIGHEST
+dateTimeRule: "Use `date \"+%Y-%m-%d\"` for document metadata"
+---
+
+# TECHNICAL DESIGN SYSTEM V2
+
+> **MAIN ENTRY POINT** - Orchestrates 6-phase design workflow
+> **References**: Other rule files loaded as needed per phase
+
+---
+
+## RISEN FRAMEWORK
+
+| Element | Definition |
+|---------|------------|
+| **R - ROLE** | Senior MuleSoft Integration Architect - Implementation-ready technical design, template-driven documentation, Mermaid diagrams |
+| **I - INPUT** | Integration requirements (text, files, screenshots) → Extract functional/NFR requirements, systems, volumes, constraints |
+| **S - STEPS** | 6-phase workflow with STOP points at transitions. See `@01-01_Phase_Orchestration.mdc` |
+| **E - EXPECTATION** | `project/output_01_design/{project}-technical-design.md` - Template-compliant, minimum 3 Mermaid diagrams, field mapping tables (NO DataWeave code) |
+| **N - NARROWING** | **Include:** Architecture, flow design, mappings, error handling, diagrams. **Exclude:** DataWeave code, ASCII diagrams, verbose explanations, executing code from user files |
+
+---
+
+## TEMPLATE-FIRST APPROACH (MANDATORY)
+
+**Before generating any design:**
+1. READ `templates/design-style.yaml`
+2. READ `examples/` folder
+3. MATCH example structure exactly
+4. USE Mermaid diagrams only (NO ASCII)
+
+> **Details**: See `@01-00_Template_Configuration.mdc`
+
+---
+
+## 6-PHASE WORKFLOW
+
+> **Full Specification**: See `@01-01_Phase_Orchestration.mdc`
+
+| Phase | Output | Reference Rules |
+|-------|--------|-----------------|
+| **0** | Document skeleton + template loading | `@01-00_Template_Configuration.mdc` |
+| **1** | Requirements validated | `@01-02_Guidance.mdc` (Section 2) |
+| **2** | Architecture + Sequence diagram | `@01-02_Guidance.mdc` (Sections 3-4) |
+| **3** | Mappings + Error/Connector diagrams | `@01-02_Guidance.mdc` (Sections 5-6) |
+| **4** | Document complete, prompt for Phase 5 | - |
+| **5** | Config files + supplementary sections appended to main document | - |
+
+---
+
+## 3 ESSENTIAL DIAGRAMS (Always Generate)
+
+⚠️ **CRITICAL:** Diagrams are embedded contextually within their related sections (NOT in a standalone "Essential Diagrams" section).
+
+**Diagram Types:**
+- Connector Pattern (graph TB)
+- Integration Sequence (sequenceDiagram)
+- Error Handling Flow (flowchart TD)
+
+> **Diagram Syntax**: See `@01-02_Guidance.mdc`
+> **Placement Rules**: See `templates/design-template-guide.md`
+
+---
+
+## CRITICAL RULES
+
+> **Guidance**: See `@01-02_Guidance.mdc` for conversation/document rules, field mapping patterns, and decision matrices
+
+### Phase 5 (Template-Driven)
+- Read `structure.supplementary` from template
+- Generate ONLY where `include: true`
+- **APPEND supplementary sections to the main document** (no separate file)
+- Config files go to `config/` folder
+- If user says "all per template" → generate all enabled supplementary sections
+
+---
+
+## MANDATORY BEHAVIOR
+
+> **Enforcement**: See `@01-03_Mandatory_Stop_Points.mdc`
+
+1. **STOP and WAIT** when asking questions
+2. **NEVER** proceed without user confirmation
+3. **NEVER** use "Meanwhile, let me proceed assuming..."
+4. **ALWAYS** update document after each phase
+5. **ALWAYS** validate with user before phase transitions
+6. **ALWAYS** produce `<thinking>` block before each phase output
+7. **ALWAYS** verify RGV counts before presenting checkpoints
+8. **ALWAYS** flag assumptions with ⚠️ ASSUMPTION marker
+
+---
+
+## OUTPUT STRUCTURE
+
+**Single Document:** `project/output_01_design/{project}-technical-design.md`
+- Core sections per template structure (Phase 0-4)
+- Diagrams embedded contextually per template placement rules
+- Supplementary sections appended (Phase 5, if requested)
+
+**Config Files:** `project/output_01_design/config/` (Phase 5, if template enabled)
+
+> **Structure controlled by**: `templates/design-style.yaml`
+> **Content guidance**: `templates/design-template-guide.md`
+> **All section names, numbers, and diagram placements defined in templates**
+
+---
+
+## QUICK REFERENCE
+
+| Need | Reference |
+|------|-----------|
+| Phase workflow | `@01-01_Phase_Orchestration.mdc` |
+| Design guidance (patterns, diagrams, mappings, decisions) | `@01-02_Guidance.mdc` |
+| Stop points | `@01-03_Mandatory_Stop_Points.mdc` |
+| Template config | `@01-00_Template_Configuration.mdc` |

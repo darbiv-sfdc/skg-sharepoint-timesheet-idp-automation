@@ -1,0 +1,182 @@
+---
+description: BizTalk Documentation Agent - Guidance, Extraction Patterns, Few-Shot, Matrices
+author: Cheppali Shaik Sohail
+version: 1.1.0
+alwaysApply: false
+tags: [biztalk, guidance, extraction, few-shot, mulesoft-mapping]
+appliesTo: [biztalk-documentation]
+whenToUse:
+  - "Reference for how to extract each BizTalk artifact type"
+  - "BizTalk -> MuleSoft mapping decisions and few-shot patterns"
+priority: HIGH
+---
+
+# GUIDANCE
+
+> **Reference** for the RGV loop (DRY source), per-artifact extraction patterns, few-shot examples, BizTalk→MuleSoft decision matrices, Mermaid standards, and the quality checklist.
+
+---
+
+## SECTION 1: RGV LOOP (DRY SOURCE)
+
+The single authoritative definition. All phases reference here.
+
+```
+FOR EACH section (orchestration / schema / map / pipeline / helper):
+  1. RE-READ   — Fresh Read tool call on ALL relevant artifact files
+  2. INVENTORY — Count target elements, list names, COMMIT to count N
+  3. GENERATE  — Produce section content with EXACTLY N items
+  4. VERIFY    — Count generated items, compare to N → "Processed N/N"
+  5. FIX       — If mismatch, RE-READ source, find missing, fix BEFORE proceeding
+  6. CHECKPOINT— Emit count-verified micro-checkpoint, write to file, proceed
+```
+
+**Why:** Each section is an ATOMIC UNIT. Do not start section N+1 until section N passes verification. This prevents summarization — the root cause of missed shapes and map links.
+
+**Evidence-Bound rule:** every extracted item cites its source — `Source: Process_X.odx, OID a782...` or `Source: Map_Y.xsl, LinkID 4`. If you cannot cite a source, it is an ⚠️ ASSUMPTION or 🔴 GAP, not a fact.
+
+---
+
+## SECTION 2: ARTIFACT EXTRACTION PATTERNS
+
+### `.odx` Orchestrations
+BizTalk designer XML (`om:Element` tree). Extract:
+- `ServiceDeclaration` → orchestration name, type modifier, invokable, activation.
+- `VariableDeclaration` / `MessageDeclaration` → name, .NET/schema `Type`, direction.
+- `ServiceBody` statements in order: `Receive` (PortName, Activate, `DNFPredicate` filters), `Send`, `Construct` (+ `Transform` ClassName = map, `MessageAssignment` expression), `Call`/`CallExternal` (Invokee = helper), `Decision`/`Rule`, `Loop`, `Scope`/`Catch`, `Parallel`.
+- Inline expression code is in `Property Name="Expression"` (decode `&quot;`, `&#xD;&#xA;`). Capture verbatim.
+- Ports: `PortDeclaration` / port-type bindings.
+
+### `.btm` Maps (UTF-16) + `.xsl`
+- `.btm` is UTF-16 — decode first. Contains `<SrcTree>`/`<TrgTree>` references, `<Links>` (LinkFrom/LinkTo XPaths), `<Functoids>` (Functoid-FID, parameters, constants), and `<CustomXSLT XsltPath=...>` when custom XSLT is used.
+- **Prefer the paired `.xsl`** for actual transform logic; use `.btm` for functoid intent and constant values.
+- Document EVERY link: source XPath → target XPath, plus functoid logic (e.g., FID 107 = scripting functoid with inline value).
+
+### `.xsd` Schemas
+- Often UTF-16. Extract target namespace, root node, element/attribute tree with types and occurrence. Note EDI/flat-file annotations (`b:` BizTalk schema extensions) when present.
+
+### `.btp` Pipelines
+- Stages (Decode, Disassemble, Validate, ResolveParty / PreAssemble, Assemble, Encode) → component list per stage with key properties.
+
+### `.cs` Helpers
+- Class + public methods (signatures). Summarize logic and include the complete code block. Common types: crypto/signing, XML canonicalization, config/section-handler readers, email senders. These are CALLED by orchestration `Call`/expression statements — link call-sites.
+
+### `.btproj` / `.sln`
+- Project list, output assembly names, referenced assemblies (incl. external ones whose source may be absent).
+
+---
+
+## SECTION 3: FEW-SHOT EXAMPLES (❌ BAD → ✅ GOOD)
+
+### Map documentation
+❌ BAD:
+```
+Map_824in_to_Email: maps the 824 to an email. Sets subject and body.
+```
+✅ GOOD:
+```
+Map_824in_to_Email (Map_824in_to_Email.btm + .xsl) — 5/5 links
+| Link | Source XPath | Target XPath | Logic |
+|------|--------------|--------------|-------|
+| 1 | .../ST/ST01 | (functoid 107 input) | Scripting functoid, const "123qwe" |
+| 2 | functoid 1 out | /Email/Subject | value from functoid |
+| 3 | functoid 1 out | /Email/Body | value from functoid |
+| 4 | functoid 1 out | /Email/SendToList/SendTo | value from functoid |
+| 5 | functoid 1 out | /Email/SendCcList/SendCc | value from functoid |
+Source: Map_824in_to_Email.btm (UTF-16) + Map_824in_to_Email.xsl
+```
+**Why:** GOOD documents every link with XPaths + functoid logic + source — reproducible. BAD summarizes and loses the mapping.
+
+### Orchestration inline expression
+❌ BAD: `Get config — reads some settings.`
+✅ GOOD:
+```
+Shape "Get config" (VariableAssignment, OID acf4...):
+  RunEnv  = Venture.Utilities.ConfigHelper.GetNameValueFileSectionHandlerKey("RuntimeEnvironment","VenHPEdiSettings");
+  strEmailTo = ...GetNameValueFileSectionHandlerKey("EmailRecipientTo","VenHPEdiSettings");
+🔴 GAP: ConfigHelper source not in export → MuleSoft needs an equivalent config/property lookup.
+```
+**Why:** Captures verbatim logic + the helper dependency + the replication implication.
+
+### Helper with absent source
+❌ BAD: invent what `CryptoHelper.Sign()` probably does.
+✅ GOOD: `CryptoHelper.Sign(doc, cert) — called by _signSubmission.odx. Source: CryptoHelper.cs (present)` OR if absent: `🔴 GAP: assembly Venture.Utilities referenced by 3 orchestrations; source not in export.`
+
+---
+
+## SECTION 4: BIZTALK → MULESOFT DECISION MATRIX
+
+| BizTalk Construct | MuleSoft Equivalent | Notes |
+|-------------------|---------------------|-------|
+| Receive port + location | Listener (HTTP/File/SFTP/JMS) source | Adapter type from port binding |
+| Send port | Outbound connector / `<*:request>` | |
+| Orchestration | Mule flow / sub-flow | Shapes → flow components |
+| Receive (Activate) | Flow trigger | |
+| Construct + Transform (map) | `<ee:transform>` (DataWeave) | Map logic → DataWeave |
+| `.btm`/`.xsl` map | DataWeave script | XSLT may be portable directly |
+| Decision shape | `<choice>` | DNF predicate → condition |
+| Loop shape | `<foreach>` / `<parallel-foreach>` | |
+| Scope + Catch | `<try>` + error handlers | |
+| Call .NET helper | DataWeave fn / Java invoke / connector | 🔴 if source absent |
+| Correlation sets | Correlation / object store | |
+| Pipeline (disassemble/validate) | Listener + transform + schema validation | |
+| Schema (.xsd) | DataWeave type / schema validation | EDI → EDI connector |
+| AS2 / EDI X12 | AnypointMQ + EDI / X12 connector | |
+
+> **Tree of Thought for ambiguous mappings:** evaluate ≥2 MuleSoft options, pick one, note the trade-off. E.g., "Loop with DB calls → Branch A `foreach` (ordered, simpler) vs Branch B `parallel-foreach` (faster, order not guaranteed). Chosen: A — original orchestration is sequential."
+
+---
+
+## SECTION 5: REPLICATION-READINESS VERDICTS
+
+| Verdict | Meaning | Trigger |
+|---------|---------|---------|
+| 🟢 Replicable | Full source present; clean MuleSoft mapping exists | All referenced artifacts present |
+| 🟡 Ambiguous | Replicable but needs a decision/clarification | Dense functoids, env-specific binding, design choice |
+| 🔴 Blocked | Cannot fully replicate from provided source | Absent assembly/schema, encrypted value, runtime-only binding |
+
+Every 🟡/🔴 MUST appear in `replication-gap-report.md` with reason + recommended action.
+
+---
+
+## SECTION 6: MERMAID DIAGRAM STANDARDS
+
+- Put `%%{ init: { 'flowchart': { 'curve': 'linear' } } }%%` atop every `flowchart`/`graph`.
+- Use `<br/>` for line breaks in labels, NEVER `\n`.
+- `stateDiagram-v2`: `[*]` start/end, transitions labeled with trigger events, states in workflow order.
+- One Mermaid flow per orchestration (Section 3): nodes = shapes in execution order, branches for Decision/Parallel; dashed `-.->` for catch/back-edges.
+- Color by semantic role (Material 200/300): sources, transforms, decisions, sends — not alphabetically; declare `style` lines at the end.
+- Run a render self-check: balanced brackets, no stray `\n`, every node referenced.
+
+---
+
+## SECTION 7: QUALITY CHECKLIST
+
+- [ ] Every orchestration shape documented (count verified per `.odx`)
+- [ ] Every map link documented (count verified per map), `.btm`+`.xsl` both consulted
+- [ ] Every schema field tree documented
+- [ ] Every `.cs` helper referenced by an orchestration documented OR flagged 🔴 GAP
+- [ ] Every artifact has a replication verdict (🟢/🟡/🔴)
+- [ ] All 🟡/🔴 captured in `replication-gap-report.md` with reasons + actions
+- [ ] Every claim cites a source file (+ OID/LinkID where available)
+- [ ] UTF-16 files read correctly (no garbled text)
+- [ ] Encrypted/env values marked `[ENCRYPTED]`/`[ENV]`, never guessed
+- [ ] One Mermaid flow per orchestration; passes render self-check
+- [ ] **Conciseness benchmarked against the canonical example `examples/01_oracle_changepo/`** — complete, not padded
+- [ ] **Structure matches the canonical example EXACTLY** — header, section order, locked table columns (per `templates/documentation-style.yaml`)
+- [ ] **Every cross-doc reference uses the blockquote + icon format** (📦 🔀 🗂️ 🔗 🧩 🚧 📋)
+- [ ] Certification reconciles documented counts against Phase 0 inventory
+
+---
+
+## QUICK REFERENCE
+
+| Need | Section |
+|------|---------|
+| RGV loop (DRY) | §1 |
+| Per-artifact extraction | §2 |
+| Few-shot bad→good | §3 |
+| BizTalk→MuleSoft mapping | §4 |
+| Replication verdicts | §5 |
+| Mermaid standards | §6 |
+| Quality checklist | §7 |

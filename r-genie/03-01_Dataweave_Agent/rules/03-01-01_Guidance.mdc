@@ -1,0 +1,477 @@
+---
+description: DataWeave Guidance - Comprehensive reference for patterns, tools, functions, and decisions
+author: Cheppali Shaik Sohail
+version: 2.1.0
+alwaysApply: false
+tags: [guidance, patterns, tools, functions, quality, performance]
+appliesTo: [dataweave]
+whenToUse:
+  - "Phase 1-4 transformation work"
+  - "Reference for patterns, functions, and tool usage"
+priority: HIGH
+---
+
+# DATAWEAVE GUIDANCE
+
+> **Comprehensive Reference** for all DataWeave development needs
+> **Detailed Docs**: `lib/docs/` for in-depth reference material
+
+---
+
+## 🚨 MANDATORY WORKFLOW - ALWAYS USE SCRIPTS
+
+> **CRITICAL**: You MUST use these scripts at each phase. DO NOT do manual analysis when scripts exist.
+
+### Phase 1: Requirements Analysis (MANDATORY SCRIPT)
+```bash
+# 🧠 ALWAYS RUN THIS FIRST - Domain detection, function recommendations, complexity analysis
+node r-genie/03-01_Dataweave_Agent/lib/processors/03-01-02_Requirements_Analyzer.js input.json expected.json
+```
+**Result**: Domain detection, XML context, function recommendations in 100-500ms
+**DO NOT**: Manually analyze structure - let the script do it
+
+### Phase 2: Generate Script
+*(Use the requirements analysis output to guide script generation)*
+
+### Phase 3: Validation (MANDATORY - USE ENHANCED SUITE)
+```bash
+# 🚀 RECOMMENDED: Smart auto-routing - detects scenario and runs full pipeline
+node r-genie/03-01_Dataweave_Agent/lib/scripts/03-01-01_Enhanced_Suite.js --mode smart script.dwl input.json expected.json
+
+# OR: Complete validation mode
+node r-genie/03-01_Dataweave_Agent/lib/scripts/03-01-01_Enhanced_Suite.js --mode complete script.dwl input.json output.json expected.json
+```
+**Result**: Automatic scenario detection, error detection, CLI validation, security scanning, output comparison in 3-6s
+**DO NOT**: Only run CLI validator - run the full Enhanced Suite
+
+### Phase 4: Quality & Performance (MANDATORY)
+```bash
+# Quality gates (hardcode detection, security)
+node r-genie/03-01_Dataweave_Agent/lib/processors/03-01-16_Quality_Gates.js script.dwl
+
+# Performance analysis (optional for complex scripts)
+node r-genie/03-01_Dataweave_Agent/lib/scripts/03-01-24_Performance_Analyzer.js script.dwl
+```
+
+### Individual Tools (When Needed)
+```bash
+# Error detection (proactive)
+node r-genie/03-01_Dataweave_Agent/lib/processors/03-01-04_Error_Detector.js script.dwl
+
+# Security scanning
+node r-genie/03-01_Dataweave_Agent/lib/processors/03-01-05_Security_Scanner.js script.dwl
+
+# CLI validation only
+node r-genie/03-01_Dataweave_Agent/lib/processors/03-01-06_CLI_Validator.js script.dwl input.json output.json expected.json
+```
+
+### ❌ DO NOT DO THIS
+```
+❌ Manual structure analysis without running Requirements Analyzer
+❌ Only running CLI Validator without Enhanced Suite
+❌ Skipping Quality Gates before delivery
+❌ Writing analysis reports manually instead of using script output
+```
+
+---
+
+## 1. REQUIREMENTS ANALYSIS (Phase 1)
+
+### Domain Detection
+
+| Domain | Indicators | Patterns |
+|--------|------------|----------|
+| **ECOMMERCE** | orders, products, cart, checkout | Price calculations, inventory |
+| **HEALTHCARE** | patient, diagnosis, prescription | HL7, FHIR, compliance |
+| **FINANCIAL** | account, transaction, balance | Currency, precision, audit |
+| **GENERAL** | No specific indicators | Standard transformations |
+
+### Structure Analysis
+
+**Scan for:** Field names, data types, nesting depth, arrays, date formats, null patterns, calculation vs display fields
+
+---
+
+## 2. SAFE DEFAULTS STRATEGY (Phase 2)
+
+### Field Type Decision Matrix
+
+| Field Type | Strategy | Example | Rationale |
+|------------|----------|---------|-----------|
+| **Display** | Natural null | `customer.name` | DataWeave returns null naturally |
+| **Arithmetic** | `default 0` | `price as Number default 0` | Prevents null * x crashes |
+| **Date Arithmetic** | `default now()` | `orderDate as Date default now()` | Prevents null + Period crashes |
+| **Boolean** | `default false` | `isActive as Boolean default false` | Safe for logic operations |
+
+### Production Safety Checklist
+
+- [ ] No hardcoded dates, numbers, or business constants
+- [ ] All type coercions have appropriate defaults
+- [ ] Arithmetic fields use `default 0`
+- [ ] Date arithmetic fields use `default now()`
+
+---
+
+## 3. ESSENTIAL FUNCTIONS (Top 20)
+
+### Array Operations
+
+| Function | Purpose | Example |
+|----------|---------|---------|
+| `map` | Transform each element | `items map ((i) -> {id: i.id})` |
+| `filter` | Keep matching elements | `items filter ($.active)` |
+| `reduce` | Aggregate to single value | `items reduce ((i, acc=0) -> acc + i.amount)` |
+| `flatMap` | Map and flatten | `orders flatMap $.items` |
+| `groupBy` | Group by key | `items groupBy $.category` |
+| `orderBy` | Sort elements | `items orderBy $.name` |
+| `distinctBy` | Remove duplicates | `items distinctBy $.id` |
+| `sizeOf` | Count elements | `sizeOf(items)` |
+
+### String Operations
+
+| Function | Purpose | Example |
+|----------|---------|---------|
+| `upper` | Uppercase | `upper("hello")` → "HELLO" |
+| `lower` | Lowercase | `lower("HELLO")` → "hello" |
+| `trim` | Remove whitespace | `trim(" hello ")` → "hello" |
+| `++` | Concatenate | `"Hello" ++ " World"` |
+| `splitBy` | Split string | `"a,b,c" splitBy ","` |
+| `joinBy` | Join array | `["a","b"] joinBy ","` |
+| `replace` | Replace pattern | `"hello" replace "l" with "L"` |
+
+### Type & Null Operations
+
+| Function | Purpose | Example |
+|----------|---------|---------|
+| `as` | Type coercion | `x as Number default 0` |
+| `default` | Null fallback | `x default "N/A"` |
+| `isEmpty` | Check empty | `isEmpty(payload.items)` |
+| `isBlank` | Check blank string | `isBlank(payload.name)` |
+
+> **Full Reference**: `lib/docs/functions-reference.md`
+
+---
+
+## 4. XML PROCESSING ESSENTIALS
+
+### Namespace Declaration
+
+```dataweave
+%dw 2.0
+ns ns0 http://example.com/schema
+output application/xml
+---
+{
+    ns0#Root: {
+        ns0#Element: payload.data
+    }
+}
+```
+
+### Common XML Patterns
+
+| Pattern | Syntax |
+|---------|--------|
+| Attribute access | `payload.element.@attributeName` |
+| CDATA output | `output application/xml cdata=["fieldName"]` |
+| Namespace prefix | `ns0#ElementName` |
+| Remove namespace | `payload.element.*` |
+
+> **Full Reference**: `lib/docs/xml-processing.md`
+
+---
+
+## 5. ERROR TROUBLESHOOTING (Top 10)
+
+| Error | Cause | Fix |
+|-------|-------|-----|
+| `Unable to coerce Null` | Null in type coercion | Add `default` operator |
+| `Cannot coerce Null to Number` | Null in arithmetic | Use `default 0` |
+| `Unrecognized selector` | Wrong field path | Check input structure |
+| `Cannot cast X to Y` | Type mismatch | Use explicit `as Type` |
+| `Invalid input` | Malformed JSON/XML | Validate input format |
+| `Index out of bounds` | Array access beyond size | Check `sizeOf()` first |
+| `Expecting type X, found Y` | Wrong data type | Add type coercion |
+| `Cannot read property` | Null object navigation | Use `?.` or `default` |
+| `Duplicate key` | Same key in object | Use `groupBy` or rename |
+| `Stack overflow` | Recursive loop | Limit recursion depth |
+
+> **Full Reference**: `lib/docs/error-troubleshooting.md`
+
+---
+
+## 6. CLI VALIDATION
+
+### Primary Commands
+
+```bash
+# Smart auto-routing (recommended)
+node lib/scripts/03-01-01_Enhanced_Suite.js --mode smart script.dwl input.json expected.json
+
+# Requirements analysis
+node lib/processors/03-01-02_Requirements_Analyzer.js input.json expected.json
+
+# Quality gates
+node lib/processors/03-01-16_Quality_Gates.js script.dwl
+
+# CLI validation
+node lib/processors/03-01-06_CLI_Validator.js script.dwl input.json output.json expected.json
+```
+
+### File Conversion (Binary → Text)
+
+| File Type | Command |
+|-----------|---------|
+| Excel | `node lib/utilities/03-01-13_Excel_Converter.js file.xlsx` |
+| PDF | `node lib/utilities/03-01-14_Document_Converter.js file.pdf` |
+
+**Rule:** Only convert binary files. Use JSON, XML, CSV directly.
+
+> **Full Reference**: `lib/docs/cli-framework.md`
+
+---
+
+## 7. QUALITY & SECURITY
+
+### Quality Gates Summary
+
+| Check | Threshold | Action |
+|-------|-----------|--------|
+| Security Score | ≥ 98/100 | Review and fix |
+| Hardcode Detection | 0 violations | Remove hardcoded values |
+| Output Accuracy | ≥ 95% | Adjust transformation |
+
+### Hardcode Detection Patterns
+
+| ❌ Violation | ✅ Compliant |
+|--------------|--------------|
+| `default "2025-01-01"` | `default now()` |
+| `default 100` | `default 0` |
+| `default "USD"` | `default null` or from config |
+| `if (x == "ACTIVE")` | `if (x == vars.activeStatus)` |
+
+> **Full Reference**: `lib/docs/quality-security.md`
+
+---
+
+## 8. PERFORMANCE OPTIMIZATION
+
+### Streaming (Large Datasets >10MB)
+
+```dataweave
+%dw 2.0
+output application/json deferred=true
+---
+payload.largeArray map ((item) -> { ... })
+```
+
+### Import Efficiency
+
+```dataweave
+// ❌ BAD: Import everything
+import * from dw::core::Arrays
+
+// ✅ GOOD: Import only what you use
+import take from dw::core::Arrays
+```
+
+### Memory Patterns
+
+| Pattern | Recommendation |
+|---------|----------------|
+| Large arrays | Use streaming output |
+| Nested loops | Flatten or use reduce |
+| Multiple passes | Combine into single pass |
+
+> **Full Reference**: `lib/docs/performance-optimization.md`
+
+---
+
+## 9. TRANSFORMATION PATTERNS
+
+### Simple Map
+```dataweave
+payload.items map ((item) -> {
+    id: item.id,
+    name: item.name,
+    total: (item.price as Number default 0) * (item.qty as Number default 0)
+})
+```
+
+### Filter + Map
+```dataweave
+payload.items filter ($.status == "ACTIVE") map ((item) -> {
+    id: item.id,
+    name: item.name
+})
+```
+
+### Reduce (Aggregation)
+```dataweave
+payload.items reduce ((item, acc = 0) -> 
+    acc + (item.amount as Number default 0)
+)
+```
+
+### GroupBy
+```dataweave
+payload.items groupBy $.category
+```
+
+### FlatMap (Nested arrays)
+```dataweave
+payload.orders flatMap ((order) -> 
+    order.items map ((item) -> {
+        orderId: order.id,
+        itemId: item.id
+    })
+)
+```
+
+---
+
+## 10. DECISION MATRICES
+
+### Processing Strategy
+
+| Data Volume | Strategy |
+|-------------|----------|
+| < 1MB | Standard |
+| 1-10MB | Consider streaming |
+| > 10MB | Streaming required |
+
+### Function Selection
+
+| Need | Function |
+|------|----------|
+| Transform array | `map` |
+| Filter array | `filter` |
+| Aggregate | `reduce` |
+| Group | `groupBy` |
+| Flatten nested | `flatMap` |
+| Sort | `orderBy` |
+| Deduplicate | `distinctBy` |
+
+---
+
+## 11. STREAMLINED TOOLSET
+
+### Essential (4) - Core Workflow
+| Tool | Purpose | When |
+|------|---------|------|
+| `03-01-01_Enhanced_Suite.js` | **Primary orchestrator** - smart auto-routing | Phase 3 |
+| `03-01-02_Requirements_Analyzer.js` | Domain detection, function recommendations | Phase 1 |
+| `03-01-06_CLI_Validator.js` | Platform-aware DataWeave CLI execution | Phase 3 |
+| `03-01-16_Quality_Gates.js` | Hardcode detection, security checks | Phase 4 |
+
+### Supporting (4) - Used by Enhanced Suite
+| Tool | Purpose |
+|------|---------|
+| `03-01-04_Error_Detector.js` | Proactive error detection, reserved keywords |
+| `03-01-05_Security_Scanner.js` | Sensitive data detection, compliance |
+| `03-01-12_Output_Validator.js` | Deep JSON/XML comparison, accuracy |
+| `03-01-24_Performance_Analyzer.js` | MuleSoft performance optimization |
+
+### Specialized (5) - Scenario-Specific
+| Tool | Purpose |
+|------|---------|
+| `03-01-03_Scenario_Detector.js` | Auto-detect transformation scenario |
+| `03-01-07_Multi_Example_Validator.js` | Multiple input/output pairs |
+| `03-01-08_Multi_Input_Validator.js` | Multiple source files |
+| `03-01-13_Excel_Converter.js` | Excel → JSON/CSV |
+| `03-01-15_Mapping_Analyzer.js` | Mapping sheet analysis |
+
+### Infrastructure (4) - Core Dependencies
+| Tool | Purpose |
+|------|---------|
+| `03-01-18_Config_Manager.js` | Central configuration |
+| `03-01-19_Error_Handler.js` | Standardized error handling |
+| `03-01-20_Unified_Logger.js` | Logging framework |
+| `03-01-21_File_Utils.js` | Async file operations |
+
+---
+
+## DETAILED DOCUMENTATION
+
+For comprehensive reference material, see `lib/docs/`:
+
+| Document | Content |
+|----------|---------|
+| `functions-reference.md` | DataWeave functions |
+| `xml-processing.md` | Complete XML patterns |
+| `error-troubleshooting.md` | All error resolutions |
+| `cli-framework.md` | CLI tool documentation |
+| `quality-security.md` | Quality gates detail |
+| `enterprise-config.md` | Configuration patterns |
+| `excellence-focus.md` | Best practices |
+| `performance-optimization.md` | MuleSoft performance |
+
+---
+
+## EVIDENCE-BOUND OUTPUTS
+
+Every transformation decision must cite its source:
+
+| Decision Type | Evidence Format |
+|---------------|----------------|
+| Field mapping | "Mapped {source} → {target} — Input field at path '{path}'" |
+| Function choice | "Using {function} — Input structure requires '{reason}'" |
+| Safe default | "Applied default {value} — Field used in {arithmetic/boolean} context" |
+| Assumption | "⚠️ ASSUMPTION: {value} — Input/expected unclear on '{detail}'" |
+| Gap entry | "GAP-{N}: Unable to confirm {detail} (asked {X} times)" |
+
+> If you cannot cite a source, flag as assumption. Never present assumptions as confirmed decisions.
+
+---
+
+## TREE OF THOUGHT (Ambiguous Decisions)
+
+For decisions with multiple valid paths, evaluate branches before choosing:
+
+```
+<thinking>
+Branch A: [Option] — fits because [evidence]. Risk: [risk].
+Branch B: [Option] — fits because [evidence]. Risk: [risk].
+Best path: [chosen] — Confidence: {HIGH/MEDIUM/LOW}
+</thinking>
+```
+
+**Common ambiguous decisions in DataWeave:**
+- `map` vs `flatMap` for nested array transformation
+- `reduce` vs `groupBy` for aggregation patterns
+- Natural null vs `default 0` for numeric display fields
+- Single-pass vs multi-pass for complex transformations
+
+---
+
+## FEW-SHOT PATTERNS
+
+### Safe Defaults
+
+❌ BAD - Unsafe coercion:
+```dataweave
+var price = item.price as Number
+var total = price * quantity
+```
+
+✅ GOOD - Safe coercion:
+```dataweave
+var price = item.price as Number default 0
+var total = price * quantity
+```
+
+**Why**: `null as Number` causes runtime crash. `default 0` prevents it.
+
+### Import Efficiency
+
+❌ BAD - Import everything:
+```dataweave
+import * from dw::core::Arrays
+```
+
+✅ GOOD - Import only what you use:
+```dataweave
+import take from dw::core::Arrays
+```
+
+**Why**: Wildcard imports increase memory footprint and reduce clarity.

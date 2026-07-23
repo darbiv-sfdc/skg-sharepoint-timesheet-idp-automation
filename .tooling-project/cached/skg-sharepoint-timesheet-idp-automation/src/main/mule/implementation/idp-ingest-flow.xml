@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:idp-timesheet-130="http://www.mulesoft.org/schema/mule/idp-timesheet-130"
+	xmlns:vm="http://www.mulesoft.org/schema/mule/vm"
+	xmlns:sharepoint="http://www.mulesoft.org/schema/mule/sharepoint"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/sharepoint http://www.mulesoft.org/schema/mule/sharepoint/current/mule-sharepoint.xsd
+http://www.mulesoft.org/schema/mule/vm http://www.mulesoft.org/schema/mule/vm/current/mule-vm.xsd
+http://www.mulesoft.org/schema/mule/idp-timesheet-130 http://www.mulesoft.org/schema/mule/idp-timesheet-130/current/mule-idp-timesheet-130.xsd">
+
+	<!--
+		FLOW 1 - Scheduler / SharePoint Ingest
+		Runs on a cron schedule, lists PDFs in the Inbound folder, and for each file:
+		  1. moves it Inbound -> Processing (isolation / idempotency)
+		  2. reads its binary content
+		  3. submits it to MuleSoft IDP (PostDocumentAction)
+		  4. publishes an async tracking message (executionId + file paths) to the persistent VM queue
+		Per-file errors are isolated so one bad file does not abort the batch (poison-pill deflection).
+	-->
+	<flow name="scheduler-sharepoint-ingest-flow" doc:id="a1000001-0001-4001-8001-idpingestflow1">
+		<scheduler doc:name="Hourly Scheduler" doc:id="a1000001-0002-4001-8001-idpingestsched">
+			<scheduling-strategy>
+				<cron expression="${scheduler.cron}" />
+			</scheduling-strategy>
+		</scheduler>
+
+		<logger level="INFO" doc:name="Log Ingest Start" doc:id="a1000001-0003-4001-8001-idpingestlog01"
+			message="#['[IDP-INGEST] Scanning SharePoint folder: ' ++ p('sharepoint.path.source')]" />
+
+		<sharepoint:file-query doc:name="List Inbound Files" doc:id="a1000001-0004-4001-8001-idpingestquery" config-ref="Sharepoint_Sharepoint_online">
+			<sharepoint:query><![CDATA[#[p('sharepoint.path.source') ++ '?$select=Name,ServerRelativeUrl,Length,TimeLastModified']]]></sharepoint:query>
+		</sharepoint:file-query>
+
+		<foreach doc:name="For Each PDF (sequential)" doc:id="a1000001-0005-4001-8001-idpingestforeach"
+			collection="#[payload default [] filter ((file) -> lower((file.Name default '')) endsWith ('.' ++ p('sharepoint.filter.extension')))]">
+
+			<set-variable variableName="fileName" value="#[payload.Name]" doc:name="fileName" doc:id="a1000001-0006-4001-8001-idpingestvname" />
+			<set-variable variableName="sourceUrl" value="#[payload.ServerRelativeUrl]" doc:name="sourceUrl" doc:id="a1000001-0007-4001-8001-idpingestvsrc" />
+			<set-variable variableName="processingUrl" value="#[p('sharepoint.site.serverRelativePath') ++ '/' ++ p('sharepoint.path.processing') ++ '/' ++ vars.fileName]" doc:name="processingUrl" doc:id="a1000001-0008-4001-8001-idpingestvproc" />
+
+			<try doc:name="Isolate Per-File Errors" doc:id="a1000001-0009-4001-8001-idpingesttry">
+				<!-- 1. Move Inbound -> Processing -->
+				<sharepoint:file-move doc:name="Move to Processing" doc:id="a1000001-000a-4001-8001-idpingestmove"
+					config-ref="Sharepoint_Sharepoint_online"
+					fileServerRelativeUrl="#[vars.sourceUrl]"
+					newFileServerRelativeUrl="#[vars.processingUrl]"
+					flag="1" />
+
+				<!-- 2. Read the binary content of the moved file -->
+				<sharepoint:file-get-content doc:name="Get File Content" doc:id="a1000001-000b-4001-8001-idpingestget"
+					config-ref="Sharepoint_Sharepoint_online"
+					fileServerRelativeUrl="#[vars.processingUrl]"
+					target="fileContent" />
+
+				<!-- 3. Submit document to IDP (multipart/form-data upload) -->
+				<idp-timesheet-130:postdocumentactionexecution doc:name="IDP Submit Document" doc:id="a1000001-000c-4001-8001-idpingestpost"
+					config-ref="IDP___Timesheet___1_3_0_Config">
+					<idp-timesheet-130:postdocumentactionexecution-request-data><![CDATA[#[%dw 2.0
+output application/java
+---
+{
+	parts: {
+		file: {
+			headers: {
+				"Content-Disposition": {
+					name: "file",
+					filename: vars.fileName
+				},
+				"Content-Type": "application/pdf"
+			},
+			content: vars.fileContent
+		}
+	}
+}]]]></idp-timesheet-130:postdocumentactionexecution-request-data>
+				</idp-timesheet-130:postdocumentactionexecution>
+
+				<set-variable variableName="executionId" value="#[payload.id]" doc:name="executionId" doc:id="a1000001-000d-4001-8001-idpingestvexec" />
+
+				<!-- 4. Build async tracking message and publish to the persistent VM queue -->
+				<ee:transform doc:name="Build Tracking Message" doc:id="a1000001-000e-4001-8001-idpingesttx">
+					<ee:message>
+						<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+	executionId: vars.executionId,
+	fileName: vars.fileName,
+	processingUrl: vars.processingUrl,
+	pollCount: 0
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+
+				<vm:publish doc:name="Publish to Tracking Queue" doc:id="a1000001-000f-4001-8001-idpingestpub"
+					config-ref="VM_Config" queueName="${vm.queue.name}" />
+
+				<logger level="INFO" doc:name="Log Submitted" doc:id="a1000001-0010-4001-8001-idpingestlog02"
+					message="#['[IDP-INGEST] Submitted ' ++ vars.fileName as String ++ ' -&gt; executionId=' ++ (vars.executionId default 'UNKNOWN')]" />
+
+				<error-handler>
+					<on-error-continue enableNotifications="true" logException="true" doc:name="Deflect Failed File" doc:id="a1000001-0011-4001-8001-idpingesterr" type="ANY">
+						<logger level="ERROR" doc:name="Log Ingest Failure" doc:id="a1000001-0012-4001-8001-idpingestlog03"
+							message="#['[IDP-INGEST][ERROR] Failed to process ' ++ (vars.fileName default 'unknown') ++ ' : ' ++ (error.description default '')]" />
+						<!-- Best-effort move to Error folder; source may be in Inbound or Processing depending on where it failed -->
+						<try doc:name="Best-Effort Move to Error" doc:id="a1000001-0013-4001-8001-idpingesterrtry">
+							<sharepoint:file-move doc:name="Move to Error" doc:id="a1000001-0014-4001-8001-idpingesterrmove"
+								config-ref="Sharepoint_Sharepoint_online"
+								fileServerRelativeUrl="#[vars.processingUrl]"
+								newFileServerRelativeUrl="#[p('sharepoint.site.serverRelativePath') ++ '/' ++ p('sharepoint.path.error') ++ '/' ++ vars.fileName]"
+								flag="1" />
+							<error-handler>
+								<on-error-continue doc:name="Ignore Move Failure" doc:id="a1000001-0015-4001-8001-idpingesterrignore" type="ANY">
+									<logger level="WARN" doc:name="Log Move-to-Error Failure" doc:id="a1000001-0016-4001-8001-idpingestlog04"
+										message="#['[IDP-INGEST][WARN] Could not move failed file to Error folder: ' ++ (vars.fileName default 'unknown')]" />
+								</on-error-continue>
+							</error-handler>
+						</try>
+					</on-error-continue>
+				</error-handler>
+			</try>
+		</foreach>
+	</flow>
+</mule>

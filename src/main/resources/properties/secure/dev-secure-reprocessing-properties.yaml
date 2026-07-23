@@ -1,0 +1,7 @@
+anypointMq:
+  clientId:  "![]"
+  clientSecret: "![]"
+  
+credentials:
+  clientId:  ""
+  clientSecret: ""

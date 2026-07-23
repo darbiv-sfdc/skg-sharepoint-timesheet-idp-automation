@@ -1,0 +1,270 @@
+{
+  "description": "🧞‍♂️ R-GENIE PRODUCT-PRICING-API TEST DATA REFERENCE",
+  "source": "Real test data patterns from working product-pricing-api project",
+  "status": "PRODUCTION-VALIDATED - Proven to work with zero XML/schema errors",
+  
+  "test_data_patterns": {
+    
+    "api_input_patterns": {
+      "get_products_input": {
+        "description": "API endpoint input with query parameters",
+        "example": {
+          "currencyCode": "EUR",
+          "region": "EUROPE",
+          "productCategory": "STANDARD"
+        },
+        "usage": "classpath://test-data/api-get-products-input.json"
+      },
+      
+      "post_products_input": {
+        "description": "API endpoint input for product creation",
+        "example": {
+          "productName": "Test Product",
+          "productCode": "PROD123",
+          "price": 100.00,
+          "currency": "USD",
+          "category": "ELECTRONICS",
+          "description": "Test product for MUnit validation"
+        },
+        "usage": "classpath://test-data/api-post-products-input.json"
+      },
+      
+      "put_products_input": {
+        "description": "API endpoint input for product updates",
+        "example": {
+          "productId": "PROD123",
+          "productName": "Updated Test Product",
+          "price": 120.00,
+          "currency": "USD",
+          "lastModified": "2025-09-26T10:00:00Z"
+        },
+        "usage": "classpath://test-data/api-put-products-input.json"
+      }
+    },
+    
+    "salesforce_mock_responses": {
+      "products_query_response": {
+        "description": "Salesforce SOQL query response for products",
+        "example": [
+          {
+            "Id": "a0X1234567890ABC",
+            "Name": "Premium Headphones",
+            "ProductCode": "PHDPNS001",
+            "ListPrice": 299.99,
+            "Family": "ELECTRONICS",
+            "IsActive": true,
+            "Description": "High-quality wireless headphones"
+          },
+          {
+            "Id": "a0X1234567890DEF", 
+            "Name": "Wireless Speaker",
+            "ProductCode": "WSPKR002",
+            "ListPrice": 149.99,
+            "Family": "ELECTRONICS",
+            "IsActive": true,
+            "Description": "Portable Bluetooth speaker"
+          }
+        ],
+        "usage": "classpath://test-data/salesforce-products-response.json"
+      },
+      
+      "create_success_response": {
+        "description": "Salesforce create operation success response",
+        "example": [
+          {
+            "id": "a0X1234567890NEW",
+            "success": true,
+            "created": true,
+            "errors": []
+          }
+        ],
+        "usage": "classpath://test-data/salesforce-create-success-response.json"
+      },
+      
+      "update_success_response": {
+        "description": "Salesforce update operation success response", 
+        "example": [
+          {
+            "id": "a0X1234567890UPD",
+            "success": true,
+            "created": false,
+            "errors": []
+          }
+        ],
+        "usage": "classpath://test-data/salesforce-update-success-response.json"
+      }
+    },
+    
+    "http_mock_responses": {
+      "currency_rates_response": {
+        "description": "External currency API response",
+        "example": {
+          "success": true,
+          "timestamp": 1695729600,
+          "base": "USD",
+          "date": "2025-09-26",
+          "rates": {
+            "EUR": 0.85,
+            "GBP": 0.73,
+            "JPY": 110.25,
+            "CAD": 1.25,
+            "AUD": 1.35
+          }
+        },
+        "usage": "classpath://test-data/currency-rates-response.json"
+      }
+    },
+    
+    "business_flow_inputs": {
+      "create_product_input": {
+        "description": "Input for create-product business flow",
+        "example": {
+          "productRequest": {
+            "name": "Test Product for Creation",
+            "code": "TESTCREATE001", 
+            "price": 99.99,
+            "currency": "USD",
+            "category": "TEST",
+            "description": "Product created through MUnit test",
+            "isActive": true
+          },
+          "metadata": {
+            "requestId": "REQ123456",
+            "timestamp": "2025-09-26T10:00:00Z",
+            "source": "MUNIT_TEST"
+          }
+        },
+        "usage": "classpath://test-data/create-product-input.json"
+      },
+      
+      "get_all_products_input": {
+        "description": "Input for get-all-products business flow",
+        "example": {
+          "filters": {
+            "category": "ELECTRONICS",
+            "isActive": true,
+            "priceRange": {
+              "min": 0,
+              "max": 1000
+            }
+          },
+          "pagination": {
+            "limit": 50,
+            "offset": 0
+          },
+          "currencyCode": "EUR"
+        },
+        "usage": "classpath://test-data/get-all-products-input.json"
+      },
+      
+      "update_product_input": {
+        "description": "Input for update-product business flow",
+        "example": {
+          "productId": "PROD123",
+          "updates": {
+            "name": "Updated Product Name",
+            "price": 199.99,
+            "description": "Updated description through MUnit test"
+          },
+          "metadata": {
+            "requestId": "UPD789012",
+            "timestamp": "2025-09-26T11:00:00Z",
+            "updatedBy": "MUNIT_TEST"
+          }
+        },
+        "usage": "classpath://test-data/update-product-input.json"
+      }
+    },
+    
+    "objectstore_mock_responses": {
+      "retrieve_all_response": {
+        "description": "ObjectStore retrieve-all operation response",
+        "example": {
+          "cache_entry_1": {
+            "productId": "PROD001",
+            "cachedAt": "2025-09-26T09:00:00Z",
+            "data": {"name": "Cached Product 1", "price": 50.00}
+          },
+          "cache_entry_2": {
+            "productId": "PROD002", 
+            "cachedAt": "2025-09-26T09:15:00Z",
+            "data": {"name": "Cached Product 2", "price": 75.00}
+          }
+        },
+        "usage": "classpath://test-data/objectstore-retrieve-response.json"
+      }
+    },
+    
+    "salesforce_product_data": {
+      "create_data": {
+        "description": "Salesforce product data for create operations",
+        "example": [
+          {
+            "Name": "MUnit Test Product",
+            "ProductCode": "MUNIT001",
+            "Family": "TEST_CATEGORY",
+            "IsActive": true,
+            "Description": "Product created via MUnit test automation"
+          }
+        ],
+        "usage": "classpath://test-data/salesforce-product-create-data.json"
+      }
+    }
+  },
+  
+  "file_naming_conventions": {
+    "api_inputs": "api-{operation}-{resource}-input.json",
+    "salesforce_responses": "salesforce-{operation}-{status}-response.json", 
+    "http_responses": "{service}-{operation}-response.json",
+    "business_flows": "{flow-name}-input.json",
+    "mock_data": "{connector}-{resource}-data.json",
+    "examples": [
+      "api-get-products-input.json",
+      "salesforce-create-success-response.json",
+      "currency-rates-response.json",
+      "create-product-input.json",
+      "salesforce-product-create-data.json"
+    ]
+  },
+  
+  "proven_patterns": {
+    "always_use": [
+      "File-based test data with readUrl()",
+      "Realistic business data structures",
+      "Consistent naming conventions",
+      "Complete JSON structures (no partial data)",
+      "Proper data types (strings, numbers, booleans)",
+      "Metadata fields for traceability"
+    ],
+    
+    "never_use": [
+      "Inline DataWeave objects in XML",
+      "Hardcoded values in test files",
+      "Incomplete or partial data structures",
+      "Generic or non-descriptive data",
+      "Missing required fields"
+    ],
+    
+    "success_factors": [
+      "Data matches actual business scenarios",
+      "Proper JSON formatting and validation", 
+      "Consistent field naming conventions",
+      "Realistic value ranges and types",
+      "Complete object hierarchies",
+      "Error-free JSON syntax"
+    ]
+  },
+  
+  "integration_with_munit": {
+    "payload_setting": "value='#[readUrl(\"classpath://test-data/filename.json\")]'",
+    "variable_setting": "<munit:variable key=\"varName\" value='#[readUrl(\"classpath://test-data/filename.json\")]'/>",
+    "mock_responses": "<munit-tools:payload value='#[readUrl(\"classpath://test-data/filename.json\")]'/>",
+    "assertion_expectations": "expected='#[readUrl(\"classpath://test-data/filename.json\")]'",
+    
+    "directory_structure": {
+      "location": "src/test/resources/test-data/",
+      "organization": "Organized by operation or component type",
+      "naming": "Descriptive and consistent naming"
+    }
+  }
+}

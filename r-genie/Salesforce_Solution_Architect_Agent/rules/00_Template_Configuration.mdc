@@ -1,0 +1,278 @@
+---
+description: Salesforce Solution Architect Agent - Template Configuration Guide
+author: Cheppali Shaik Sohail
+version: 1.0.0
+alwaysApply: false
+tags: [template, configuration, salesforce, solution-architecture]
+appliesTo: [salesforce-solution-architecture, sfdc-integration-design]
+priority: HIGH
+---
+
+# TEMPLATE CONFIGURATION
+
+> **Phase 0 Reference** — Template-First / Per-Phase Write Contract (Pattern #20 v2)
+> **Loaded by**: Phase 0 of `@01_Phase_Orchestration.mdc` to create the deliverable skeleton
+
+---
+
+## TEMPLATE LOCATION
+
+```
+r-genie/Salesforce_Solution_Architect_Agent/
+├── templates/
+│   ├── solution-architecture-style.yaml      ← This file's structure source
+│   └── solution-architecture-template-guide.md ← Section-by-section content guide
+├── examples/
+│   └── 01_fnol_insurance_guidewire/
+│       └── solution_architecture_fnol_guidewire.md  ← CANONICAL ANCHOR
+└── rules/
+    └── 00_Template_Configuration.mdc         ← THIS FILE
+```
+
+**Verbosity benchmark**: Always benchmark output length and structure against `examples/01_fnol_insurance_guidewire/solution_architecture_fnol_guidewire.md`. NOT against hard line caps. See `@02_Guidance.mdc` Example-Anchored Conciseness section.
+
+---
+
+## PRE-GENERATION CHECKLIST (MANDATORY)
+
+Before generating ANY content (must complete in Phase 0 BEFORE skeleton creation):
+
+- [ ] `templates/solution-architecture-style.yaml` read in full
+- [ ] `templates/solution-architecture-template-guide.md` read in full
+- [ ] `examples/01_fnol_insurance_guidewire/` example reviewed (verbosity anchor)
+- [ ] All 12 sections identified and confirmed against template
+- [ ] Section markers (`<!-- SECTION: ... -->`) prepared for skeleton
+- [ ] Output filename slug derived from scenario (e.g., `fnol-insurance-guidewire`)
+- [ ] Skeleton write path confirmed: `project/output_salesforce_solution_architect/{scenario-slug}-solution-architecture.md`
+
+**If ANY check fails → DO NOT PROCEED → Fix first.** Skipping the checklist breaks Pattern #20 v2 — later phases will have no markers to `edit` into and will fall back to chat accumulation (Anti-Pattern, see `@03_Mandatory_Stop_Points.mdc`).
+
+---
+
+## TEMPLATE STRUCTURE — 12 Sections (Fixed Order, All Mandatory)
+
+```yaml
+deliverable:
+  filename_pattern: "{scenario-slug}-solution-architecture.md"
+  output_dir: "project/output_salesforce_solution_architect/"
+  verbosity_anchor: "examples/01_fnol_insurance_guidewire/solution_architecture_fnol_guidewire.md"
+  target_lines: "400-700 (Medium-form HLD; benchmark against anchor)"
+
+structure:
+  # ─── MAIN SECTIONS (all 12 mandatory, fixed order) ───
+  sections:
+    - id: 1
+      name: "Business & Technical Context"
+      marker: "<!-- SECTION: business-technical-context -->"
+      include: true             # NEVER false — mandatory
+      written_in_phase: 0
+      written_via: "edit (replace marker placeholder block)"
+      content_summary: "Scenario, business drivers, stakeholders, success criteria, in-scope/out-of-scope, key NFRs, regulatory context"
+      sub_stops: 0
+
+    - id: 2
+      name: "Recommended Architecture"
+      marker: "<!-- SECTION: recommended-architecture -->"
+      include: true
+      written_in_phase: 1
+      written_via: "edit"
+      content_summary: "SFDC clouds, integration platform, key components, design patterns, with TRADE-OFF TABLE for major decisions"
+      sub_stops: 0
+
+    - id: 3
+      name: "Architecture Diagram"
+      marker: "<!-- SECTION: architecture-diagram -->"
+      include: true
+      written_in_phase: 2
+      written_via: "edit (insert Mermaid block)"
+      content_summary: "Mermaid flowchart/graph diagram per @02_Guidance.mdc Mermaid standards (linear curve, <br/> not \\n, styles at end)"
+      sub_stops: 0
+
+    - id: 4
+      name: "Data Model Design"
+      marker: "<!-- SECTION: data-model-design -->"
+      include: true
+      written_in_phase: 3
+      written_via: "edit"
+      content_summary: "Entities, fields, relationships, FSC/Industry Cloud objects vs custom; record types, sharing model"
+      sub_stops: 1                  # Phase 3 sub-stop 4-a
+
+    - id: 5
+      name: "Data Model Diagram (Lucidchart Instructions)"
+      marker: "<!-- SECTION: data-model-diagram -->"
+      include: true
+      written_in_phase: 3
+      written_via: "edit"
+      content_summary: "Step-by-step Lucidchart create-document instructions: shapes, entities, relationships, cardinality. NOT Mermaid (data model viz handled in Lucidchart per agent convention)"
+      sub_stops: 1                  # Phase 3 sub-stop 4-b
+
+    - id: 6
+      name: "Integration & Event Pattern"
+      marker: "<!-- SECTION: integration-event-pattern -->"
+      include: true
+      written_in_phase: 4
+      written_via: "edit"
+      content_summary: "Async vs sync vs event-driven, Platform Events / CDC / Pub-Sub API, message contracts, retry/replay, dead-letter handling"
+      sub_stops: 0
+
+    - id: 7
+      name: "Automation & Orchestration"
+      marker: "<!-- SECTION: automation-orchestration -->"
+      include: true
+      written_in_phase: 5
+      written_via: "edit"
+      content_summary: "Flows, triggers, batch jobs, Async Apex, Queueable, scheduled jobs, orchestration patterns (Saga / Choreography / Orchestration)"
+      sub_stops: 0
+
+    - id: 8
+      name: "Security & Compliance"
+      marker: "<!-- SECTION: security-compliance -->"
+      include: true
+      written_in_phase: 6
+      written_via: "edit"
+      content_summary: "Auth model (SSO, OAuth, JWT), encryption (Shield, field-level), PII/PHI classification, sharing/visibility, HIPAA/PCI/GDPR/SOX posture, audit logging"
+      sub_stops: 0
+
+    - id: 9
+      name: "Scalability & Performance"
+      marker: "<!-- SECTION: scalability-performance -->"
+      include: true
+      written_in_phase: 7
+      written_via: "edit"
+      content_summary: "Sizing math with EXPLICIT ARITHMETIC (TPS sustained + peak), governor limits, bulk patterns, caching, async offload, queue depth"
+      sub_stops: 1                  # Phase 7 sub-stop 8-a; numeric verification required
+      numeric_verification_required: true
+
+    - id: 10
+      name: "Reusability & Productization"
+      marker: "<!-- SECTION: reusability-productization -->"
+      include: true
+      written_in_phase: 7
+      written_via: "edit"
+      content_summary: "Reusable accelerators (>=3 named), unlocked packages, managed package potential, multi-org/multi-tenant considerations"
+      sub_stops: 1                  # Phase 7 sub-stop 8-b
+
+    - id: 11
+      name: "Risks & Mitigations"
+      marker: "<!-- SECTION: risks-mitigations -->"
+      include: true
+      written_in_phase: 8
+      written_via: "edit"
+      content_summary: "Risk register table (>=5 rows): risk, likelihood, impact, mitigation, owner"
+      sub_stops: 1                  # Phase 8 sub-stop 9-a
+
+    - id: 12
+      name: "References"
+      marker: "<!-- SECTION: references -->"
+      include: true
+      written_in_phase: 8
+      written_via: "edit"
+      content_summary: "SFDC Trailhead, official docs, whitepapers, vendor docs (Guidewire/MuleSoft/etc.) — credible sources only, no marketing pages"
+      sub_stops: 1                  # Phase 8 sub-stop 9-b
+
+  # ─── CONSOLIDATE & POLISH (Phase 8 final mode) ───
+  consolidate_phase:
+    phase: 8
+    mode: "CONSOLIDATE_AND_POLISH"
+    tasks:
+      - "Re-read full deliverable file"
+      - "Cross-section consistency edits (entity names, terminology, vendor naming)"
+      - "Replace any residual placeholders left by skipped/incomplete phases"
+      - "Run validate-solution-doc.js (mandatory script)"
+      - "Apply script-flagged fixes"
+      - "Final style + length self-check against verbosity_anchor"
+      - "Verify all 12 section markers replaced (no <!-- SECTION: ... --> remaining as standalone)"
+    forbidden:
+      - "Regenerating sections already written and approved in Phases 0-7"
+      - "Adding new content not previously approved"
+```
+
+---
+
+## TEMPLATE-DRIVEN RULES
+
+### Section Marker Convention (Pattern #20 v2 mandatory)
+
+Every section MUST be created in Phase 0 skeleton with this exact marker pattern:
+
+```markdown
+## {N}. {Section Name}
+
+<!-- SECTION: {kebab-case-id} -->
+_{pending Phase N}_
+```
+
+When the corresponding phase writes the section, the agent uses targeted `edit`:
+- `old_string`: the complete `<!-- SECTION: ... -->\n_{pending Phase N}_` block
+- `new_string`: the approved section prose (no marker — marker is consumed)
+
+After all writes, the deliverable contains zero `<!-- SECTION: ... -->` markers as standalone (they are replaced by content). Validation script asserts this.
+
+### Per-Section Generation Order (locked)
+
+The agent MUST generate sections in the order Phase 0 → Phase 8 (Section 1 → 12). NEVER write Section 7 before Section 6, even if the user asks — earlier sections inform later ones (Data Model in Sec 4 informs Integration entities in Sec 6 and Automation triggers in Sec 7). If the user requests reordering, decline and explain dependency.
+
+### Section Inclusion Flags
+
+ALL 12 sections have `include: true` — fixed template, no opt-out. The `include` field exists in the YAML for forward-compatibility (future variants like "abbreviated" or "extended" templates may set some to `false`), but for v1.0 the agent treats every section as mandatory.
+
+### Verbosity Discipline
+
+Each section's verbosity is benchmarked against the corresponding section in the canonical anchor (`examples/01_fnol_insurance_guidewire/...md`). Structural budgets (preferred over hard line caps):
+
+| Section | Structural Budget |
+|---------|-------------------|
+| 1. Business & Technical Context | 4-7 sentences per subsection (drivers, scope, NFRs, regulatory) |
+| 2. Recommended Architecture | 1 prose paragraph + 1 trade-off table per major decision |
+| 3. Architecture Diagram | 1 Mermaid block + 3-6 sentences explaining flow |
+| 4. Data Model Design | Entity table + relationship table; 1-2 sentence per entity |
+| 5. Data Model Diagram | Numbered Lucidchart steps (10-20 steps typical) |
+| 6. Integration & Event Pattern | 1 trade-off table + message contract block + 5-10 sentence rationale |
+| 7. Automation & Orchestration | Component table + 1-2 sentence per component |
+| 8. Security & Compliance | Posture table (per-control) + compliance summary table |
+| 9. Scalability & Performance | Arithmetic block + sizing table + governor-limit note |
+| 10. Reusability & Productization | Numbered list of >=3 accelerators + 2-3 sentence each |
+| 11. Risks & Mitigations | Risk register table (>=5 rows) |
+| 12. References | Bulleted citation list (URL + 1-line description) |
+
+### Two Special Diagram Conventions
+
+| Section | Diagram Tool | Why Different |
+|---------|--------------|---------------|
+| Section 3 (Architecture) | **Mermaid** (in-doc) | Architecture diagrams are read in code review, render in GitHub/Cursor, version-controlled with the doc |
+| Section 5 (Data Model) | **Lucidchart instructions** (text steps) | Data models often need stakeholder collaboration, color coding, multi-page layouts that Mermaid struggles with; Lucidchart is the architect-team standard |
+
+Do NOT generate a Mermaid data model diagram — convention is Lucidchart instructions in Section 5.
+
+---
+
+## FILENAME SLUG RULES
+
+The agent derives `{scenario-slug}` from the scenario in Phase 0:
+- Lowercase, hyphen-separated
+- Includes domain + integration partner: `fnol-insurance-guidewire`, `loyalty-mulesoft-sap`, `service-cloud-genesys`
+- Max 50 chars; if longer, truncate at last hyphen before 50
+
+Examples:
+- "FNOL on Salesforce Insurance Cloud + Guidewire" → `fnol-insurance-guidewire`
+- "Service Cloud → SAP CDC integration" → `service-cloud-sap-cdc`
+- "Loyalty + MuleSoft + Marketing Cloud" → `loyalty-mulesoft-marketing-cloud`
+
+---
+
+## QUICK REFERENCE
+
+| Need | Reference |
+|------|-----------|
+| Main entry, RISEN, output structure | `@Salesforce_Solution_Architect.mdc` |
+| Phase workflow, state machine, P20v2 contract | `@01_Phase_Orchestration.mdc` |
+| Section content guidance, decision matrices, few-shots | `@02_Guidance.mdc` |
+| Stop points, self-check, anti-patterns | `@03_Mandatory_Stop_Points.mdc` |
+| Style YAML (this file's source) | `templates/solution-architecture-style.yaml` |
+| Section content guide | `templates/solution-architecture-template-guide.md` |
+| Verbosity anchor (canonical example) | `examples/01_fnol_insurance_guidewire/solution_architecture_fnol_guidewire.md` |
+
+---
+
+> 🧞‍♂️ R-GENIE Agent Framework by Cheppali Shaik Sohail
+> ✍️ Agent Author: Cheppali Shaik Sohail | v1.0.0 | 2026-05-13

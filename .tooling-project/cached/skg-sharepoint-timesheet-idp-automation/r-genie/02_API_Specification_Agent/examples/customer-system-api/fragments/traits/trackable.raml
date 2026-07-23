@@ -1,0 +1,14 @@
+#%RAML 1.0 Trait
+
+description: Request tracking headers
+headers:
+  X-Correlation-Id?:
+    type: string
+    description: Correlation ID for request tracing
+    example: "corr-abc123-xyz789"
+responses:
+  200:
+    headers:
+      X-Correlation-Id:
+        type: string
+        description: Correlation ID echoed back

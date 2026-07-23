@@ -1,0 +1,76 @@
+{
+  "projectName": "SKG IDP Document Automation",
+  "applicationName": "idp-document-automation-template",
+  "documentFile": "skg-idp-document-automation-technical-design.md",
+  "currentPhase": 5,
+  "phases": {
+    "phase0": {
+      "status": "COMPLETED",
+      "checkpoints": {
+        "templatesRead": true,
+        "examplesRead": true,
+        "skeletonCreated": true,
+        "requirementsDetected": true
+      }
+    },
+    "phase1": {
+      "status": "COMPLETED",
+      "checkpoints": {
+        "requirementsIdentified": true,
+        "userApproved": true,
+        "overviewSectionWritten": true,
+        "volume": "50 pdf/day, ~200KB",
+        "sharepointAuth": "oauth-client-credentials certificate (JKS)",
+        "idpIntegration": "IDP Connector",
+        "schedulerFrequency": "hourly"
+      }
+    },
+    "phase2": {
+      "status": "COMPLETED",
+      "checkpoints": {
+        "architectureApproved": "single-app scheduler + persistent VM queue subscriber",
+        "connectorSummaryWritten": true,
+        "connectorPatternDiagram": true,
+        "flowTables": 2,
+        "sequenceDiagrams": 2
+      }
+    },
+    "phase3": {
+      "status": "COMPLETED",
+      "checkpoints": {
+        "dataSampleConfirmed": true,
+        "mappingRule": "flatten one row per timeSheetData line-item, header repeated",
+        "csvFilename": "idp-results-{documentName}.csv",
+        "emptyLineItems": "emit one header-only row",
+        "fieldMappingWritten": true,
+        "errorHandlingWritten": true,
+        "errorHandlingDiagram": true
+      }
+    },
+    "phase4": {
+      "status": "COMPLETED",
+      "checkpoints": {
+        "essentialDiagramsVerified": 3,
+        "coreSectionsVerified": 5,
+        "statusBannerUpdated": true
+      }
+    },
+    "phase5": {
+      "status": "COMPLETED",
+      "checkpoints": {
+        "supplementarySections": ["Security Considerations", "Performance & Monitoring", "Configuration Files", "Additional Diagrams"],
+        "deploymentGuideOmitted": true,
+        "configFilesGenerated": ["config/idp-automation-properties.yaml", "config/idp-automation-secure-properties.yaml"]
+      }
+    }
+  },
+  "inputFiles": [
+    "project/input_01_design/SKG - Solution Design Document_ Self-Contained IDP Automation Utility.md"
+  ],
+  "outputFiles": [
+    "project/output_01_design/skg-idp-document-automation-technical-design.md",
+    "project/output_01_design/config/idp-automation-properties.yaml",
+    "project/output_01_design/config/idp-automation-secure-properties.yaml"
+  ],
+  "lastUpdated": "2026-07-09"
+}

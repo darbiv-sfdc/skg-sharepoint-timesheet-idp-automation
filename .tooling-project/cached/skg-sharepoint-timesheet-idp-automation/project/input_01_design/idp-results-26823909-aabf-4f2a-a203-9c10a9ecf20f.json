@@ -1,0 +1,230 @@
+{
+  "id": "26823909-aabf-4f2a-a203-9c10a9ecf20f",
+  "documentName": "Time Sheets - T I Division - Wages Staff - 18 to 24 May 2026_Part4.pdf",
+  "status": "SUCCEEDED",
+  "fields": {
+    "lastName": {
+      "value": "Tafane"
+    },
+    "firstName": {
+      "value": "Siyamamkela"
+    },
+    "timeSheet": {
+      "value": "True"
+    },
+    "rawText": {
+      "value": null
+    },
+    "dateTo": {
+      "value": "20260522"
+    },
+    "fullName": {
+      "value": "Siyamamkela Tafane"
+    },
+    "employeeID": {
+      "value": "KW3404"
+    },
+    "dateFrom": {
+      "value": "20260518"
+    },
+    "tableStructure": {
+      "value": "True"
+    }
+  },
+  "tables": {
+    "timeSheetData": [
+      {
+        "sunTime": {
+          "value": null
+        },
+        "tueTime": {
+          "value": null
+        },
+        "wedTime": {
+          "value": null
+        },
+        "projectCode": {
+          "value": "B11464"
+        },
+        "friTime": {
+          "value": null
+        },
+        "tradeCode": {
+          "value": "B01000"
+        },
+        "description": {
+          "value": "AMALINDA 91567"
+        },
+        "thurTime": {
+          "value": null
+        },
+        "monTime": {
+          "value": "0700 - 1100"
+        },
+        "satTime": {
+          "value": null
+        }
+      },
+      {
+        "sunTime": {
+          "value": null
+        },
+        "tueTime": {
+          "value": "0700 - 1400"
+        },
+        "wedTime": {
+          "value": null
+        },
+        "projectCode": {
+          "value": "B11479"
+        },
+        "friTime": {
+          "value": null
+        },
+        "tradeCode": {
+          "value": "B01000"
+        },
+        "description": {
+          "value": "AMALINDA 91568"
+        },
+        "thurTime": {
+          "value": null
+        },
+        "monTime": {
+          "value": null
+        },
+        "satTime": {
+          "value": null
+        }
+      },
+      {
+        "sunTime": {
+          "value": null
+        },
+        "tueTime": {
+          "value": null
+        },
+        "wedTime": {
+          "value": "0700 - 1300"
+        },
+        "projectCode": {
+          "value": "B11143"
+        },
+        "friTime": {
+          "value": "0700 - 1400"
+        },
+        "tradeCode": {
+          "value": "B01000"
+        },
+        "description": {
+          "value": "AMALINDA 91624"
+        },
+        "thurTime": {
+          "value": "0700 - 1400"
+        },
+        "monTime": {
+          "value": null
+        },
+        "satTime": {
+          "value": null
+        }
+      },
+      {
+        "sunTime": {
+          "value": null
+        },
+        "tueTime": {
+          "value": "1100 - 1400"
+        },
+        "wedTime": {
+          "value": "1100 - 1500"
+        },
+        "projectCode": {
+          "value": "B11266"
+        },
+        "friTime": {
+          "value": null
+        },
+        "tradeCode": {
+          "value": "B01000"
+        },
+        "description": {
+          "value": "AMALINDA 91643"
+        },
+        "thurTime": {
+          "value": "1100 - 1500"
+        },
+        "monTime": {
+          "value": null
+        },
+        "satTime": {
+          "value": null
+        }
+      },
+      {
+        "sunTime": {
+          "value": null
+        },
+        "tueTime": {
+          "value": "1400 - 1700"
+        },
+        "wedTime": {
+          "value": "1400 - 1700"
+        },
+        "projectCode": {
+          "value": "B11474"
+        },
+        "friTime": {
+          "value": null
+        },
+        "tradeCode": {
+          "value": "B01000"
+        },
+        "description": {
+          "value": "AMALINDA 9157/"
+        },
+        "thurTime": {
+          "value": "1400 - 1700"
+        },
+        "monTime": {
+          "value": null
+        },
+        "satTime": {
+          "value": null
+        }
+      },
+      {
+        "sunTime": {
+          "value": null
+        },
+        "tueTime": {
+          "value": null
+        },
+        "wedTime": {
+          "value": null
+        },
+        "projectCode": {
+          "value": "B11208"
+        },
+        "friTime": {
+          "value": null
+        },
+        "tradeCode": {
+          "value": "B01000"
+        },
+        "description": {
+          "value": "AMALINDA 91646"
+        },
+        "thurTime": {
+          "value": "1700 - 1700"
+        },
+        "monTime": {
+          "value": null
+        },
+        "satTime": {
+          "value": null
+        }
+      }
+    ]
+  }
+}

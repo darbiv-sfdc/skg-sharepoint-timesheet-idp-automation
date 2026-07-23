@@ -1,0 +1,14 @@
+project.groupId: ${project.groupId}
+app:
+  specification:
+    artifactId: ${app.specification.artifactId}
+    version: ${app.specification.version}
+
+application:
+  layer: "System BO"
+
+#Show layer in Anypoint Visualizer
+anypoint:
+  platform:
+    visualizer:
+      layer: "System BO"

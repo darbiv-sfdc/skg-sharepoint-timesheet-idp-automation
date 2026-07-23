@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:sharepoint="http://www.mulesoft.org/schema/mule/sharepoint"
+	xmlns:apikit="http://www.mulesoft.org/schema/mule/mule-apikit"
+	xmlns:api-gateway="http://www.mulesoft.org/schema/mule/api-gateway"
+	xmlns:secure-properties="http://www.mulesoft.org/schema/mule/secure-properties"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns:vm="http://www.mulesoft.org/schema/mule/vm"
+	xmlns:idp-timesheet-130="http://www.mulesoft.org/schema/mule/idp-timesheet-130"
+	xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="
+http://www.mulesoft.org/schema/mule/mule-apikit http://www.mulesoft.org/schema/mule/mule-apikit/current/mule-apikit.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/secure-properties http://www.mulesoft.org/schema/mule/secure-properties/current/mule-secure-properties.xsd
+http://www.mulesoft.org/schema/mule/api-gateway http://www.mulesoft.org/schema/mule/api-gateway/current/mule-api-gateway.xsd
+http://www.mulesoft.org/schema/mule/sharepoint http://www.mulesoft.org/schema/mule/sharepoint/current/mule-sharepoint.xsd
+http://www.mulesoft.org/schema/mule/vm http://www.mulesoft.org/schema/mule/vm/current/mule-vm.xsd
+http://www.mulesoft.org/schema/mule/idp-timesheet-130 http://www.mulesoft.org/schema/mule/idp-timesheet-130/current/mule-idp-timesheet-130.xsd">
+	<!-- Load Property Files -->
+	<configuration-properties
+		doc:name="ConfigurationPropertiesForCommon"
+		doc:id="346154e3-1504-4c6e-9197-980ca950495a"
+		file="properties/common-properties.yaml" />
+
+	<configuration-properties
+		doc:name="ConfigurationPropertiesForEnv"
+		doc:id="a4da05a1-8238-4a2f-a29a-d746bcca383a"
+		file="properties/${mule.env}-properties.yaml" />
+
+	<!-- HTTP Listener Configuration -->
+	<http:listener-config name="HttpListenerConfig" doc:name="HTTP Listener config" doc:id="0f00b737-ca7a-4b5c-8e55-3df7c864264e">
+		<http:listener-connection host="0.0.0.0" port="${http.port}" />
+	</http:listener-config>
+
+	<!-- APIkit Configuration -->
+	<apikit:config name="api-config" api="resource::dfb7e975-c094-4e2b-8895-a7742dcadd1d:skg-idp-automation-template-papi:1.0.0:raml:zip:skg-idp-automation-template-papi.raml" outboundHeadersMapName="outboundHeaders" httpStatusVarName="httpStatus" />
+
+	<!-- HTTP Request Configs for Health Checks -->
+	<http:request-config
+		name="HttpHealthCheckRequestConfig"
+		doc:name="HTTP Request configuration"
+		doc:id="95b3d431-7ac4-4a9e-8107-715a964ed789"
+		basePath="#[payload.basepath]"
+		sendCorrelationId="ALWAYS">
+		<http:request-connection
+			host="#[payload.host]"
+			port="#[payload.port]" />
+	</http:request-config>
+
+	<http:request-config
+		name="HttpsHealthCheckRequestConfig"
+		doc:name="HTTPS Request configuration"
+		doc:id="cb65eb28-27b1-4081-b65d-11eab2f3f583"
+		basePath="#[payload.basepath]"
+		sendCorrelationId="ALWAYS">
+		<http:request-connection
+			protocol="HTTPS"
+			host="#[payload.host]"
+			port="#[payload.port]" />
+	</http:request-config>
+
+	<!-- IMPORT HEALTH CHECK -->
+	<import doc:name="ImportHealthCheck" doc:id="a682fdba-5a6e-4f90-824f-a4c1d66e8dc4" file="health-check.xml" />
+
+	<!-- IMPORT COMMON ERROR HANDLING -->
+	<import doc:name="ImportCommonErrorHandling" doc:id="ff3075a0-16ff-4848-ad14-3214292bc127" file="common-error-handling.xml"  />
+	<secure-properties:config name="Secure_Properties_Config" doc:name="Secure Properties Config" doc:id="ac76e227-f91b-48ee-8460-18a8db36bc1c" file="properties/secure/${mule.env}-secure-properties.yaml" key="${mule.secure.key}">
+	</secure-properties:config>
+	
+	<sharepoint:sharepoint-online-config name="Sharepoint_Sharepoint_online" doc:name="Sharepoint Sharepoint online" doc:id="182c255f-54cb-4add-bfe7-4bb4dbdcc92e" >
+		<sharepoint:oauth-client-credentials-connection siteUrl="https://skgtechoffice.sharepoint.com/sites/MulesoftProjectSite" clientId="84b7131c-fd51-4331-a02a-68574b85ffc0" tokenUrl="https://login.microsoftonline.com/538f4f4e-ffdb-47b6-818d-cdb243067ad0/oauth2/v2.0/token" keyStoreAlias="mule" keyStorePath="server.jks" keyStorePassword="changeit" keyStoreType="JKS" scope="https://skgtechoffice.sharepoint.com/.default"/>
+	</sharepoint:sharepoint-online-config>
+
+	<!-- IDP (MuleSoft Intelligent Document Processing) Connector Config -->
+	<idp-timesheet-130:config name="IDP___Timesheet___1_3_0_Config" doc:name="IDP - Timesheet - 1.3.0 Config" doc:id="c07400dc-216f-4549-8b2c-7a4291e05d0b" property_host="${idp.host}" property_port="${idp.port}" property_protocol="${idp.protocol}" property_client-id="${anypoint.clientId}" property_client-secret="${anypoint.clientSecret}"/>
+
+	<!-- VM Persistent Queue Config (async IDP execution tracking) -->
+	<vm:config name="VM_Config" doc:name="VM Config" doc:id="b1e2c3d4-0001-4a00-9a00-idpvmqueue001">
+		<vm:queues>
+			<vm:queue queueName="${vm.queue.name}" />
+		</vm:queues>
+	</vm:config>
+</mule>

@@ -1,0 +1,13 @@
+# Design-specific SECURE properties to add to:
+#   src/main/resources/properties/secure/${mule.env}-secure-properties.yaml
+# All values MUST be encrypted with the Secure Properties tool (![...] syntax).
+# NEVER commit plaintext secrets.
+
+sharepoint:
+  keystore:
+    password: "![encrypted-keystore-password]"
+  clientId: "![encrypted-sharepoint-client-id-if-externalized]"
+
+anypoint:
+  clientId: "![encrypted-anypoint-client-id]"
+  clientSecret: "![encrypted-anypoint-client-secret]"

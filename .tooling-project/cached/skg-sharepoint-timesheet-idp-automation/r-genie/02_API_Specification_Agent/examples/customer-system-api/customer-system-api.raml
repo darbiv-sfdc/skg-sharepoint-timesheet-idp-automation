@@ -1,0 +1,123 @@
+#%RAML 1.0
+title: Customer Data System API
+description: |
+  System API providing direct access to customer data in CRM.
+  API-Led Layer: System | Auth: API Key | Consumers: Process APIs
+version: v1
+baseUri: https://api.company.com/system/v1
+mediaType: application/json
+protocols: [HTTPS]
+
+# Fragment Imports
+uses:
+  CommonTypes: fragments/libraries/common-types.raml
+  ErrorTypes: fragments/libraries/error-types.raml
+
+# Security Schemes (MUST use !include)
+securitySchemes:
+  api_key: !include fragments/security-schemes/api-key-auth.raml
+
+securedBy: [api_key]
+
+# Traits
+traits:
+  pageable: !include fragments/traits/pageable.raml
+  trackable: !include fragments/traits/trackable.raml
+
+# Resources
+/customers:
+  displayName: Customers
+  is: [trackable]
+  
+  get:
+    description: List customers with pagination
+    is: [pageable]
+    queryParameters:
+      status?:
+        type: string
+        enum: [active, inactive, pending]
+      search?:
+        type: string
+        minLength: 2
+    responses:
+      200:
+        body:
+          application/json:
+            type: CommonTypes.CustomerList
+            example: !include examples/responses/customer-list.json
+      400:
+        body:
+          application/json:
+            type: ErrorTypes.Error
+            example: !include examples/responses/error-400.json
+  
+  post:
+    description: Create a new customer
+    body:
+      application/json:
+        type: CommonTypes.CustomerCreate
+        example: !include examples/requests/create-customer.json
+    responses:
+      201:
+        headers:
+          Location:
+            example: "/customers/cust-12345"
+        body:
+          application/json:
+            type: CommonTypes.Customer
+            example: !include examples/responses/customer.json
+      400:
+        body:
+          application/json:
+            type: ErrorTypes.Error
+            example: !include examples/responses/error-400.json
+
+  /{customerId}:
+    uriParameters:
+      customerId:
+        type: string
+        pattern: ^cust-[a-zA-Z0-9]{8,}$
+        example: "cust-12345abc"
+    
+    get:
+      description: Get customer by ID
+      responses:
+        200:
+          body:
+            application/json:
+              type: CommonTypes.Customer
+              example: !include examples/responses/customer.json
+        404:
+          body:
+            application/json:
+              type: ErrorTypes.Error
+              example: !include examples/responses/error-404.json
+    
+    put:
+      description: Update customer
+      body:
+        application/json:
+          type: CommonTypes.CustomerUpdate
+          example: !include examples/requests/update-customer.json
+      responses:
+        200:
+          body:
+            application/json:
+              type: CommonTypes.Customer
+              example: !include examples/responses/customer.json
+    
+    delete:
+      description: Delete customer
+      responses:
+        204:
+          description: Customer deleted
+
+/health:
+  get:
+    description: API health check
+    securedBy: []
+    responses:
+      200:
+        body:
+          application/json:
+            example: !include examples/responses/health.json

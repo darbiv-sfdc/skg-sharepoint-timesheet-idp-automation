@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//private/tmp/**)",
+      "Bash(rm -rf raml_check)",
+      "Bash(mkdir raml_check)",
+      "Bash(unzip -o -q \"/Users/darbiv/.m2/repository/dfb7e975-c094-4e2b-8895-a7742dcadd1d/skg-idp-automation-template-papi/1.0.0/skg-idp-automation-template-papi-1.0.0-raml.zip\" -d raml_check)",
+      "Bash(mvn dependency:tree)"
+    ]
+  }
+}

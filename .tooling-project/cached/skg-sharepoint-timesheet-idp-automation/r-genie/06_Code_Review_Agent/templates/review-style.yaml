@@ -1,0 +1,123 @@
+# ============================================
+# CODE REVIEW AGENT V2 - TEMPLATE CONFIGURATION
+# ============================================
+# 🎯 SINGLE DETAILED REPORT WITH FINDINGS-ONLY
+# 
+# Workflow: Document is updated progressively at each phase
+#   Phase 1: CREATE skeleton with placeholders
+#   Phase 3: UPDATE with findings + flow-by-flow analysis
+#   Phase 4: UPDATE with mappings
+#   Phase 5: UPDATE with score and decision
+# 
+# Main report contains: What's broken, where, why, code snippets
+# Main report does NOT contain: How to fix, recommendations
+# ============================================
+
+project_name: ""
+
+# ============================================
+# REPORT TYPE
+# ============================================
+report_type: "detailed"             # "summary" | "standard" | "detailed"
+  # summary:  Score + Critical Issues ONLY (~1-2 pages)
+  # standard: + All bugs + Mappings (~2-3 pages)
+  # detailed: + Flow-by-flow analysis + Code snippets (~4-6 pages)
+
+# ============================================
+# MAIN REPORT SECTIONS
+# ============================================
+# All sections included in single detailed report:
+
+sections:
+  # Score breakdown by category
+  category_breakdown: true
+  
+  # All bug findings (Critical, High, Medium)
+  all_findings: true
+  
+  # Flow-by-flow analysis with code snippets
+  flow_by_flow_analysis: true
+  
+  # Field mapping verification
+  field_mapping_verification: true
+  
+  # Test coverage summary
+  test_coverage: true
+  
+  # Security findings
+  security_findings: true
+
+# ============================================
+# SCORING CONFIGURATION
+# ============================================
+scoring:
+  use_defaults: true
+  
+  # Custom weights (if use_defaults: false)
+  custom_weights:
+    requirements_compliance: 25
+    implementation_quality: 25
+    architecture_design: 20
+    code_quality_tests: 20
+    security_compliance: 10
+
+  # Minimum score for production approval
+  production_threshold: 80
+
+# ============================================
+# OUTPUT FORMAT
+# ============================================
+output:
+  file_pattern: "{project}-code-review.md"
+  heading_style: "Title Case"
+  include_grade_emojis: true
+  include_attribution: true
+
+# ============================================
+# FINDINGS-ONLY RULES
+# ============================================
+# 🚨 STRICT ENFORCEMENT:
+#
+# ✅ INCLUDE in Report:
+#   - Bug locations (file:line)
+#   - What is broken
+#   - Why it's a problem (impact)
+#   - Code snippets showing bugs
+#   - Severity classification
+#   - Flow-by-flow execution traces
+#
+# ❌ EXCLUDE from Report:
+#   - How to fix
+#   - Code solutions  
+#   - Recommendations
+#   - Action plans
+
+# ============================================
+# RGV (REPEATED GENERATION VALIDATION)
+# ============================================
+# Multi-pass forensic review to catch what single-pass misses
+# Phase 3 (Bug Hunt) and Phase 4 (Mappings) iterate until convergence
+
+rgv:
+  enabled: true
+  
+  # Default number of passes before asking user
+  default_passes: 3
+  
+  # Convergence rule: stop when zero new CRITICAL or MEDIUM findings
+  # HIGH-only findings do NOT block convergence
+  convergence_rule: "strict_zero_critical_medium"
+  
+  # Full sweep every pass (same scope, not shifted focus)
+  pass_strategy: "full_sweep"
+  
+  # Tag every finding with its discovery pass: e.g., CRITICAL-003 [Pass 2]
+  delta_tracking: true
+  
+  # After default_passes, ask user if they want to continue
+  ask_after_default: true
+  
+  # Phases that iterate
+  iterating_phases:
+    - 3  # Mental Code Execution / Bug Hunt
+    - 4  # Field Mapping Verification

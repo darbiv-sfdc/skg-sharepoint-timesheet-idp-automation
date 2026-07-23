@@ -1,0 +1,98 @@
+{
+  "description": "🧞‍♂️ R-GENIE MUNIT TEST DATA EXAMPLES",
+  "source": "Extracted from s-sfdc-commerce-mst-api-at project test resources",
+  "examples": {
+    
+    "sfdc_query_account_response": [
+      {
+        "Id": "0010Q00001GA6RwQAL"
+      }
+    ],
+    
+    "sfdc_query_user_response": [
+      {
+        "Id": "0050Q000005QjItQAK",
+        "HNK_UniqueExternaUserId__c": "AT00023956"
+      }
+    ],
+    
+    "account_mapping_output": [
+      {
+        "Name": "Schwarz Marcel",
+        "RecordTypeId": "Account", 
+        "ShippingStreet": "Am See 415",
+        "ShippingCity": "Wiener Neustadt",
+        "ShippingPostalCode": "9077",
+        "ShippingCountryCode": "AT",
+        "AccountNumber": "7616070",
+        "OwnerId": "AT00007300",
+        "HNK_BusinessSegment__c": "02",
+        "HNK_CustomerName__c": "Schwarz Marcel",
+        "HNK_Status__c": "",
+        "HNK_UniqueExternalAccountId__c": "AT7616070",
+        "HNK_Email__c": "INFO@pizza-primavera.at",
+        "HNK_SalesOrganization__c": "AT15"
+      }
+    ],
+    
+    "account_relations_mapping_output": [
+      {
+        "HNK_AccountId__c": "AT7616070",
+        "HNK_RelatedAccountId__c": "AT7616070",
+        "HNK_RelationType__c": "KS",
+        "HNK_UniqueExternalAccountRelationId__c": "AT7616070-KS"
+      },
+      {
+        "HNK_AccountId__c": "AT7616070",
+        "HNK_RelatedAccountId__c": "AT7616070", 
+        "HNK_RelationType__c": "AG",
+        "HNK_UniqueExternalAccountRelationId__c": "AT7616070-AG"
+      }
+    ],
+    
+    "contact_mapping_output": [
+      {
+        "AccountId": "AT7616070",
+        "LastName": "Schuster",
+        "FirstName": "",
+        "RecordTypeId": "SAP",
+        "Phone": "0461 694811",
+        "Email": "INFO@pizzeria-primavera.at",
+        "HNK_UniqueExternalContactId__c": "AT7616070-Telesales",
+        "IRNAT_Telesales__c": "TRUE"
+      }
+    ],
+    
+    "test_attributes_structure": {
+      "userProperties": {
+        "correlation_id": "1234-munit-test",
+        "tracking_id": "1234"
+      },
+      "destination": "test/queue/name",
+      "messageReferenceId": "1234"
+    }
+  },
+  
+  "patterns": {
+    "spy_validation_pattern": {
+      "description": "Pattern for validating DataWeave transformations",
+      "before_call": "Validate input payload structure and content",
+      "after_call": "Validate output payload matches expected mapping result"
+    },
+    
+    "mock_pattern": {
+      "description": "Pattern for mocking external systems",
+      "salesforce_upsert": {"successful": true},
+      "salesforce_query": [{"Id": "mock-id"}],
+      "solace_publish": "No return payload needed",
+      "solace_ack": "No return payload needed"
+    },
+    
+    "test_structure": {
+      "setup": "Mock all external system calls",
+      "spy": "Validate all DataWeave transformations",
+      "execution": "Set realistic test data and run flow",
+      "validation": "Assert expected outcomes and verify mocks called"
+    }
+  }
+}

@@ -1,0 +1,833 @@
+---
+description: MUnit Guidance - Patterns, Mocks, Spies, Error Fixes
+author: Cheppali Shaik Sohail
+version: 2.1.0
+alwaysApply: false
+tags: [guidance, patterns, mocks, spies, errors, scenarios]
+appliesTo: [munit, testing]
+whenToUse:
+  - "Phase 2-9 test generation work"
+  - "Reference for patterns and templates"
+priority: HIGH
+---
+
+# MUNIT GUIDANCE
+
+> Reference for flow logic analysis, scenario design, test generation, and error fixes
+
+---
+
+## 1. NAMESPACE DECLARATION
+
+```xml
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<mule xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xmlns:munit="http://www.mulesoft.org/schema/mule/munit"
+      xmlns:munit-tools="http://www.mulesoft.org/schema/mule/munit-tools"
+      xmlns="http://www.mulesoft.org/schema/mule/core"
+      xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+      xsi:schemaLocation="
+        http://www.mulesoft.org/schema/mule/munit http://www.mulesoft.org/schema/mule/munit/current/mule-munit.xsd
+        http://www.mulesoft.org/schema/mule/munit-tools http://www.mulesoft.org/schema/mule/munit-tools/current/mule-munit-tools.xsd
+        http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd">
+
+    <munit:config name="{test-suite-filename}.xml" />
+```
+
+**Rules:**
+- XML declaration MUST include `standalone="no"`
+- `<munit:config>` REQUIRED immediately after `<mule>` tag
+- `xmlns:doc` MANDATORY for `doc:id` and `doc:name` attributes
+
+---
+
+## 2. SCHEMA COMPLIANCE
+
+### ❌ FORBIDDEN (Causes 52+ XML Errors)
+```xml
+<munit:behavior doc:name="anything">
+<munit:execution doc:name="anything">
+<munit:validation doc:name="anything">
+```
+
+### ✅ ALLOWED
+```xml
+<munit:behavior>
+<munit:execution>
+<munit:validation>
+
+<munit-tools:mock-when doc:name="Mock API">
+<munit-tools:assert-that doc:name="Assert">
+<flow-ref doc:name="Call Flow">
+```
+
+---
+
+## 3. TEST PATTERNS
+
+### Success Test
+```xml
+<munit:test name="test-{FLOW_NAME}-success" description="Test successful execution">
+    <munit:behavior>
+        {MOCKS}
+        {SPIES}
+    </munit:behavior>
+    
+    <munit:execution>
+        <munit:set-event doc:name="Set Input">
+            <munit:payload 
+                value='#[output application/json --- MunitTools::getResourceAsString("test-data/{flow}-input.json")]' 
+                encoding="UTF-8" mediaType="application/json"/>
+        </munit:set-event>
+        <flow-ref doc:name="Call Flow" name="{FLOW_NAME}"/>
+    </munit:execution>
+    
+    <munit:validation>
+        <munit-tools:assert-that doc:name="Assert Payload" 
+            expression="#[payload]" is="#[MunitTools::notNullValue()]"/>
+        <munit-tools:assert-equals doc:name="Assert Output"
+            actual="#[payload]"
+            expected='#[output application/json --- readUrl("classpath://test-data/expected-output.json")]'
+            message="Output mismatch"/>
+        <munit-tools:verify-call doc:name="Verify Called" processor="http:request" atLeast="#[1]">
+            <munit-tools:with-attributes>
+                <munit-tools:with-attribute whereValue="{DOC_ID}" attributeName="doc:id"/>
+            </munit-tools:with-attributes>
+        </munit-tools:verify-call>
+    </munit:validation>
+</munit:test>
+```
+
+### Message Source Test (Solace/JMS Listeners)
+```xml
+<munit:execution>
+    <munit:set-event doc:name="Set Payload and Attributes">
+        <munit:payload 
+            value='#[%dw 2.6 output application/xml --- readUrl("classpath://test-data/input.xml", "application/xml")]' 
+            encoding="UTF-8" mediaType="application/xml"/>
+        <munit:attributes value='#[{
+            "userProperties": {"correlation_id": "test-123", "tracking_id": "456"},
+            "destination": "topic/test/v1.0.0/events",
+            "messageReferenceId": "msg-ref-789"
+        }]'/>
+    </munit:set-event>
+    <flow-ref doc:name="Call Flow" name="{LISTENER_FLOW_NAME}"/>
+</munit:execution>
+```
+
+### Error Test
+```xml
+<munit:test name="test-{FLOW_NAME}-error" expectedErrorType="{ERROR_TYPE}">
+    <munit:behavior>
+        <munit-tools:mock-when doc:name="Mock Error" processor="{CONNECTOR}">
+            <munit-tools:with-attributes>
+                <munit-tools:with-attribute whereValue="{DOC_ID}" attributeName="doc:id"/>
+            </munit-tools:with-attributes>
+            <munit-tools:then-return>
+                <munit-tools:error typeId="{ERROR_TYPE}"/>
+            </munit-tools:then-return>
+        </munit-tools:mock-when>
+    </munit:behavior>
+    <munit:execution>
+        <munit:set-event doc:name="Set Input">
+            <munit:payload value='#[output application/json --- MunitTools::getResourceAsString("test-data/input.json")]' 
+                encoding="UTF-8" mediaType="application/json"/>
+        </munit:set-event>
+        <flow-ref doc:name="Call Flow" name="{FLOW_NAME}"/>
+    </munit:execution>
+    <munit:validation/>
+</munit:test>
+```
+
+**Error Types:**
+| Connector | Types |
+|-----------|-------|
+| HTTP | `HTTP:TIMEOUT`, `HTTP:CONNECTIVITY`, `HTTP:UNAUTHORIZED`, `HTTP:NOT_FOUND` |
+| Database | `DB:CONNECTIVITY`, `DB:QUERY_EXECUTION` |
+| Salesforce | `SALESFORCE:INVALID_SESSION`, `SALESFORCE:CONNECTIVITY` |
+
+---
+
+## 4. MOCK PATTERNS
+
+### HTTP Mock
+```xml
+<munit-tools:mock-when doc:name="Mock HTTP" processor="http:request">
+    <munit-tools:with-attributes>
+        <munit-tools:with-attribute whereValue="{DOC_ID}" attributeName="doc:id"/>
+    </munit-tools:with-attributes>
+    <munit-tools:then-return>
+        <munit-tools:payload 
+            value='#[output application/json --- MunitTools::getResourceAsString("test-data/response.json")]' 
+            encoding="UTF-8" mediaType="application/json"/>
+        <munit-tools:attributes value="#[{statusCode: 200}]"/>
+    </munit-tools:then-return>
+</munit-tools:mock-when>
+```
+
+### HTTP Mock with Target Variable
+```xml
+<munit-tools:mock-when doc:name="Mock HTTP" processor="http:request">
+    <munit-tools:with-attributes>
+        <munit-tools:with-attribute whereValue="{DOC_ID}" attributeName="doc:id"/>
+    </munit-tools:with-attributes>
+    <munit-tools:then-return>
+        <munit-tools:payload 
+            value='#[output application/json --- MunitTools::getResourceAsString("test-data/response.json")]' 
+            encoding="UTF-8" mediaType="application/json"/>
+        <munit-tools:attributes value="#[{statusCode: 200}]"/>
+        <munit-tools:variables>
+            <munit-tools:variable key="{TARGET_VAR}" 
+                value='#[output application/json --- MunitTools::getResourceAsString("test-data/response.json")]' 
+                encoding="UTF-8" mediaType="application/json"/>
+        </munit-tools:variables>
+    </munit-tools:then-return>
+</munit-tools:mock-when>
+```
+
+### Database Mock
+```xml
+<munit-tools:mock-when doc:name="Mock DB" processor="db:select">
+    <munit-tools:with-attributes>
+        <munit-tools:with-attribute whereValue="{DOC_ID}" attributeName="doc:id"/>
+    </munit-tools:with-attributes>
+    <munit-tools:then-return>
+        <munit-tools:payload 
+            value='#[output application/json --- MunitTools::getResourceAsString("test-data/db-results.json")]' 
+            encoding="UTF-8" mediaType="application/json"/>
+    </munit-tools:then-return>
+</munit-tools:mock-when>
+```
+
+### Salesforce Query Mock
+```xml
+<munit-tools:mock-when doc:name="Mock SF Query" processor="salesforce:query">
+    <munit-tools:with-attributes>
+        <munit-tools:with-attribute whereValue="{DOC_ID}" attributeName="doc:id"/>
+    </munit-tools:with-attributes>
+    <munit-tools:then-return>
+        <munit-tools:payload 
+            value='#[output application/json --- MunitTools::getResourceAsString("test-data/sf-response.json")]' 
+            encoding="UTF-8" mediaType="application/json"/>
+    </munit-tools:then-return>
+</munit-tools:mock-when>
+```
+
+### Salesforce Write Mock (ArrayList Pattern)
+```xml
+<munit-tools:mock-when doc:name="Mock SF Upsert" processor="salesforce:upsert">
+    <munit-tools:with-attributes>
+        <munit-tools:with-attribute whereValue="{DOC_ID}" attributeName="doc:id"/>
+    </munit-tools:with-attributes>
+    <munit-tools:then-return>
+        <munit-tools:payload value='#[output application/json --- [{"id": "a0X123", "success": true}]]'/>
+    </munit-tools:then-return>
+</munit-tools:mock-when>
+```
+
+### ⚠️ Flow-Ref Mocking Anti-Pattern
+<!-- Integrated: 2026-01-04 -->
+
+**Problem:** Mocking flow-refs with `#[payload]` return causes empty payload during mock setup.
+
+**Solution:** Avoid mocking internal flow-refs entirely. See Section 4.1 Mock Strategy Guide.
+
+```xml
+❌ AVOID - Causes "Unable to parse empty input" errors:
+<munit-tools:mock-when processor="flow-ref">
+    <munit-tools:then-return>
+        <munit-tools:payload value="#[payload]"/>  <!-- Empty during setup! -->
+    </munit-tools:then-return>
+</munit-tools:mock-when>
+
+✅ RECOMMENDED - Let flow-refs execute naturally:
+<!-- No mock needed - connector mocks are sufficient -->
+```
+
+### Flow-Ref Mock (Variables Only - RARE)
+<!-- Integrated: 2026-01-04 -->
+
+**⚠️ WARNING:** Only for utility flows that ONLY set variables and have no business logic.
+
+**Rule:** Never mock business flow-refs. Only mock external I/O connectors.
+
+```xml
+<munit-tools:mock-when doc:name="Mock Utility Subflow" processor="flow-ref">
+    <munit-tools:with-attributes>
+        <munit-tools:with-attribute whereValue="{DOC_ID}" attributeName="doc:id"/>
+    </munit-tools:with-attributes>
+    <munit-tools:then-return>
+        <munit-tools:variables>
+            <munit-tools:variable key="configValue" 
+                value='#["test-value"]' 
+                mediaType="application/json" encoding="UTF-8"/>
+        </munit-tools:variables>
+    </munit-tools:then-return>
+</munit-tools:mock-when>
+```
+
+### Empty Mock (Void Operations)
+```xml
+<munit-tools:mock-when doc:name="Mock Publish" processor="solace:publish">
+    <munit-tools:with-attributes>
+        <munit-tools:with-attribute whereValue="{DOC_ID}" attributeName="doc:id"/>
+    </munit-tools:with-attributes>
+</munit-tools:mock-when>
+```
+**Use for:** `solace:publish`, `solace:ack`, `jms:publish`, `file:write`, `email:send`
+
+### Solace Connector
+```xml
+<munit-tools:mock-when doc:name="Mock Solace Publish" processor="solace:publish">
+    <munit-tools:with-attributes>
+        <munit-tools:with-attribute whereValue="{DOC_ID}" attributeName="doc:id"/>
+    </munit-tools:with-attributes>
+</munit-tools:mock-when>
+
+<munit-tools:mock-when doc:name="Mock Solace Ack" processor="solace:ack">
+    <munit-tools:with-attributes>
+        <munit-tools:with-attribute whereValue="{DOC_ID}" attributeName="doc:id"/>
+    </munit-tools:with-attributes>
+</munit-tools:mock-when>
+```
+
+---
+
+## 4.1 MOCK STRATEGY GUIDE
+<!-- Integrated: 2026-01-04 -->
+
+### Core Principle: Mock External I/O, Execute Internal Logic
+
+**Problem:** Over-mocking (mocking internal flow-refs) breaks business logic and causes empty payload cascade.
+
+**Solution:** Only mock external connectors. Let internal flow-refs execute to preserve flow integrity.
+
+### ✅ MOCK (External I/O)
+```
+- solace:publish, solace:ack, solace:queue-listener
+- http:request
+- salesforce:upsert, salesforce:query
+- db:select, db:insert, db:update
+- jms:publish, vm:publish
+- file:write, file:read
+- email:send
+```
+
+### ✅ EXECUTE (Internal Logic)
+```
+- flow-ref to business flows
+- flow-ref to utility flows (tracing, common)
+- ee:transform (DataWeave)
+- set-variable, set-payload
+- choice, foreach, until-successful
+- logger, error-handler
+```
+
+### ✅ SPY (Verify Without Blocking)
+```
+- ee:transform (to assert DataWeave output)
+- flow-ref (to verify call count)
+```
+
+### Example: Good Mock Strategy
+```xml
+<!-- ✅ GOOD: Only mock connectors -->
+<munit:behavior>
+    <munit-tools:mock-when processor="solace:publish">
+        <munit-tools:with-attributes>
+            <munit-tools:with-attribute whereValue="{DOC_ID}" attributeName="doc:id"/>
+        </munit-tools:with-attributes>
+    </munit-tools:mock-when>
+    
+    <munit-tools:mock-when processor="http:request">
+        <munit-tools:with-attributes>
+            <munit-tools:with-attribute whereValue="{DOC_ID}" attributeName="doc:id"/>
+        </munit-tools:with-attributes>
+        <munit-tools:then-return>
+            <munit-tools:payload value='#[MunitTools::getResourceAsString("test-data/response.json")]'/>
+        </munit-tools:then-return>
+    </munit-tools:mock-when>
+    
+    <!-- NO flow-ref mocks - let business logic execute naturally -->
+</munit:behavior>
+```
+
+**Why:** Internal flow-refs need to execute for DataWeave transformations to work correctly. Mocking them causes empty payloads and variable loss.
+
+---
+
+## 5. SPY PATTERNS
+
+### Basic Spy (Field Assertions)
+```xml
+<munit-tools:spy doc:name="Spy Transform" processor="ee:transform">
+    <munit-tools:with-attributes>
+        <munit-tools:with-attribute whereValue="{DOC_ID}" attributeName="doc:id"/>
+    </munit-tools:with-attributes>
+    <munit-tools:before-call>
+        <munit-tools:assert-that doc:name="Assert Input" 
+            expression="#[payload]" is="#[MunitTools::notNullValue()]"/>
+    </munit-tools:before-call>
+    <munit-tools:after-call>
+        <munit-tools:assert-that doc:name="Assert Output" 
+            expression="#[payload.status]" is="#[MunitTools::equalTo('SUCCESS')]"/>
+    </munit-tools:after-call>
+</munit-tools:spy>
+```
+
+### Variable Verification Spy (RECOMMENDED for behavior testing)
+```xml
+<munit-tools:spy doc:name="Spy Variables" processor="ee:transform">
+    <munit-tools:with-attributes>
+        <munit-tools:with-attribute whereValue="{DOC_ID}" attributeName="doc:id"/>
+    </munit-tools:with-attributes>
+    <munit-tools:after-call>
+        <!-- Verify variables are set correctly -->
+        <munit-tools:assert-that expression="#[vars.sfdcObjectType]" is="#[MunitTools::equalTo('Contact')]"/>
+        <munit-tools:assert-that expression="#[vars.sfdcRequestPayload]" is="#[MunitTools::notNullValue()]"/>
+    </munit-tools:after-call>
+</munit-tools:spy>
+```
+
+### File-Based Comparison Spy
+```xml
+<munit-tools:spy doc:name="Spy Mapping" processor="ee:transform">
+    <munit-tools:with-attributes>
+        <munit-tools:with-attribute whereValue="{DOC_ID}" attributeName="doc:id"/>
+    </munit-tools:with-attributes>
+    <munit-tools:after-call>
+        <munit-tools:assert-equals doc:name="Assert Output"
+            actual="#[payload]"
+            expected='#[readUrl("classpath://test-data/expected-output.json", "application/json")]'
+            message="Output mismatch"/>
+    </munit-tools:after-call>
+</munit-tools:spy>
+```
+
+**Rules:**
+- ❌ NEVER create spies with only `notNullValue()` assertions
+- ✅ ALWAYS verify actual values (use `equalTo`, `assert-equals`)
+- ✅ Verify variables set by transforms
+- Spies do NOT improve coverage - use for behavior validation
+
+---
+
+## 6. ASSERTION PATTERNS
+
+### Basic Assertions
+| Assertion | Expression | Matcher |
+|-----------|------------|---------|
+| Not Null | `#[payload]` | `MunitTools::notNullValue()` |
+| Equals | `#[payload.status]` | `MunitTools::equalTo('SUCCESS')` |
+| Contains | `#[payload.message]` | `MunitTools::containsString('OK')` |
+| Has Property | `#[payload]` | `MunitTools::hasProperty('status')` |
+| Array Size | `#[sizeOf(payload.items)]` | `MunitTools::equalTo(5)` |
+| Greater Than | `#[sizeOf(payload)]` | `MunitTools::greaterThan(0)` |
+
+### Full Payload Comparison
+```xml
+<munit-tools:assert-equals doc:name="Assert Payload"
+    actual="#[payload]"
+    expected='#[output application/json --- readUrl("classpath://test-data/expected.json")]'
+    message="Payload mismatch"/>
+
+<munit-tools:assert-equals doc:name="Assert XML"
+    actual="#[payload]"
+    expected='#[readUrl("classpath://test-data/expected.xml", "application/xml")]'
+    message="XML mismatch"/>
+```
+
+### Verify Processor Calls
+```xml
+<munit-tools:verify-call doc:name="Verify Called" processor="http:request" atLeast="#[1]">
+    <munit-tools:with-attributes>
+        <munit-tools:with-attribute whereValue="{DOC_ID}" attributeName="doc:id"/>
+    </munit-tools:with-attributes>
+</munit-tools:verify-call>
+```
+
+### JSON String Payloads
+```xml
+<!-- When payload is JSON string, parse before accessing fields -->
+<munit-tools:assert-that expression="#[read(payload, 'application/json').status]" 
+    is="#[MunitTools::equalTo('SUCCESS')]"/>
+```
+
+---
+
+## 7. COMMON ERROR FIXES
+
+| Error | Fix |
+|-------|-----|
+| `Unable to infer output media type` | Add `output application/json ---` directive |
+| `Prefix "doc" not bound` | Add `xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"` |
+| `Unable to find mock for processor` | Verify doc:id matches exactly from source flow |
+| `InvalidDataSourceForMimeType` (Salesforce) | Use `output application/json --- [...]` for ArrayList |
+| `Target variable null` | Add `<munit-tools:variables>` section to mock |
+| `52+ XML schema errors` | Remove `doc:name` from structural elements |
+| `LinkedHashMap` (XML stream) | Add `encoding="UTF-8" mediaType="application/xml"` to payload |
+| **`Unable to parse empty input` (flow-ref mock)** | **Remove flow-ref mocks with `#[payload]` return. See Section 4.1** |
+
+---
+
+## 8. ERROR PRIORITY MATRIX
+
+Fix errors in this order:
+
+| Priority | Category | Fix |
+|----------|----------|-----|
+| 1 | SCHEMA | Remove doc:name from structural elements |
+| 2 | COMPILATION | Fix XML syntax |
+| 3 | NAMESPACE | Add xmlns declarations |
+| 4 | PROPERTY | Resolve placeholders |
+| 5 | DOCID | Extract correct doc:id from source |
+| 6 | ARRAYLIST | Add output directive |
+| 7 | TARGET_VAR | Add variables section |
+| 8 | RUNTIME | Fix assertions/data |
+
+---
+
+## 9. TEST DATA PATTERNS
+
+### File Structure
+```
+src/test/resources/test-data/
+├── {flow}-input.json
+├── {flow}-expected-output.json
+├── http-response.json
+├── db-results.json
+└── sf-response.json
+```
+
+### XML Payload Pattern
+```xml
+<!-- ALWAYS include encoding and mediaType for XML payloads -->
+<munit:payload 
+    value='#[readUrl("classpath://test-data/input.xml", "application/xml")]' 
+    encoding="UTF-8" 
+    mediaType="application/xml"/>
+```
+
+### Rules
+- ❌ No hardcoded dates
+- ❌ No real credentials or PII
+- ✅ Use TEST- prefixes for IDs
+- ✅ XML payloads need `encoding="UTF-8" mediaType="application/xml"`
+
+---
+
+## 10. POM CONFIGURATION
+
+### Proven Versions
+| Component | Version |
+|-----------|---------|
+| MUnit | 3.4.0 |
+| Mule Maven Plugin | 4.5.1 |
+| Maven Clean Plugin | 3.3.2 |
+
+### Maven Commands
+```bash
+mvn clean test              # Standard run
+mvn clean test -U           # Force update
+mvn clean test -Dmunit.coverage.format=html  # With coverage
+```
+
+### MUnit Plugin Configuration with Parent POM
+<!-- Integrated: 2026-01-04 -->
+
+**Problem:** When inheriting from parent POM (e.g., `heineken-parent-pom`), adding `runtimeConfiguration` causes "Cannot convert 'MULE_EE' to Enum" error.
+
+**Solution:** Use simple configuration. MUnit auto-discovers tests in `src/test/munit/` by default.
+
+```xml
+❌ BAD (Causes enum error with parent POM):
+<plugin>
+    <groupId>com.mulesoft.munit.tools</groupId>
+    <artifactId>munit-maven-plugin</artifactId>
+    <configuration>
+        <runtimeConfiguration>
+            <discoverRuntimes>
+                <product>MULE_EE</product>  <!-- Invalid enum -->
+            </discoverRuntimes>
+        </runtimeConfiguration>
+        <coverage>...</coverage>
+    </configuration>
+</plugin>
+
+✅ GOOD (Simple configuration):
+<plugin>
+    <groupId>com.mulesoft.munit.tools</groupId>
+    <artifactId>munit-maven-plugin</artifactId>
+    <configuration>
+        <!-- No runtimeConfiguration needed -->
+        <!-- No munitTestsDirectory needed (auto-discovers src/test/munit/) -->
+        <coverage>
+            <runCoverage>true</runCoverage>
+            <formats><format>html</format></formats>
+        </coverage>
+    </configuration>
+</plugin>
+```
+
+**Why:** Parent POM configurations can conflict with explicit settings. Rely on MUnit's default auto-discovery for `src/test/munit/*-test-suite.xml` files.
+
+---
+
+## 11. MATCHERS REFERENCE
+
+### String
+| Matcher | Usage |
+|---------|-------|
+| `containsString` | `MunitTools::containsString('error')` |
+| `startsWith` | `MunitTools::startsWith('REQ-')` |
+| `endsWith` | `MunitTools::endsWith('.json')` |
+| `equalToIgnoringCase` | `MunitTools::equalToIgnoringCase('SUCCESS')` |
+
+### Collection
+| Matcher | Usage |
+|---------|-------|
+| `hasSize` | `MunitTools::hasSize(5)` |
+| `hasItem` | `MunitTools::hasItem('expected')` |
+| `empty` | `MunitTools::empty()` |
+
+### Logical
+| Matcher | Usage |
+|---------|-------|
+| `allOf` | `MunitTools::allOf(matcher1, matcher2)` |
+| `anyOf` | `MunitTools::anyOf(matcher1, matcher2)` |
+| `not` | `MunitTools::not(MunitTools::equalTo('ERROR'))` |
+
+---
+
+## 12. BEHAVIOR VERIFICATION
+
+> **Goal**: Tests must catch regressions when business logic changes
+
+### ❌ WEAK (Coverage only)
+```xml
+<munit:validation>
+    <munit-tools:assert-that expression="#[payload]" is="#[MunitTools::notNullValue()]"/>
+</munit:validation>
+```
+
+### ✅ STRONG (Behavior verified)
+```xml
+<munit:validation>
+    <!-- Verify output matches expected -->
+    <munit-tools:assert-equals actual="#[payload]"
+        expected='#[readUrl("classpath://test-data/expected.json", "application/json")]'/>
+    <!-- Verify variables set correctly -->
+    <munit-tools:assert-that expression="#[vars.sfdcObjectType]" is="#[MunitTools::equalTo('Contact')]"/>
+    <!-- Verify critical operations called -->
+    <munit-tools:verify-call processor="solace:ack" atLeast="#[1]">
+        <munit-tools:with-attributes>
+            <munit-tools:with-attribute whereValue="{DOC_ID}" attributeName="doc:id"/>
+        </munit-tools:with-attributes>
+    </munit-tools:verify-call>
+</munit:validation>
+```
+
+### Branch Path Verification
+```xml
+<!-- Verify path was taken -->
+<munit-tools:verify-call processor="flow-ref" atLeast="#[1]">...</munit-tools:verify-call>
+
+<!-- Verify path was SKIPPED -->
+<munit-tools:verify-call processor="flow-ref" times="#[0]">...</munit-tools:verify-call>
+```
+
+### Iteration Count Verification
+```xml
+<!-- 3 items → 3 publish calls -->
+<munit-tools:verify-call processor="solace:publish" times="#[3]">...</munit-tools:verify-call>
+```
+
+### Partial Failure Verification
+```xml
+<!-- Verify error processing called for failed records -->
+<munit-tools:verify-call processor="flow-ref" times="#[2]">
+    <munit-tools:with-attributes>
+        <munit-tools:with-attribute whereValue="{XOMI_ERROR_DOC_ID}" attributeName="doc:id"/>
+    </munit-tools:with-attributes>
+</munit-tools:verify-call>
+```
+
+**Minimum Requirements:**
+- ✅ Compare output to expected file
+- ✅ Verify critical variables are set correctly
+- ✅ Verify connector calls (ack, publish, etc.)
+- ✅ Test each choice branch
+- ✅ Verify foreach iteration count
+
+---
+
+## 13. SCENARIO-BASED TEST GENERATION
+
+> **Think-First**: Understand flow logic → Design scenarios → Generate tests
+
+### Flow Logic Analysis Pattern (Phase 2)
+
+For each flow, document:
+```
+FLOW: {flow-name}
+  Transforms:
+    - doc:id {id}: Sets vars.{name} = {logic}
+  Choices:
+    - When {condition} → {action}
+    - Otherwise → {default}
+  Foreach:
+    - Collection: {expression}
+    - Per item: {action}
+  Errors:
+    - Catches {type} → {handling}
+```
+
+### Scenario Design Pattern (Phase 3)
+
+For each test scenario:
+```
+SCENARIO: {descriptive-name}
+  Purpose: {what behavior is being tested}
+  Input: {file reference or inline}
+  Mocks: {connector} returns {response}
+  Expected:
+    - vars.{name} == {value}
+    - {branch} taken/skipped
+    - {processor} called N times
+```
+
+### Scenario Types
+
+| Type | When to Use | Example |
+|------|-------------|---------|
+| Happy Path | Always | Valid input, all success |
+| Branch A | Has choice | Input triggers first branch |
+| Branch B | Has choice | Input triggers second branch |
+| Error | Has error handler | Trigger connector error |
+| Partial Failure | Bulk operations | Mix of success/failure |
+| Empty Collection | Has foreach | Empty input array |
+
+### Scenario-to-Test Mapping
+
+Each scenario becomes one test:
+```xml
+<!-- SCENARIO: Contact Upsert Success -->
+<munit:test name="test-contact-upsert-success" description="Scenario: Contact path with valid data">
+    <munit:behavior>
+        <!-- Mocks from scenario -->
+    </munit:behavior>
+    <munit:execution>
+        <!-- Input from scenario -->
+    </munit:execution>
+    <munit:validation>
+        <!-- Expected assertions from scenario -->
+        <munit-tools:assert-that expression="#[vars.sfdcObjectType]" is="#[MunitTools::equalTo('Contact')]"/>
+        <munit-tools:verify-call processor="flow-ref" times="#[1]"><!-- contact-path taken --></munit-tools:verify-call>
+        <munit-tools:verify-call processor="flow-ref" times="#[0]"><!-- account-path skipped --></munit-tools:verify-call>
+    </munit:validation>
+</munit:test>
+```
+
+---
+
+## 14. PRE-COMMIT CHECKLIST
+
+**Schema & Syntax:**
+- [ ] All doc:ids extracted from source XML
+- [ ] No doc:name on structural elements
+- [ ] xmlns:doc namespace declared
+- [ ] Salesforce writes use output directive
+- [ ] XML payloads use `encoding="UTF-8" mediaType="application/xml"`
+
+**Behavior Verification:**
+- [ ] Spies verify variable values (not just notNullValue)
+- [ ] Output compared to expected files
+- [ ] Each choice branch has a test
+- [ ] Foreach iteration count verified
+- [ ] Partial failure scenarios tested
+- [ ] Critical connector calls verified (ack, publish)
+
+**Security:**
+- [ ] No credentials in test files
+
+---
+
+## 15. EVIDENCE-BOUND OUTPUTS
+
+Every testing decision must cite its source:
+
+| Decision Type | Evidence Format |
+|---------------|----------------|
+| Mock inclusion | "Mocking {connector} at doc:id {id} — Flow XML line {N}" |
+| Scenario design | "Testing {branch} — Choice condition at doc:id {id}" |
+| Assertion value | "Asserting vars.{name} == {value} — Transform at doc:id {id} sets this" |
+| Assumption | "⚠️ ASSUMPTION: {value} — Flow logic unclear on '{detail}'" |
+| Gap entry | "GAP-{N}: Unable to confirm {detail} (asked {X} times)" |
+
+> If you cannot cite a source, flag as assumption. Never present assumptions as confirmed decisions.
+
+---
+
+## 16. TREE OF THOUGHT (Ambiguous Decisions)
+
+For decisions with multiple valid paths, evaluate branches before choosing:
+
+```
+<thinking>
+Branch A: [Option] — fits because [evidence]. Risk: [risk].
+Branch B: [Option] — fits because [evidence]. Risk: [risk].
+Best path: [chosen] — Confidence: {HIGH/MEDIUM/LOW}
+</thinking>
+```
+
+**Common ambiguous decisions in MUnit testing:**
+- Mock flow-ref vs let it execute naturally
+- Spy before-call vs after-call for assertion placement
+- Full payload comparison vs field-level assertions
+- Error test with expectedErrorType vs try-catch validation
+
+---
+
+## 17. FEW-SHOT PATTERNS
+
+### Schema Compliance
+
+❌ BAD - doc:name on structural elements:
+```xml
+<munit:behavior doc:name="Setup">
+<munit:execution doc:name="Run">
+```
+
+✅ GOOD - no doc:name on structural elements:
+```xml
+<munit:behavior>
+<munit:execution>
+```
+
+**Why**: doc:name on structural elements causes 52+ XML schema errors.
+
+### Mock Strategy
+
+❌ BAD - Mocking internal flow-refs:
+```xml
+<munit-tools:mock-when processor="flow-ref">
+    <munit-tools:then-return>
+        <munit-tools:payload value="#[payload]"/>
+    </munit-tools:then-return>
+</munit-tools:mock-when>
+```
+
+✅ GOOD - Only mock external connectors:
+```xml
+<munit-tools:mock-when processor="http:request">
+    <munit-tools:with-attributes>
+        <munit-tools:with-attribute whereValue="{DOC_ID}" attributeName="doc:id"/>
+    </munit-tools:with-attributes>
+    <munit-tools:then-return>
+        <munit-tools:payload value='#[MunitTools::getResourceAsString("test-data/response.json")]'/>
+    </munit-tools:then-return>
+</munit-tools:mock-when>
+```
+
+**Why**: Mocking flow-refs causes empty payload cascade and breaks business logic.
+

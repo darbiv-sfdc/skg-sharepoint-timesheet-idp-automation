@@ -1,0 +1,734 @@
+# BOOMI DOCUMENTATION AGENT V2 - TEMPLATE CONFIGURATION
+# 
+# ZERO ASSUMPTION DOCUMENTATION
+# Goal: A developer can recreate exact functionality from documentation alone
+#
+# OUTPUT STRUCTURE (MODULAR):
+#   Main Document: boomi_design_{flow_name}.md
+#   Supporting Documents: supporting-docs/ folder
+#   All files inside: project/output_boomi/{flow_number}/
+#     - component-inventory.md
+#     - shape-configuration.md
+#     - function-reference.md
+#     - profile-structures.md
+#     - connector-settings.md
+#     - verification-checklist.md
+#
+# SECTIONS:
+#   1. Overview - Process ID, description, integration scope
+#   2. Architecture - System diagram (graph TB), component inventory
+#   3. Flow Documentation - Per-process: diagrams FIRST, then steps, then configs
+#   4. Data Mappings - Per-map: fields, functions, profiles
+#   5. Connector Settings - Reference to supporting doc
+#   6. Gap Analysis - Referenced but missing components
+#   7. Validation - Reference to verification checklist
+#
+# RGV LOOP (Read-Generate-Verify):
+#   Every section in Phases 1-4 follows: RE-READ → INVENTORY → GENERATE → VERIFY → FIX → CHECKPOINT
+#   Defined once in 01_Guidance.mdc §1 (DRY)
+
+version: "4.0.0"
+author: "Cheppali Shaik Sohail"
+
+# Core Principles
+principles:
+  zero_assumption: true
+  count_verification: true
+  source_references: true
+  progressive_file_writing: true
+  modular_output: true
+
+# Output Configuration
+outputs:
+  flow_folder:
+    pattern: "{flow_number}/"
+    location: "project/output_boomi/{flow_number}/"
+    required: true
+    description: "Subfolder per Boomi flow - extract process number (e.g., 13020)"
+  
+  main_document:
+    pattern: "boomi_design_{flow_name}.md"
+    location: "project/output_boomi/{flow_number}/"
+    required: true
+  
+  supporting_docs_folder:
+    location: "project/output_boomi/{flow_number}/supporting-docs/"
+    required: true
+  
+  supporting_files:
+    component_inventory:
+      pattern: "component-inventory.md"
+      location: "supporting-docs/"
+      trigger: "always"
+      required: true
+      phase: 0
+      description: "Complete component inventory with element counts"
+    
+    shape_configuration:
+      pattern: "shape-configuration.md"
+      location: "supporting-docs/"
+      trigger: "always"
+      required: true
+      phase: 1
+      description: "Detailed shape configurations for all processes"
+    
+    function_reference:
+      pattern: "function-reference.md"
+      location: "supporting-docs/"
+      trigger: "functions > 0"
+      required: true
+      phase: 2
+      description: "Transformation function documentation"
+    
+    profile_structures:
+      pattern: "profile-structures.md"
+      location: "supporting-docs/"
+      trigger: "profiles > 0"
+      required: true
+      phase: 2
+      description: "Profile field structures and hierarchies"
+    
+    connector_settings:
+      pattern: "connector-settings.md"
+      location: "supporting-docs/"
+      trigger: "always"
+      required: true
+      phase: 2
+      description: "Connection and operation settings"
+    
+    verification_checklist:
+      pattern: "verification-checklist.md"
+      location: "supporting-docs/"
+      trigger: "always"
+      required: true
+      phase: 3
+      description: "Zero data loss verification checklist"
+
+# Document Structure
+structure:
+  sections:
+    - number: 1
+      name: "Overview"
+      description: "Process identification, description from XML, integration scope"
+      required: true
+      phase: 0
+      subsections:
+        - "1.1 Process Description"
+        - "1.2 Integration Scope"
+        - "1.3 Component Inventory (reference to supporting doc)"
+    
+    - number: 2
+      name: "Architecture"
+      description: "System interaction diagram (graph TB), process hierarchy"
+      required: true
+      phase: 0
+      subsections:
+        - "2.1 System Interaction Diagram (graph TB with subgraphs)"
+        - "2.2 Process Hierarchy"
+    
+    - number: 3
+      name: "Flow Documentation"
+      description: "Per-process: diagrams FIRST, then steps, then configs reference"
+      required: true
+      phase: 1
+      per_component: "process"
+      subsections:
+        - "3.x.1 Flow Diagram (flowchart TD) - BEFORE STEPS"
+        - "3.x.2 Sequence Diagram - BEFORE STEPS"
+        - "3.x.3 Step-by-Step Execution (ALL shapes individually)"
+        - "3.x.4 Shape Configuration Details (reference to supporting doc)"
+    
+    - number: 4
+      name: "Data Mappings"
+      description: "Per-map: profile reference, field table, functions reference"
+      required: true
+      phase: 2
+      per_component: "map"
+      subsections:
+        - "4.x.1 Field Mappings Table (ALL rows — NEVER summarize)"
+        - "4.x.2 Transformation Functions (reference to supporting doc)"
+        - "4.x.3 Default Values"
+    
+    - number: 5
+      name: "Connector Settings"
+      description: "Reference to supporting document"
+      required: true
+      phase: 2
+      content: "reference_only"
+      reference_format: "> **🔌 Complete connector settings:** See [`supporting-docs/connector-settings.md`](supporting-docs/connector-settings.md)"
+    
+    - number: 6
+      name: "Gap Analysis"
+      description: "Components referenced but NOT in export - structured table"
+      required: true
+      phase: 5
+      subsections:
+        - "6.1 Missing Profiles"
+        - "6.2 Missing Operations"
+        - "6.3 Missing Document Cache"
+        - "6.4 Missing Process Route"
+        - "6.5 Impact Summary"
+    
+    - number: 7
+      name: "Validation"
+      description: "Reference to verification checklist"
+      required: true
+      phase: 5
+      content: "reference_only"
+      reference_format: "> **📋 Complete verification checklist:** See [`supporting-docs/verification-checklist.md`](supporting-docs/verification-checklist.md)"
+
+# Diagram Specifications
+diagrams:
+  system_interaction:
+    type: "graph TB"
+    subgraphs: true
+    location: "Section 2.1"
+    required: true
+    style: "no_custom_colors"
+    description: "Layered architecture diagram with Source, Middleware, Integration, Target, Monitoring layers"
+  
+  process_flow:
+    type: "flowchart TD"
+    location: "Section 3.x.2"
+    required: true
+    per_process: true
+    position: "BEFORE_STEPS"
+    style: "no_custom_colors"
+  
+  process_sequence:
+    type: "sequenceDiagram"
+    location: "Section 3.x.3"
+    required: true
+    per_process: true
+    position: "BEFORE_STEPS"
+    autonumber: true
+    style: "no_custom_colors"
+
+# Reference Format
+reference_format:
+  style: "blockquote"
+  pattern: "> **{icon} {title}:** See [`{path}`]({path}) for {description}."
+  icons:
+    component_inventory: "📦"
+    shape_configuration: "📄"
+    function_reference: "📚"
+    profile_structures: "📄"
+    connector_settings: "🔌"
+    verification_checklist: "📋"
+
+# Extraction Requirements
+extraction:
+  shapes:
+    document_all: true
+    include_configuration: true
+    count_verification: true
+    
+  mappings:
+    document_all: true
+    include_functions: true
+    include_scripts: true
+    count_verification: true
+    
+  profiles:
+    document_all: true
+    include_structure_tree: true
+    include_field_details: true
+    
+  connectors:
+    document_all: true
+    mask_credentials: true
+    credential_mask: "[ENCRYPTED]"
+    
+  cross_references:
+    document_all: true
+    include_usage: true
+
+# RGV Loop Configuration
+rgv_loop:
+  description: "Read-Generate-Verify loop applied per section in Phases 1-4"
+  defined_in: "01_Guidance.mdc §1"
+  steps:
+    - "RE-READ: Fresh Read tool call on ALL relevant XML files"
+    - "INVENTORY: Count target elements, list names, COMMIT to count N"
+    - "GENERATE: Produce section content with exactly N items"
+    - "VERIFY: Count generated items, compare to N"
+    - "FIX: If mismatch → RE-READ XML, find missing, fix BEFORE proceeding"
+    - "CHECKPOINT: Emit micro-checkpoint with counts, write to file, proceed"
+  
+  micro_checkpoint_format: "✅ {section}: {name} — {generated}/{expected} {type}"
+  micro_checkpoint_examples:
+    - "✅ 3.1: HNK_US_PRC_12730 — 18/18 shapes"
+    - "✅ 4.1: HNK_US_MAP_JSON_XML — 22/22 mappings"
+    - "✅ Profile: JSON_Response — 49/49 fields"
+    - "✅ Function: UDF_ProductID — 3/3 steps"
+    - "✅ CrossRef: XOMI_Lookup — 7/7 rows"
+
+# Progressive Document Updates (6-phase)
+progressive_updates:
+  enabled: true
+  phases:
+    - phase: 0
+      name: "Discovery & Planning"
+      actions:
+        - "CREATE main document with header"
+        - "WRITE Section 1 (Overview)"
+        - "WRITE Section 2 (Architecture)"
+        - "CREATE supporting-docs/component-inventory.md"
+        - "BUILD reading plan with element counts per file"
+        - "CREATE .boomi-state.json (status: IN_PROGRESS, current_phase: 0)"
+    
+    - phase: 1
+      name: "Flow Documentation"
+      rgv_per: "each process XML"
+      actions:
+        - "APPEND Section 3 to main document (per-process RGV loop)"
+        - "CREATE supporting-docs/shape-configuration.md"
+        - "UPDATE .boomi-state.json (current_phase: 1, phase 1 checkpoints)"
+    
+    - phase: 2
+      name: "Mapping Documentation"
+      rgv_per: "each map XML (with grouped profile/function reads)"
+      actions:
+        - "APPEND Section 4 to main document (per-map RGV loop, ALL rows)"
+        - "UPDATE .boomi-state.json (current_phase: 2, phase 2 checkpoints)"
+    
+    - phase: 3
+      name: "Profile & Function Documentation"
+      rgv_per: "each profile XML, each function XML"
+      actions:
+        - "CREATE supporting-docs/function-reference.md"
+        - "CREATE supporting-docs/profile-structures.md"
+        - "UPDATE .boomi-state.json (current_phase: 3, phase 3 checkpoints)"
+    
+    - phase: 4
+      name: "Connector & Cross-Ref Documentation"
+      rgv_per: "each connector/operation/crossref XML"
+      actions:
+        - "APPEND Section 5 to main document"
+        - "CREATE supporting-docs/connector-settings.md"
+        - "UPDATE .boomi-state.json (current_phase: 4, phase 4 checkpoints)"
+    
+    - phase: 5
+      name: "Validation & Certification"
+      actions:
+        - "APPEND Section 6 (Gap Analysis) to main document"
+        - "APPEND Section 7 (Validation) to main document"
+        - "CREATE supporting-docs/verification-checklist.md"
+        - "UPDATE .boomi-state.json (status: COMPLETED, all phase checkpoints)"
+
+# Style Settings
+style:
+  heading_style: "Title Case"
+  table_format: "markdown"
+  code_format: "fenced"
+  diagram_format: "mermaid"
+  diagram_colors: "none"
+  credential_mask: "[ENCRYPTED]"
+  missing_data_marker: "[NOT IN EXPORT]"
+
+# Naming Conventions
+naming:
+  flow_folder: "{flow_number}/"
+  main_document: "boomi_design_{flow_name}.md"
+  supporting_folder: "supporting-docs/"
+  state_file: ".boomi-state.json"  # MUST be updated after EVERY phase completion
+  flow_number_convention: "Extract process number from process name (e.g., HNK_US_PRC_13020_... -> 13020)"
+  flow_name_convention: "Process number + short name (e.g., 13020_PRICE_LIST)"
+  
+  supporting_docs:
+    component_inventory: "component-inventory.md"
+    shape_configuration: "shape-configuration.md"
+    function_reference: "function-reference.md"
+    profile_structures: "profile-structures.md"
+    connector_settings: "connector-settings.md"
+    verification_checklist: "verification-checklist.md"
+
+# Content Patterns & Style Requirements (Based on Examples)
+content_patterns:
+  main_document:
+    header:
+      required_fields:
+        - "Project: {flow_name}"
+        - "Process ID: `{componentId}`"
+        - "Processing: {Event-driven/Batch/Real-time}"
+        - "Source File: `{uuid}.xml`"
+        - "Generated: {date}"
+      style: "Bold labels, code-formatted IDs"
+    
+    section_1_overview:
+      subsection_1_1:
+        content: "EXACT text from <bns:description> element - NO paraphrasing"
+        style: "Plain text, preserve original formatting"
+      
+      subsection_1_2:
+        table_columns: ["Aspect", "Details"]
+        required_rows:
+          - "Source System"
+          - "Source Protocol"
+          - "Source Format"
+          - "Target System"
+          - "Target Protocol"
+          - "Target Format"
+      
+      subsection_1_3:
+        reference_format: "Blockquote with 📦 icon, link to component-inventory.md, include total component count"
+    
+    section_2_architecture:
+      subsection_2_1:
+        diagram_type: "graph TB"
+        required_subgraphs: ["Source Layer", "Middleware Layer", "Integration Layer - Boomi", "Target Layer", "Monitoring & Logging"]
+        style: "No custom colors, descriptive labels with line breaks"
+      
+      subsection_2_2:
+        table_columns: ["Process", "Type", "Source File", "Shapes"]
+        required_data: "All processes with shape counts"
+    
+    section_3_flow_documentation:
+      per_process_order:
+        - "Process header (ID, Source File, Description, Allow Simultaneous if present)"
+        - "Flow Diagram (flowchart TD) - MUST be BEFORE steps"
+        - "Sequence Diagram (sequenceDiagram with autonumber) - MUST be BEFORE steps"
+        - "Step-by-Step Execution table (ALL shapes — NEVER summarize)"
+        - "Shape Configuration Details reference"
+      verification_note: "Shape Count Verification belongs ONLY in verification-checklist.md — NOT in main document"
+      
+      step_by_step_table:
+        columns: ["Step", "Shape ID", "Type", "Label", "Action", "Next"]
+        action_column: "Include ALL configuration details: connector types, operation IDs, property assignments, decision logic, etc."
+        next_column: "Show all paths: shapeX(1), shapeY(2) for branches"
+    
+    section_4_data_mappings:
+      per_map_structure:
+        - "Map header (Map ID, Source File, Source/Target Profiles with IDs)"
+        - "Field Mappings table (ALL rows — NEVER summarize or abbreviate)"
+        - "Transformation Functions reference"
+        - "Default Values table (if any)"
+      verification_note: "Mapping Count Verification belongs ONLY in verification-checklist.md — NOT in main document"
+      
+      field_mappings_table:
+        columns: ["#", "Source Field", "Source Path", "Target Field", "Target Path", "Type"]
+        type_values: ["Direct", "Function", "Function Input"]
+        function_format: "Function: {name} (key={n})"
+        function_input_format: "Function: {name} (key={n}, input={n})"
+    
+    section_5_connector_settings:
+      content: "Reference only - blockquote format with 🔌 icon"
+    
+    section_6_gap_analysis:
+      table_columns: ["#", "Component ID", "Type", "Referenced In", "Impact"]
+      subsections:
+        - "6.1 Missing Profiles"
+        - "6.2 Missing Operations"
+        - "6.3 Missing Document Cache"
+        - "6.4 Missing Process Route"
+        - "6.5 Impact Summary"
+    
+    section_7_validation:
+      content: "Reference only - blockquote format with 📋 icon"
+  
+  component_inventory:
+    header:
+      title_format: "{Process Name} - Component Inventory"
+      required_fields:
+        - "Referenced from: `../boomi_design_{flow_name}.md` Section 1.3"
+        - "Generated: {date}"
+    
+    component_table:
+      columns: ["#", "File", "Type", "Name", "ID", "Elements"]
+      file_format: "Backtick-wrapped UUID.xml"
+      id_format: "Backtick-wrapped UUID"
+      elements_format: "{n} shapes / {n} mappings / {n} fields / etc."
+    
+    component_summary:
+      format: "Bullet list with counts"
+      required_items:
+        - "Processes: {n} (total shapes: {n})"
+        - "Maps: {n} (total mappings: {n})"
+        - "Functions: {n}"
+        - "Connectors: {n}"
+        - "Operations: {n}"
+        - "Cross References: {n}"
+        - "Profiles: {n} (types breakdown, total fields: {n})"
+        - "Process Properties: {n}" # if present
+    
+    footer:
+      reference: "Blockquote reference to profile-structures.md"
+  
+  shape_configuration:
+    header:
+      title_format: "{Process Name} - Shape Configurations"
+      required_fields:
+        - "Referenced from: `../boomi_design_{flow_name}.md` Section 3"
+        - "Generated: {date}"
+    
+    per_process_section:
+      heading_format: "## 3.x Process: {Process Name} - Shape Configurations"
+      anchor_format: "#3x-process-name-lowercase-with-hyphens"
+    
+    shape_entry:
+      heading_format: "### Shape: {userlabel} (ID: {shape_id})"
+      type_line: "**Type:** {shapetype}"
+      
+      configuration_tables:
+        start_shape:
+          columns: ["Setting", "Value"]
+          required_settings: ["Action Type", "Connector Type", "Connection ID", "Operation ID"]
+        
+        documentproperties_shape:
+          columns: ["Property", "Property ID", "Source Type", "Source Value"]
+          source_types: ["static", "crossref", "track", "execution", "profile"]
+        
+        branch_shape:
+          columns: ["Branch", "Target Shape", "Description"]
+        
+        catcherrors_shape:
+          columns: ["Setting", "Value"]
+          required_settings: ["Catch All", "Retry Count", "Try Path", "Catch Path"]
+        
+        processcall_shape:
+          columns: ["Setting", "Value"]
+          required_settings: ["Process ID", "Process Name", "Abort on Error", "Wait for Completion", "Return Paths"]
+        
+        decision_shape:
+          columns: ["Setting", "Value"]
+          required_settings: ["Comparison Type", "Left Value", "Right Value", "True Path", "False Path"]
+        
+        map_shape:
+          columns: ["Setting", "Value"]
+          required_settings: ["Map ID", "Map Name"]
+        
+        connectoraction_shape:
+          columns: ["Setting", "Value"]
+          required_settings: ["Action Type", "Connector Type", "Connection ID", "Operation ID"]
+        
+        dataprocess_shape:
+          columns: ["Step", "Process Type", "Name", "Configuration"]
+        
+        message_shape:
+          columns: ["Setting", "Value"]
+          note: "Include message template with parameter placeholders"
+        
+        exception_shape:
+          columns: ["Setting", "Value"]
+          required_settings: ["Message", "Stop Process Return Single Doc", "Stop Single Doc"]
+        
+        returndocuments_shape:
+          columns: ["Setting", "Value"]
+          required_settings: ["Label"]
+        
+        processroute_shape:
+          columns: ["Setting", "Value"]
+          required_settings: ["Route ID", "Route Name", "Wait for Completion", "Abort on Error"]
+  
+  function_reference:
+    header:
+      title_format: "{Process Name} - Function Reference"
+      required_fields:
+        - "Referenced from: `../boomi_design_{flow_name}.md` Section 4"
+        - "Generated: {date}"
+    
+    function_entry:
+      heading_format: "### Function: {Function Name} (Key: {n})"
+      required_fields:
+        - "**Function ID:** `{uuid}`"
+        - "**Type:** {User Defined Function / Scripting / etc.}"
+        - "**Description:** {from bns:description}" # if present
+      
+      inputs_table:
+        columns: ["Key", "Name", "Source"]
+        source_format: "Full path from profile root"
+      
+      outputs_table:
+        columns: ["Key", "Name", "Target"]
+        target_format: "Full path to target profile"
+      
+      function_steps_table:
+        columns: ["Step", "Type", "Name", "Configuration"]
+        configuration_format: "Complete step configuration details"
+      
+      logic_section:
+        format: "**Logic:** {description of what the function does}"
+        style: "Plain text explanation"
+  
+  profile_structures:
+    header:
+      title_format: "{Process Name} - Profile Structures"
+      required_fields:
+        - "Referenced from: `../boomi_design_{flow_name}.md` Section 4"
+        - "Generated: {date}"
+    
+    profile_inventory_table:
+      columns: ["#", "Profile ID", "Name", "Type", "File", "Fields"]
+    
+    per_profile_section:
+      heading_format: "## {n}. Profile: {Profile Name}"
+      required_fields:
+        - "**Profile ID:** `{uuid}`"
+        - "**Type:** {JSON/XML/Flat File}"
+        - "**Source File:** `{uuid}.xml`"
+        - "**Strict Mode:** {true/false}"
+        - "**Encoding:** {utf8/etc.}" # if applicable
+        - "**Usage:** {where profile is used}"
+      
+      structure_tree:
+        format: "Code block with tree visualization"
+        style: "Indented hierarchy showing field relationships"
+        include: "Key numbers, data types, minOccurs, maxOccurs"
+      
+      field_summary_table:
+        columns: ["Level", "Field Count", "Types"]
+        levels: ["Root", "Arrays", "Objects", "Leaf Fields"]
+      
+      field_details_table:
+        columns: ["Key", "Name", "Path", "Data Type", "Min Occurs", "Max Occurs", "Mappable", "Required"]
+        note: "Include ALL fields, not just mapped ones"
+      
+      mapped_fields_table:
+        columns: ["Field", "Mapping #", "Source Field"]
+        note: "Only for target profiles showing which fields are mapped"
+      
+      usage_notes:
+        format: "Bullet list or paragraph"
+        content: "Where fields are used, special handling, etc."
+    
+    profile_usage_summary_table:
+      columns: ["Profile", "Used In", "Purpose"]
+      location: "End of document"
+    
+    footer:
+      format: "**Total Profile Fields:** {n} fields across {n} profiles"
+      format_2: "**Profile Types:** {breakdown}"
+  
+  connector_settings:
+    header:
+      title_format: "{Process Name} - Connector Settings"
+      required_fields:
+        - "Referenced from: `../boomi_design_{flow_name}.md` Section 5"
+        - "Generated: {date}"
+    
+    section_heading: "## 5. Connector Settings"
+    
+    per_connection:
+      heading_format: "### 5.{n} Connection: {Connection Name}"
+      required_fields:
+        - "**Connection ID:** `{uuid}`"
+        - "**Type:** {Connector Type}"
+        - "**Source File:** `{uuid}.xml`"
+      settings_table:
+        columns: ["Setting", "Value"]
+        credential_mask: "[ENCRYPTED]"
+        include_all: "All connection properties"
+    
+    per_operation:
+      heading_format: "### 5.{n} Operation: {Operation Name}"
+      required_fields:
+        - "**Operation ID:** `{uuid}`"
+        - "**Type:** {Operation Type}"
+        - "**Source File:** `{uuid}.xml`"
+      settings_table:
+        columns: ["Setting", "Value"]
+        include_all: "All operation properties including batch sizes, timeouts, etc."
+      object_fields_table: # for Salesforce operations
+        columns: ["Field Name", "Data Type", "Custom", "Enabled", "Nillable"]
+    
+    per_cross_reference:
+      heading_format: "### 5.{n} Cross Reference: {Cross Ref Name}"
+      required_fields:
+        - "**Cross Ref ID:** `{uuid}`"
+        - "**Source File:** `{uuid}.xml`"
+      note_format: "**Note:** Cross-reference table contains {n} rows in export. Table is used for lookup operations."
+      columns_section: "**Columns:** {comma-separated list}"
+      usage_section: "**Usage:** {how lookup is performed}"
+  
+  verification_checklist:
+    header:
+      title_format: "{Process Name} - Zero Data Loss Verification Checklist"
+      required_fields:
+        - "Referenced from: `../boomi_design_{flow_name}.md` Section 7"
+        - "Generated: {date}"
+    
+    section_heading: "## 6. Zero Data Loss Validation"
+    
+    file_by_file_reconciliation:
+      heading: "### 6.1 File-by-File Reconciliation"
+      table_columns: ["#", "XML File", "Component", "Type", "XML Elements", "Documented", "Status"]
+      status_format: "✅ for match, ⚠️ for mismatch"
+      note_format: "Include notes for missing files or referenced-but-not-exported components"
+    
+    count_summary:
+      heading: "### 6.2 Count Summary"
+      table_columns: ["Category", "XML Count", "Documented", "Status"]
+      categories:
+        - "Processes"
+        - "Shapes (total)"
+        - "Maps"
+        - "Mappings (total)"
+        - "Functions"
+        - "Connectors"
+        - "Operations"
+        - "Cross References"
+        - "Profiles"
+        - "Profile Fields"
+    
+    configuration_completeness:
+      heading: "### 6.3 Configuration Completeness"
+      table_columns: ["Detail Type", "Documented", "Status"]
+      detail_types:
+        - "Decision shape logic"
+        - "Message templates"
+        - "Document property assignments"
+        - "Process call settings"
+        - "Connector action details"
+        - "Function configurations"
+        - "Map field mappings"
+        - "Cross-reference lookups"
+    
+    certification:
+      heading: "### 6.4 Certification"
+      format: "ASCII box with checkmarks"
+      required_items:
+        - "All XML files processed"
+        - "All shapes documented with configurations"
+        - "All mappings documented at field level"
+        - "All functions documented with complete logic"
+        - "All connectors documented with settings"
+        - "All operations documented with configurations"
+        - "File-by-file reconciliation complete"
+      result_line: "RESULT: ZERO DATA LOSS - DOCUMENTATION COMPLETE"
+    
+    footer:
+      required_fields:
+        - "**Documentation Generated:** {date}"
+        - "**Process:** {Process Name}"
+        - "**Version:** {version numbers if available}"
+
+# Critical Output Patterns (DO NOT MISS)
+critical_patterns:
+  main_document:
+    - "Header MUST include Project (exact description text), Process ID, Processing type, Source File, Generated date"
+    - "Section 1.1 MUST use EXACT text from XML description - NO paraphrasing"
+    - "Section 2.1 MUST use graph TB with 5 subgraphs (Source, Middleware, Integration, Target, Monitoring)"
+    - "Section 3 diagrams MUST appear BEFORE step-by-step execution table"
+    - "Shape Count Verification belongs ONLY in verification-checklist.md — NEVER in main document"
+    - "Mapping Count Verification belongs ONLY in verification-checklist.md — NEVER in main document"
+    - "Field Mappings table MUST include ALL rows — NEVER summarize, abbreviate, or show 'X of Y'"
+    - "Step-by-Step Execution table MUST include ALL shapes — NEVER summarize"
+    - "Field Mappings table MUST show function inputs separately with 'Function Input' type"
+    - "Section 6 MUST include Gap Analysis table when referenced-but-missing components exist"
+    - "Every section MUST follow RGV loop: RE-READ → INVENTORY → GENERATE → VERIFY → FIX → CHECKPOINT"
+    - "Agent MUST COMMIT to element count N before generating any table"
+    - "Agent MUST VERIFY generated row count = N before proceeding to next section"
+  
+  supporting_docs:
+    - "component-inventory.md MUST include Component Summary with all counts"
+    - "component-inventory.md MUST include Gap Analysis subsection when referenced-but-missing components exist"
+    - "shape-configuration.md MUST document ALL shapes with complete configuration tables"
+    - "function-reference.md MUST include Function Steps table with complete configuration"
+    - "profile-structures.md MUST include Structure Tree, Field Summary, and Field Details for ALL fields"
+    - "connector-settings.md MUST mask credentials as [ENCRYPTED]"
+    - "verification-checklist.md MUST include Certification box with ASCII art"
+  
+  references:
+    - "ALL references MUST use blockquote format: > **{icon} {title}:** See [`{path}`]({path})"
+    - "Reference links MUST use relative paths: supporting-docs/{filename}.md"
+    - "Anchor links for shape-configuration MUST match process section: #3x-process-name"

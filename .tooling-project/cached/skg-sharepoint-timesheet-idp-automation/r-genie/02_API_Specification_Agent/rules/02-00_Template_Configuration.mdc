@@ -1,0 +1,105 @@
+---
+description: Template Configuration Guide (RAML & OpenAPI)
+author: Cheppali Shaik Sohail
+version: 2.1.0
+alwaysApply: false
+tags: [template, configuration, phase-0, raml, openapi]
+appliesTo: [api-specification, templates]
+whenToUse:
+  - "Phase 0: Template loading"
+  - "Customizing output format"
+priority: HIGH
+---
+
+# TEMPLATE CONFIGURATION
+
+> **Phase 0 Reference** - Template-first approach for API specification generation
+
+---
+
+## EXAMPLE LOCATIONS
+
+| Format | Example Directory |
+|--------|-------------------|
+| **RAML** | `examples/customer-system-api/` |
+| **OpenAPI** | `examples/customer-system-api-oas/` |
+
+---
+
+## PRE-GENERATION CHECKLIST (MANDATORY)
+
+Before generating ANY specification:
+
+- [ ] **Format selected** (RAML or OpenAPI)
+- [ ] Example folder read for chosen format
+- [ ] API layer identified (Experience/Process/System)
+- [ ] Endpoints confirmed with user
+- [ ] Security scheme selected
+- [ ] Component structure planned
+
+**If ANY check fails → DO NOT PROCEED → Fix first**
+
+---
+
+## FORMAT COMPARISON
+
+| Aspect | RAML 1.0 | OpenAPI 3.0 |
+|--------|----------|-------------|
+| **Extension** | `.raml` | `.yaml` |
+| **Header** | `#%RAML 1.0` | `openapi: 3.0.3` |
+| **Imports** | `!include`, `uses:` | `$ref:` |
+| **Types** | `fragments/libraries/` | `components/schemas/` |
+| **Security** | `fragments/security-schemes/` | `components/security/` |
+| **Best For** | MuleSoft projects | Cross-platform tools |
+
+---
+
+## STRUCTURE CONFIGURATION
+
+### RAML
+```yaml
+structure:
+  externalize_examples: true      # !include examples/...
+  security_via_include: true      # !include for security (MANDATORY)
+  
+fragments:
+  libraries: true
+  traits: true
+  security_schemes: true
+```
+
+### OpenAPI
+```yaml
+structure:
+  externalize_schemas: true       # $ref: './components/...'
+  modular_components: true        # Separate component files
+  
+components:
+  schemas: true
+  parameters: true
+  responses: true
+  securitySchemes: true
+```
+
+---
+
+## PHASE 0 OUTPUT
+
+```
+📋 Template Configuration Loaded:
+   ✅ Format: [RAML 1.0 | OpenAPI 3.0]
+   ✅ API Layer: [Experience | Process | System]
+   ✅ Example: [reference folder]
+   ✅ Components: [enabled list]
+   ✅ Quality Target: 85 points
+```
+
+---
+
+## DEFAULT CONFIGURATION
+
+If no custom config:
+- Externalize all examples (MANDATORY)
+- Modular components (MANDATORY)
+- RFC 7807 errors (MANDATORY)
+- 85-point production threshold

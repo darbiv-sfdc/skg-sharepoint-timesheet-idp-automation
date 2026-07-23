@@ -1,0 +1,30 @@
+# Design-specific NON-SECURE properties to add to:
+#   src/main/resources/properties/${mule.env}-properties.yaml
+# (Values shown are dev/reference defaults; adjust per environment.)
+
+idp:
+  action:
+    id: "idp-skg-salaries-pjc"       # Mapped IDP Action UUID/name
+    version: "1.0.0"                 # Target version in Exchange
+    max_checks: "20"                 # Max poll loops before timeout (20 x 30s ~= 10 min)
+
+sharepoint:
+  site:
+    url: "https://skgtechoffice.sharepoint.com/sites/MulesoftProjectSite"
+  path:
+    source: "Shared Documents/Manual Uploads/Inbound"
+    processing: "Shared Documents/Manual Uploads/Processing"
+    output: "Shared Documents/Manual Uploads/Output"
+    processed: "Shared Documents/Manual Uploads/Processed"
+    error: "Shared Documents/Manual Uploads/Error"
+  filter:
+    extension: "pdf"
+
+scheduler:
+  cron: "0 0 0/1 * * ?"              # Every 1 hour
+
+vm:
+  queue:
+    name: "idp-timesheet-queue"      # Persistent VM queue
+  poll:
+    sleepMillis: "30000"             # 30s pause between IN_PROGRESS re-checks

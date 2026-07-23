@@ -1,0 +1,333 @@
+---
+description: R-GENIE Master Orchestrator - 7-Stage Pipeline with Per-Agent Phase Execution & Handoff Protocol
+author: Cheppali Shaik Sohail
+version: 3.0.0
+alwaysApply: false
+tags: [phase, orchestration, pipeline, stages, workflow, state-machine, handoff]
+appliesTo: [r-genie, orchestration, pipeline, stage-management]
+whenToUse:
+  - "Managing stage transitions in R-GENIE pipeline"
+  - "Tracking pipeline workflow state and progress"
+  - "Executing agent phases and creating handoff documents"
+whenNotToUse:
+  - "Starting new pipeline → Use @00_Master_Orchestrator.mdc"
+  - "Need stop point rules → Use @00-02_Mandatory_Stop_Points.mdc"
+  - "Need per-stage execution details → Use @00-01_Guidance.mdc"
+keywords: [phase, stage, checkpoint, pipeline, workflow, transition, state-machine, handoff]
+priority: HIGH
+role: Stage workflow manager - Drives 7-stage pipeline with full phase execution and handoff documents
+delegatesTo:
+  - "@00_Master_Orchestrator.mdc - Overall pipeline coordination"
+  - "@00-01_Guidance.mdc - Per-stage phase details, handoff templates, I/O mapping"
+  - "@00-02_Mandatory_Stop_Points.mdc - Checkpoint enforcement"
+  - "Agent rules loaded per stage for detailed execution"
+---
+
+# 🧞‍♂️ **7-STAGE PIPELINE ORCHESTRATION**
+
+> **APPLY WHEN**: Executing R-GENIE pipeline, managing stage transitions and handoffs
+> **CROSS-REFERENCE**: `@00-01_Guidance.mdc` for per-stage details, `@00-02_Mandatory_Stop_Points.mdc` for checkpoints
+
+---
+
+## 🎯 **PIPELINE PHILOSOPHY**
+
+- ✅ **Phase-aware** — Orchestrator drives each agent's full phase workflow
+- ✅ **Structured handoffs** — Markdown handoff doc between every stage
+- ✅ **One agent at a time** — Load/unload to manage context window
+- ✅ **User control** — Checkpoints at every stage boundary + agent internal stops
+- ✅ **Resume capable** — State file + handoff docs enable mid-pipeline restart
+
+---
+
+## 📊 **PIPELINE STATE DIAGRAM**
+
+```mermaid
+stateDiagram-v2
+    [*] --> INIT: Start Pipeline
+    INIT --> S1: User Confirms Scope
+    
+    S1 --> H1: Design Complete → Create Handoff
+    H1 --> S2: Continue
+    H1 --> STOP: Stop
+    
+    S2 --> H2: API Spec Complete → Create Handoff
+    H2 --> S3: Continue
+    H2 --> STOP: Stop
+    
+    S3 --> H3: App Complete → Create Handoff
+    H3 --> S4: Continue
+    H3 --> STOP: Stop
+    
+    S4 --> H4: DW Review Complete → Create Handoff
+    H4 --> S5: Continue
+    H4 --> STOP: Stop
+    
+    S5 --> H5: Tests Complete → Create Handoff
+    H5 --> S6: Continue
+    H5 --> STOP: Stop
+    
+    S6 --> H6: Docs Complete → Create Handoff
+    H6 --> S7: Continue
+    H6 --> STOP: Stop
+    
+    S7 --> DONE: Review Complete
+    DONE --> [*]
+    STOP --> [*]
+```
+
+---
+
+## 📋 **7 STAGES WITH AGENT PHASES**
+
+### Stage 1: Technical Design (Agent 01) — 6 Phases
+
+| Phase | What Happens | Output |
+|-------|-------------|--------|
+| 0 | Document skeleton + template loading | Skeleton created |
+| 1 | Requirements analysis + validation | Requirements validated |
+| 2 | Architecture + sequence diagram | Architecture section |
+| 3 | Mappings + error/connector diagrams | Mapping tables + diagrams |
+| 4 | Document completion | Full design document |
+| 5 | Config files + supplementary sections (optional) | Config appendix |
+
+**Rules:** `@r-genie/01_Technical_Design_Agent/rules/01_Technical_Design.mdc`
+**Output:** `project/output_01_design/{project}-technical-design.md`
+**Handoff:** `project/output_00_orchestrator/handoff-01-to-02.md`
+
+---
+
+### Stage 2: API Specification (Agent 02) — 5 Phases
+
+| Phase | What Happens | Output |
+|-------|-------------|--------|
+| 0 | File discovery + state check | Input files identified |
+| 1 | Format selection (RAML/OAS) + requirements + API layer | Format chosen, requirements |
+| 2 | Specification structure design | Spec structure |
+| 3 | Quality enhancement + components | Components created |
+| 4 | Validation + delivery | Final spec delivered |
+
+**Rules:** `@r-genie/02_API_Specification_Agent/rules/02_API_Specification.mdc`
+**Input:** Stage 1 design document (from handoff)
+**Output:** `project/output_02_api/{api-name}.raml` or `.yaml`
+**Handoff:** `project/output_00_orchestrator/handoff-02-to-03.md`
+
+---
+
+### Stage 3: App Development (Agent 03) — 6 Phases
+
+| Phase | What Happens | Output |
+|-------|-------------|--------|
+| 0 | Requirements + template analysis | Understanding confirmed |
+| 1 | Design analysis + validation | Implementation plan |
+| 2 | Application generation | Project structure + flows |
+| 3 | Build optimization | Build-ready app |
+| 3.5 | Secure properties/credentials | Credentials configured |
+| 4 | Deployment preparation | Deployment config |
+| 5 | Final validation | Complete app delivered |
+
+**Rules:** `@r-genie/03_App_Development_Agent/rules/03_App_Development.mdc`
+**Input:** Stage 2 API spec (from handoff)
+**Output:** `project/output_03_app/` (complete MuleSoft project)
+**Handoff:** `project/output_00_orchestrator/handoff-03-to-0301.md`
+
+---
+
+### Stage 4: DataWeave Review (Agent 03-01) — Review Mode
+
+| Phase | What Happens | Output |
+|-------|-------------|--------|
+| 0 | Scenario detection — **review mode** (not creation) | DW files identified |
+| 1 | Requirements analysis of existing transforms | Patterns analyzed |
+| 2 | Review + optimize each DataWeave script | Optimized scripts |
+| 3 | Validation suite on all transforms | Test results |
+| 4 | Quality gates + delivery | Production-safe DW |
+
+**Rules:** `@r-genie/03-01_Dataweave_Agent/rules/03-01_Dataweave.mdc`
+**Input:** DataWeave files from Stage 3 app (from handoff)
+**Output:** Optimized `.dwl` files in place
+**Handoff:** `project/output_00_orchestrator/handoff-0301-to-04.md`
+
+> ⚠️ **REVIEW MODE**: Tell agent to REVIEW existing transforms from Stage 3, not create new ones.
+
+---
+
+### Stage 5: MUnit Testing (Agent 04) — 10 Phases
+
+| Phase | What Happens | Output |
+|-------|-------------|--------|
+| 0 | Project setup + validation | Project copied |
+| 1 | Flow discovery + classification | Flows classified |
+| 2 | Logic analysis (in-chat) | Flow understanding |
+| 3 | Test scenario design (in-chat) | Scenarios defined |
+| 4 | Test data generation | Test data files |
+| 5 | MUnit test generation | Test XML files |
+| 6 | Mock generation | Mock configurations |
+| 7 | Coverage optimization loop | Coverage ≥85% |
+| 8 | Build verification | Maven build passes |
+| 9 | Final delivery | Complete test suite |
+
+**Rules:** `@r-genie/04_Munit_Agent/rules/04_Munit.mdc`
+**Input:** Stage 3 app + Stage 4 optimized DW (from handoff)
+**Output:** `project/output_04_munit/{project}/src/test/munit/`
+**Handoff:** `project/output_00_orchestrator/handoff-04-to-05.md`
+
+---
+
+### Stage 6: ReadMe Documentation (Agent 05) — 6 Phases
+
+| Phase | What Happens | Output |
+|-------|-------------|--------|
+| 0 | Confirm project location | Project located |
+| 1 | Template loading | Templates ready |
+| 2 | Project analysis + metadata extraction | Metadata extracted |
+| 3 | Section-by-section generation | README sections |
+| 4 | Mermaid diagrams + quality check | Diagrams + quality |
+| 5 | Final delivery | Complete README |
+
+**Rules:** `@r-genie/05_ReadMe_Agent/rules/05_ReadMe.mdc`
+**Input:** All stage outputs (app, tests, design)
+**Output:** `project/output_05_readme/README.md`
+**Handoff:** `project/output_00_orchestrator/handoff-05-to-06.md`
+
+---
+
+### Stage 7: Code Review (Agent 06) — 5 Phases + RGV Multi-Pass
+
+| Phase | What Happens | Output |
+|-------|-------------|--------|
+| 1 | Validate inputs + count files | Report skeleton |
+| 2 | Extract requirements from Stage 1 design | Requirements section |
+| 3 | Flow-by-flow analysis (RGV multi-pass) | Findings per flow |
+| 4 | Field mapping verification (RGV multi-pass) | Mapping gaps |
+| 5 | Calculate score + finalize | Score + decision |
+
+**Rules:** `@r-genie/06_Code_Review_Agent/rules/06_Code_Review.mdc`
+**Input:** Full project + Stage 1 technical design (for requirements verification)
+**Output:** `project/output_06_review/{project}-code-review.md`
+
+> ⚠️ **REVIEW AGAINST DESIGN**: Tell agent to use Stage 1 technical design as the requirements source for verification.
+
+---
+
+## 🔄 **STAGE EXECUTION PROTOCOL**
+
+```
+EXECUTE_STAGE(N):
+  0. DETECT IDE (Cursor → .cursorignore, Windsurf → .windsurfignore)
+  1. ANNOUNCE: "🧞‍♂️ Stage {N}: {Agent Name}"
+  2. ENABLE agent in IDE's ignore file (comment the line)
+  3. LOAD agent rules (see per-stage rules reference above)
+  4. READ previous handoff: project/output_00_orchestrator/handoff-{prev}.md
+  5. EXECUTE all agent phases in order:
+     - Follow agent's Phase Orchestration rules
+     - Respect agent's Mandatory Stop Points
+     - Track phase completion
+  6. On agent completion → CREATE handoff document (see @00-01_Guidance.mdc for template)
+  7. 🛑 STAGE CHECKPOINT (see @00-02_Mandatory_Stop_Points.mdc)
+  8. User decides: Continue | Skip | Stop
+  9. DISABLE agent (uncomment in ignore file)
+  10. UPDATE state file
+```
+
+---
+
+## 📁 **STATE FILE**
+
+**Location:** `project/output_00_orchestrator/.master-pipeline-state.json`
+
+```json
+{
+  "workflowId": "master-pipeline-{timestamp}",
+  "version": "3.0.0",
+  "projectName": "{project-name}",
+  "startTime": "{ISO8601}",
+  "lastUpdated": "{ISO8601}",
+  "currentStage": "STAGE_N",
+  "status": "IN_PROGRESS | COMPLETED | STOPPED",
+  "stages": {
+    "stage1_design":     { "status": "...", "output": "...", "handoff": "handoff-01-to-02.md" },
+    "stage2_api":        { "status": "...", "output": "...", "handoff": "handoff-02-to-03.md" },
+    "stage3_app":        { "status": "...", "output": "...", "handoff": "handoff-03-to-0301.md" },
+    "stage4_dw_review":  { "status": "...", "output": "...", "handoff": "handoff-0301-to-04.md" },
+    "stage5_munit":      { "status": "...", "output": "...", "handoff": "handoff-04-to-05.md" },
+    "stage6_readme":     { "status": "...", "output": "...", "handoff": "handoff-05-to-06.md" },
+    "stage7_review":     { "status": "...", "output": "..." }
+  }
+}
+```
+
+### **State Management**
+
+```
+ON ACTIVATION:
+  1. Check for state file in project/output_00_orchestrator/
+  2. If exists: Show progress, offer resume from last completed stage
+  3. If not: Create new state file + output_00_orchestrator/ directory
+
+ON STAGE COMPLETE:
+  1. Update stage status and output paths
+  2. Record handoff file path
+  3. Save state file
+
+ON RESUME:
+  1. Read state file
+  2. Read last handoff document
+  3. Offer: resume next stage OR re-run current stage
+```
+
+---
+
+## 🧠 **PHASE EXECUTION: `<thinking>` BLOCK**
+
+Before generating ANY stage output or handoff document:
+
+```
+<thinking>
+1. Key inputs received: [handoff data, user requirements, stage context]
+2. Decisions I am making: [which agent to load, which phases to prioritize]
+3. Evidence from source: [cite specific handoff content or user answers]
+4. Risks/gaps identified: [missing inputs, quality concerns, stage dependencies]
+5. Confidence: HIGH / MEDIUM / LOW [with justification]
+6. Production learnings applicable: [check 00_Production_Learnings.md]
+</thinking>
+```
+
+---
+
+## 📊 **CONFIDENCE CALIBRATION**
+
+| Confidence | When to Use | Action |
+|------------|------------|--------|
+| **HIGH** | Clear handoff data, all inputs present | Proceed with stage execution |
+| **MEDIUM** | Partial handoff, reasonable inference | Flag assumptions, recommend validation |
+| **LOW** | Missing handoff, vague requirements | **STOP** — request clarification before proceeding |
+
+---
+
+## 🔄 **RGV PATTERN (Handoff Verification)**
+
+Apply after EVERY stage completion, before presenting checkpoint:
+
+```
+1. READ: Stage {N} outputs → Expected: [count deliverables from phase table]
+2. GENERATE: Handoff document → Expected: [all key decisions, output files, instructions]
+3. VERIFY: "Handoff covers {X}/{Y} deliverables from stage"
+4. FIX: Any missing deliverables or decisions before presenting checkpoint
+```
+
+> If X ≠ Y, do NOT present the stage checkpoint. Fix the gap first.
+
+---
+
+##  **QUICK REFERENCE**
+
+| Need | Reference |
+|------|-----------|
+| Main orchestration | `@00_Master_Orchestrator.mdc` |
+| Per-stage details + handoff templates | `@00-01_Guidance.mdc` |
+| Stop points | `@00-02_Mandatory_Stop_Points.mdc` |
+
+---
+
+🧞‍♂️ **Pipeline Orchestration V3 - Phase-Aware with Structured Handoffs!** ✨

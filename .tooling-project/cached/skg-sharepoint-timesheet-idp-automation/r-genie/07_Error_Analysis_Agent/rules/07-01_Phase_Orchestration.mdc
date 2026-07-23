@@ -1,0 +1,185 @@
+---
+description: Phase Orchestration & Workflow State Management
+author: Cheppali Shaik Sohail
+version: 2.1.0
+alwaysApply: false
+tags: [phase, orchestration, workflow]
+appliesTo: [error-analysis, workflow]
+whenToUse:
+  - "Managing phase transitions"
+  - "Tracking workflow state"
+priority: HIGH
+---
+
+# PHASE ORCHESTRATION V2
+
+> **Purpose**: Manage 3-phase workflow with confidence-based checkpoints
+> **Enforcement**: See `@07-03_Mandatory_Stop_Points.mdc`
+
+---
+
+## PHASE SPECIFICATION
+
+### **PHASE 0: Input Reception**
+
+**Tasks:**
+1. Receive error log, stack trace, or description
+2. Identify error format
+3. Categorize error type
+4. Prepare for root cause analysis
+
+**STOP POINT:** If error input is unclear, ASK for more context.
+
+---
+
+### **PHASE 1: Root Cause Analysis**
+
+**Tasks:**
+1. Parse error message and stack trace
+2. Identify error category (connection, transformation, config, etc.)
+3. Analyze component involved
+4. Determine root cause
+5. Assign confidence level (High/Medium/Low)
+
+**Root Cause Questions:**
+```
+- Configuration issue? (URLs, credentials, timeouts)
+- Data problem? (Invalid format, missing fields)
+- Integration issue? (External system down, network)
+- Resource issue? (Memory, CPU, connection pool)
+- Design issue? (Anti-patterns, missing error handling)
+```
+
+**STOP POINT:** If confidence is LOW (<50%), STOP and ask for:
+- Additional logs
+- Configuration details
+- Environment information
+- What changed recently
+
+---
+
+### **PHASE 2: Solution & Prevention**
+
+**Tasks:**
+1. Generate immediate fix steps
+2. Provide long-term resolution
+3. Suggest prevention measures
+4. Include confidence level with reasoning
+
+**FINAL MESSAGE:**
+```
+✅ ERROR ANALYSIS COMPLETE
+
+Root Cause: [description]
+Confidence: [HIGH/MEDIUM/LOW]
+
+Immediate Fix:
+1. [Step 1]
+2. [Step 2]
+
+Long-term Resolution:
+- [Solution details]
+
+Prevention:
+- [Best practice]
+
+---
+Did this solve your problem?
+→ Reply "solved" if resolved
+→ Reply with more details for further help
+```
+
+---
+
+## STATE FILE
+
+**Location:** `project/output_07_errors/.error-analysis-state.json`
+
+**On Activation:**
+1. Check for existing state file
+2. If exists → offer Resume / Start Fresh
+3. If not → create new state, start Phase 0
+
+---
+
+## ERROR RECOVERY
+
+| Situation | Action |
+|-----------|--------|
+| Analysis fails | State confidence LOW, ask for more info |
+| User disconnects | State preserved, resume on next activation |
+| Ambiguous error | Present possible causes, ask user to narrow down |
+| New error during fix | Start fresh analysis for new error |
+
+---
+
+## PHASE TRANSITIONS
+
+| From | To | Condition |
+|------|-----|-----------|
+| INPUT | ROOT_CAUSE | Error input received |
+| ROOT_CAUSE | SOLUTION | High/Medium confidence |
+| ROOT_CAUSE | STOP | Low confidence, need more info |
+| SOLUTION | COMPLETE | Solution provided |
+
+---
+
+## CONFIDENCE-BASED FLOW
+
+```
+Error Input → Phase 0 (categorize)
+    ↓
+Phase 1 (root cause)
+    ↓
+Confidence HIGH/MEDIUM? → Phase 2 (solution)
+    ↓
+Confidence LOW? → STOP, ask for more info
+```
+
+---
+
+## `<thinking>` BLOCK (MANDATORY Before Every Phase Output)
+
+```
+<thinking>
+1. Key inputs received: [error log, stack trace, description details]
+2. Decisions I am making: [error classification, root cause hypothesis, confidence assessment]
+3. Evidence from source: [cite specific error signatures, stack trace lines]
+4. Risks/gaps identified: [what could go wrong, what info is missing]
+5. Confidence: HIGH / MEDIUM / LOW [with justification]
+6. Production learnings applicable: [check 07_Production_Learnings.md]
+</thinking>
+```
+
+---
+
+## CONFIDENCE CALIBRATION (Enhanced)
+
+| Confidence | When to Use | Action |
+|------------|------------|--------|
+| **HIGH** (80-100%) | Clear error signature, proven pattern match | Proceed with solution |
+| **MEDIUM** (50-79%) | Probable cause, needs testing | Proceed with caveat, flag assumptions |
+| **LOW** (<50%) | Multiple causes, insufficient info | **STOP** — request more info before proceeding |
+
+---
+
+## RGV (READ-GENERATE-VERIFY) PATTERN
+
+Apply for each analysis phase:
+
+```
+1. READ: [error input material] → Expected: [signatures, components, context]
+2. GENERATE: [diagnosis/solution] → Expected: [root cause, fix steps, prevention]
+3. VERIFY: "Analyzed {X}/{Y} error indicators from input"
+4. FIX: Any gaps before presenting to user
+```
+
+> If X ≠ Y, do NOT present the analysis. Fix the gap first.
+
+### Phase-Specific RGV
+
+| Phase | READ | GENERATE | VERIFY |
+|-------|------|----------|--------|
+| Phase 0 | Error input (logs, traces) | Error categorization | All error indicators classified? |
+| Phase 1 | Categorized error | Root cause + confidence | All possible causes considered? |
+| Phase 2 | Root cause analysis | Solution + prevention | All fix steps actionable? |

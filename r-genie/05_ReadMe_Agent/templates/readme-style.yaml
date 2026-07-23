@@ -1,0 +1,82 @@
+# README AGENT - TEMPLATE CONFIGURATION
+# 
+# ⚠️ CRITICAL: This template controls README structure
+# 
+# SECTION INCLUSION RULES:
+#   include: true  → Section MUST be generated
+#   include: false → Section MUST NOT be generated
+# 
+# The agent will ONLY generate sections where include: true
+# Examples are for FORMATTING reference only, not structure
+#
+
+project_name: ""
+
+outputs:
+  readme: true
+
+structure:
+  sections:
+    - name: "Overview"
+      description: "Project purpose, business context, key capabilities, technology stack table"
+      include: true
+    
+    - name: "Architecture"
+      description: "High-level system design Mermaid diagram (flowchart TB) showing overall integration pattern"
+      include: true
+    
+    - name: "API Endpoints"
+      description: "For each endpoint/business flow: (1) Endpoint details table (method, path, description), (2) Flow-specific Mermaid diagram (flowchart TD) showing processing steps, (3) Reference to relevant MUnit test files for request response data - do not add example content directly. ask user if there is no relavant test data is present"
+      include: true
+    
+    - name: "Configuration"
+      description: "Property files, environment variables table, secure properties list"
+      include: true
+    
+    - name: "Deployment"
+      description: "CloudHub/on-prem commands, vCore/worker requirements, CI/CD notes"
+      include: false
+      # ⚠️ Set to false: Do NOT generate this section
+    
+    - name: "Troubleshooting"
+      description: "Quick diagnosis table (symptom/cause/solution), health check endpoint"
+      include: false
+      # ⚠️ Set to false: Do NOT generate this section
+
+  custom_sections:
+    - name: "Support"
+      description: "How to get support"
+      include: true
+
+naming:
+  file_pattern: "README.md"
+  heading_style: "Title Case"
+
+style:
+  include_badges: true
+  include_toc: true
+  include_diagram: true
+  include_attribution: true
+  badge_style: "plain-text"
+  # ⚠️ Use plain text format: "Version: X | Runtime: Y | Status: Z"
+  # ❌ DO NOT use external SVG badges (shields.io) - violates self-contained documentation principle
+
+
+    
+
+# ============================================
+# VALIDATION RULES
+# ============================================
+# 
+# Before generating README, agent must:
+# 1. Parse this file
+# 2. Extract structure.sections array
+# 3. Filter sections where include: true
+# 4. Generate ONLY those sections
+# 5. Verify no sections with include: false are present
+# 6. Verify no sections NOT in this template are present
+# 
+# EXAMPLES are for formatting (headings, tables, code blocks)
+# TEMPLATE is for structure (which sections to include)
+#
+

@@ -1,0 +1,191 @@
+---
+description: BizTalk Documentation Agent - MANDATORY Template Configuration & Output Structure
+author: Cheppali Shaik Sohail
+version: 1.1.0
+alwaysApply: false
+tags: [biztalk, template, output-structure, documentation, MANDATORY]
+appliesTo: [biztalk-documentation]
+whenToUse:
+  - "Before generating any output section (read this FIRST)"
+  - "Determining main-doc sections, supporting-doc formats, and locked table columns"
+priority: HIGH
+---
+
+# TEMPLATE CONFIGURATION — MANDATORY
+
+> **⚠️ CRITICAL: Output MUST match the canonical example format EXACTLY.**
+> **Canonical full anchor:** `examples/01_oracle_changepo/` (main doc + all 7 supporting docs)
+> **Literal templates:** `templates/documentation-template-guide.md`
+> **Declarative config:** `templates/documentation-style.yaml`
+> **Decoupling:** Rules reference sections by NAME; this file + `templates/` own the structure.
+
+---
+
+## ⚠️ MANDATORY ENFORCEMENT
+
+```
+╔═══════════════════════════════════════════════════════════════════════╗
+║  BEFORE CREATING ANY OUTPUT FILE:                                     ║
+║   1. READ templates/documentation-style.yaml                         ║
+║   2. READ templates/documentation-template-guide.md                  ║
+║   3. READ examples/01_oracle_changepo/ (main + supporting-docs)      ║
+║                                                                       ║
+║  YOUR OUTPUT STRUCTURE MUST MATCH THE EXAMPLE EXACTLY —              ║
+║  same headers, section order, table columns, reference blockquotes,  ║
+║  and certification box. Only the EXTRACTED VALUES change.            ║
+╚═══════════════════════════════════════════════════════════════════════╝
+```
+
+Consistency is the product. Two different BizTalk apps must yield two structurally identical documents.
+
+---
+
+## REQUIRED FILES (ALL MUST BE CREATED)
+
+Inside `project/output_biztalk/{app_name}/`:
+
+| File | Phase | Required |
+|------|-------|----------|
+| `biztalk_design_{app_name}.md` | 0-5 | ✅ |
+| `supporting-docs/artifact-inventory.md` | 0 | ✅ |
+| `supporting-docs/orchestration-flows.md` | 1 | ✅ |
+| `supporting-docs/schema-structures.md` | 2 | ✅ |
+| `supporting-docs/map-mappings.md` | 2 | ✅ |
+| `supporting-docs/pipeline-helper-reference.md` | 3 | ✅ |
+| `supporting-docs/replication-gap-report.md` | 4 | ✅ |
+| `supporting-docs/verification-checklist.md` | 5 | ✅ |
+| `.biztalk-state.json` | 0-5 | ✅ |
+
+> If an artifact type is absent, still emit the section/doc and mark it **"Not applicable — no {artifact} present"** — never omit silently.
+
+---
+
+## MAIN DOCUMENT STRUCTURE (EXACT ORDER)
+
+Header (`# BizTalk Technical Design — {app_name}` + Source / Generated / Agent line), then:
+
+| # | Section | Marker | Phase | Reference icon |
+|---|---------|--------|-------|----------------|
+| 1 | Application Overview | `<!-- SECTION:1 -->` | 0 | 📦 |
+| 2 | Architecture | `<!-- SECTION:2 -->` | 0 | — (📦 inherited) |
+| 3 | Orchestration Documentation | `<!-- SECTION:3 -->` | 1 | 🔀 |
+| 4 | Schemas & Data Mappings | `<!-- SECTION:4 -->` | 2 | 🗂️ 🔗 |
+| 5 | Pipelines, Ports & Helpers | `<!-- SECTION:5 -->` | 3 | 🧩 |
+| 6 | MuleSoft Replication Readiness | `<!-- SECTION:6 -->` | 4 | 🚧 |
+| 7 | Validation & Certification | `<!-- SECTION:7 -->` | 5 | 📋 |
+
+> Heavy detail (verbatim expressions, full field trees, all map links, full helper code) lives in supporting docs; the main doc carries the narrative + diagrams + the complete Section 4/6 tables. Full literal per-section templates: `templates/documentation-template-guide.md`.
+
+---
+
+## LOCKED TABLE COLUMNS (DO NOT rename / reorder / add / drop)
+
+| Where | Columns |
+|-------|---------|
+| §1 Artifact counts | `Type \| Count \| Notes` (rows: Orchestrations/Maps/Schemas/Pipelines/Helpers) |
+| §2 Assembly graph | `Referenced Assembly \| Used For \| Source in export?` |
+| §3 Shape table | `# \| Shape \| Name \| Config / Expression \| OID` |
+| §4 Map links | `Link \| Source \| Target \| Logic` |
+| §6 Replication | `BizTalk Construct \| MuleSoft Equivalent \| Verdict` |
+| §7 Reconciliation | `File \| Found \| Documented` |
+| inventory: files | `# \| File \| Type \| Encoding \| Notes` |
+| orch-flows: shapes | `# \| Shape Type \| Name \| Config / Expression \| Source OID` |
+| gap register | `# \| Artifact \| Gap \| Why not replicable \| Recommended MuleSoft action` |
+| verification: recon | `File \| Elements found \| Documented \| Status` |
+
+> Full column set for every table: `templates/documentation-style.yaml → locked_columns`.
+
+---
+
+## REFERENCE FORMAT (EXACT)
+
+```markdown
+> **{icon} {Title}:** See [`supporting-docs/{file}.md`](supporting-docs/{file}.md) for {description}.
+```
+
+| Icon | Doc | Icon | Doc |
+|------|-----|------|-----|
+| 📦 | artifact-inventory.md | 🧩 | pipeline-helper-reference.md |
+| 🔀 | orchestration-flows.md | 🚧 | replication-gap-report.md |
+| 🗂️ | schema-structures.md | 📋 | verification-checklist.md |
+| 🔗 | map-mappings.md | | |
+
+Canonical descriptions: `templates/documentation-template-guide.md → Reference Format`.
+
+---
+
+## DIAGRAM SPECIFICATIONS
+
+| Diagram | Type | Location | Rules |
+|---------|------|----------|-------|
+| System context | `flowchart LR` | Section 2 | `curve: linear` init; `<br/>` labels; style by role |
+| Orchestration flow | `flowchart TD` | Section 3 (one per `.odx`) | branches for Decision/Parallel; dashed `-.->` for catch/back-edges |
+
+MANDATORY atop every flowchart: `%%{ init: { 'flowchart': { 'curve': 'linear' } } }%%`. Never use `\n` in labels. Mermaid standards: `@02_Guidance.mdc §6`.
+
+---
+
+## SUPPORTING DOCUMENT FORMATS
+
+Each supporting doc opens with `# {Title} — {app_name}` + a `> Phase {n}.` scope line. Exact per-doc structures (tables, trees, code blocks, certification box) are in `templates/documentation-template-guide.md → SUPPORTING DOCUMENT — EXACT TEMPLATES`. Summary:
+
+| Doc | Must contain |
+|-----|--------------|
+| artifact-inventory.md | files table, artifact-type counts, assembly-ref graph (tree), referenced-but-absent table |
+| orchestration-flows.md | per-orch: ports/messages/variables tables, shape table, **verbatim csharp blocks (never truncated)**, helper call-sites, Mermaid flow |
+| schema-structures.md | per-schema property table, structure tree, fields-in-use (when body absent) |
+| map-mappings.md | `.btm`↔`.xsl` divergence note, EVERY link table, body template, header/control |
+| pipeline-helper-reference.md | pipelines, ports table, helpers (🔴 GAP when absent), framework calls |
+| replication-gap-report.md | BizTalk→MuleSoft table, gap register, Tree-of-Thought for ambiguous rebuilds |
+| verification-checklist.md | file-by-file reconciliation, count summary, quality checklist, **certification box** |
+
+---
+
+## CERTIFICATION BOX (EXACT — in §7 AND verification-checklist.md)
+
+```
+╔══════════════════════════════════════════════════════════════╗
+║  BIZTALK DOCUMENTATION — COVERAGE CERTIFICATION                ║
+║  App: {app_name}                                               ║
+║  ✅ All present artifacts documented                            ║
+║     (shapes {n}/{n}, map links {n}/{n}, schemas {n}/{n}, helpers {n}/{n}) ║
+║  🔴 {g} external/binding dependencies flagged as replication gaps ║
+║  RESULT: {COMPLETE for provided source | INCOMPLETE — see gaps} ║
+╚══════════════════════════════════════════════════════════════╝
+```
+
+Content lines are fixed (App / coverage counts / gap count / RESULT); `║` borders need not be pixel-aligned.
+
+---
+
+## PRE-GENERATION CHECKLIST
+
+Before writing the FIRST section:
+1. Read `templates/documentation-style.yaml` (locked columns, icons, markers).
+2. Read `templates/documentation-template-guide.md` (literal templates + per-shape-type formats + content patterns).
+3. Read `examples/01_oracle_changepo/` (the format to match exactly).
+4. Build the Phase 0 artifact mind map.
+5. Create the main-doc skeleton with all 7 section markers (Per-Phase Write Contract, `@01_Phase_Orchestration.mdc`).
+
+---
+
+## TEMPLATE-DRIVEN RULES
+
+- **Match the example exactly** — same structure for every app; only extracted values differ.
+- **Section inclusion** governed by `documentation-style.yaml`; absent artifact → "Not applicable", never omitted.
+- **Markers**: `[ENCRYPTED]` (secrets), `[ENV]` (environment values), `[NOT IN EXPORT]` (missing), `🔴 GAP`, `⚠️ ASSUMPTION`.
+- **Citations**: every row/claim cites its source file (+ OID/Link ID where available).
+- **Verbosity**: benchmark conciseness against `examples/01_oracle_changepo/` — complete, not padded.
+
+---
+
+## QUICK REFERENCE
+
+| Need | Reference |
+|------|-----------|
+| Literal per-section / per-doc templates | `templates/documentation-template-guide.md` |
+| Locked columns, icons, markers, diagrams | `templates/documentation-style.yaml` |
+| Canonical example to match | `examples/01_oracle_changepo/` |
+| Phase → section mapping | This file (Main Document Structure) |
+| RGV loop | `@02_Guidance.mdc` §1 |
+| Per-phase write contract | `@01_Phase_Orchestration.mdc` |

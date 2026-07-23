@@ -1,0 +1,46 @@
+type: object
+description: Customer entity with complete profile
+required:
+  - id
+  - firstName
+  - lastName
+  - email
+  - status
+  - createdAt
+  - updatedAt
+properties:
+  id:
+    type: string
+    description: Unique identifier
+    example: "cust-12345abc"
+  createdAt:
+    type: string
+    format: date-time
+  updatedAt:
+    type: string
+    format: date-time
+  firstName:
+    type: string
+    minLength: 1
+    maxLength: 50
+    example: "John"
+  lastName:
+    type: string
+    minLength: 1
+    maxLength: 50
+    example: "Doe"
+  email:
+    type: string
+    format: email
+    example: "john.doe@example.com"
+  phone:
+    type: string
+    example: "+1234567890"
+  status:
+    type: string
+    enum: [active, inactive, pending]
+    default: pending
+  addresses:
+    type: array
+    items:
+      $ref: './Address.yaml'

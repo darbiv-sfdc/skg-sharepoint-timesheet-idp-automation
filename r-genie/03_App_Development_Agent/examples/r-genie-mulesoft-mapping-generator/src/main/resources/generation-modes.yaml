@@ -1,0 +1,79 @@
+# R-Genie MuleSoft Mapping Generator - Generation Modes Configuration
+# This file defines different AI generation modes using only Gemini models
+
+generation:
+  modes:
+    fast:
+      name: "⚡ Fast Mode"
+      description: "Fast generation with Gemini 2.5 Flash - optimal speed and efficiency"
+      model: "gemini-2.5-flash"
+      fallbackModel: "gemini-2.5-flash"
+      temperature: "0.3"
+      maxTokens: "8000"
+      timeout: "90000"
+      characteristics:
+        - "Ultra-fast response times"
+        - "Latest Gemini 2.5 Flash model"
+        - "Best price-performance ratio"
+        - "Excellent for most use cases"
+      useCases:
+        - "Standard transformations"
+        - "Most common scenarios"
+        - "Production mappings"
+        - "Quick prototyping"
+      
+    pro:
+      name: "🧠 Pro Mode"
+      description: "Advanced reasoning with Gemini 2.5 Pro - maximum capability and thinking"
+      model: "gemini-2.5-pro"
+      fallbackModel: "gemini-2.5-flash"
+      temperature: "0.1"
+      maxTokens: "32000"
+      timeout: "300000"
+      characteristics:
+        - "Advanced reasoning capabilities"
+        - "Latest Gemini 2.5 Pro model"
+        - "Complex pattern recognition"
+        - "Comprehensive documentation"
+      useCases:
+        - "Enterprise-level mappings"
+        - "Complex business logic"
+        - "Legacy system integration"
+        - "Advanced transformations"
+
+# Model-specific configurations (Latest Gemini 2.5 models only)
+models:
+  "gemini-2.5-flash":
+    provider: "gemini"
+    contextWindow: "1000000"
+    outputTokens: "65536"
+    costPerToken: "0.15"  # $0.15 per 1M input tokens
+    outputCostPerToken: "0.60"  # $0.60 per 1M output tokens
+    
+  "gemini-2.5-pro":
+    provider: "gemini"
+    contextWindow: "1000000"  # expanding to 2M soon
+    outputTokens: "64000"
+    costPerToken: "1.25"  # $1.25 per 1M input tokens
+    outputCostPerToken: "10.00"  # $10.00 per 1M output tokens
+
+# Provider-specific settings (Gemini only)
+providers:
+  gemini:
+    baseUrl: "https://generativelanguage.googleapis.com/v1beta"
+    authHeader: "Authorization"
+    endpoints:
+      chat: "/models/{model}:generateContent"
+
+# Default configuration
+default:
+  mode: "fast"
+  retryAttempts: "3"
+  fallbackMode: "fast"
+  enableCache: "true"
+  cacheExpiration: "3600" # seconds
+
+# Generation modes (no validation)
+supportedModes:
+  - "fast"
+  - "pro"

@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:scripting="http://www.mulesoft.org/schema/mule/scripting"
+	xmlns:apikit="http://www.mulesoft.org/schema/mule/mule-apikit"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="
+http://www.mulesoft.org/schema/mule/mule-apikit http://www.mulesoft.org/schema/mule/mule-apikit/current/mule-apikit.xsd 
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd 
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/scripting http://www.mulesoft.org/schema/mule/scripting/current/mule-scripting.xsd">
+	
+<flow name="skg-idp-automation-template-papi-main">
+        <http:listener config-ref="HttpListenerConfig" path="/api/v1/*">
+            <http:response statusCode="#[vars.httpStatus default 200]">
+                <http:headers><![CDATA[#[vars.outboundHeaders default {}]]]></http:headers>
+            </http:response>
+            <http:error-response statusCode="#[vars.httpStatus default 500]">
+                <http:body><![CDATA[#[payload]]]></http:body>
+                <http:headers><![CDATA[#[vars.outboundHeaders default {}]]]></http:headers>
+            </http:error-response>
+        </http:listener>
+        <set-variable value="#[attributes.headers.'x-correlation-id' default correlationId]" doc:name="correlationId" doc:id="56b08b4c-3df8-4b32-ac32-ec6ab7d57bbc" variableName="correlationId" />
+		<logger level="INFO" doc:name="log-start" doc:id="af49e46a-9118-4918-82f5-1dd081a3b88e" message="#[%dw 2.0&#10;output application/json&#10;var logPayload = { &#10;			&quot;method&quot;: attributes.method,&#10;			&quot;endpoint&quot;: attributes.requestUri,&#10;			&quot;queryParams&quot;: if (!isEmpty(attributes.queryParams)) attributes.queryParams else '',&#10;            &quot;uriParams&quot;: if (!isEmpty(attributes.uriParams)) attributes.uriParams else '',&#10;			&quot;payload&quot;: if (attributes.method != &quot;GET&quot;) payload else ''&#10;            }&#10;&#10;var status = &quot;ok&quot;&#10;var msg = &quot;Start Listener flow - Request Call details before APIkit&quot;&#10;---&#10;CustomLogMapper::logger(&#10;	{&#10;		correlationId: vars.correlationId,&#10;		app: app,&#10;		mule: mule,&#10;		status: status,&#10;		message: msg,&#10;		(payload: logPayload) if (p('log.level') == &quot;DEBUG&quot;),		 &#10;		env: p('mule.env')&#10;	}&#10;)]" />
+		
+        <apikit:router config-ref="api-config" />
+        <error-handler ref="common-error-handling" />
+    </flow>
+    <flow name="skg-idp-automation-template-papi-console">
+        <http:listener config-ref="HttpListenerConfig" path="/console/*">
+            <http:response statusCode="#[vars.httpStatus default 200]">
+                <http:headers><![CDATA[#[vars.outboundHeaders default {}]]]></http:headers>
+            </http:response>
+            <http:error-response statusCode="#[vars.httpStatus default 500]">
+                <http:body><![CDATA[#[payload]]]></http:body>
+                <http:headers><![CDATA[#[vars.outboundHeaders default {}]]]></http:headers>
+            </http:error-response>
+        </http:listener>
+        <apikit:console config-ref="api-config" />
+        <error-handler ref="common-error-handling" />
+    </flow>
+	<flow name="trigger-ingest-flow" doc:id="5b017f0c-8c07-4511-ac9b-9ef36127dc16" >
+		<http:listener doc:name="Listener" doc:id="2f613830-8eb1-4c9c-b392-9ec5f0d6f6ce" config-ref="HttpListenerConfig" path="/trigger-ingest"/>
+		<ee:transform doc:name="Transform Message" doc:id="1a98eb5d-36a7-4352-9ccb-086628c00390" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+  message: "HTTP Trigger of SKG IDP Automation PAPI",
+  "timestamp": now(),
+  status: "active",
+  "environment": p('mule.env')
+} as Object {encoding: "UTF-8", mediaType: "application/json"}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<flow-ref doc:name="Flow Reference" doc:id="a5370e25-eda2-4ff6-8df6-0161cdca0816" name="sharepoint-ingest-subflow"/>
+	</flow>
+    <flow name="scheduler-sharepoint-ingest-flow" initialState="${scheduler.initialState}" doc:id="f9fc3531-dce2-41de-8924-9f97074d6a66" >
+		<scheduler doc:name="Hourly Scheduler" doc:id="f96c31b5-2477-427b-ae8b-7d2f86c39570" >
+			<scheduling-strategy >
+				<cron expression="${scheduler.cron}" />
+			</scheduling-strategy>
+		</scheduler>
+		<ee:transform doc:name="Transform Message1" doc:id="3126dc64-76ce-4bd6-93c6-bf3fc77ca441" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+  message: "Schedule SKG IDP Automation PAPI",
+  "timestamp": now(),
+  status: "active",
+  "environment": p('mule.env')
+} as Object {encoding: "UTF-8", mediaType: "application/json"}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<flow-ref doc:name="Flow Reference" doc:id="0708eb4e-8222-4934-b9c9-ef0e8488821a" name="sharepoint-ingest-subflow" />
+	</flow>
+	<flow name="get:\hello:api-config">
+        <ee:transform doc:name="Transform Message">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+  message: "Hello from SKG IDP Automation Template PAPI",
+  "timestamp": now(),
+  status: "active",
+  "environment": p('mule.env')
+} as Object {encoding: "UTF-8", mediaType: "application/json"}]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+
+    </flow>
+    <flow name="get:\health-check\liveliness-probe:api-config">
+    <logger level="INFO" doc:name="log-request-received" doc:id="75be3880-bc02-4e70-a69b-d85c38725f48" message="#[%dw 2.0&#10;output application/json skipNullOn=&quot;everywhere&quot;&#10;&#10;&#10;var logPayload = payload default &quot;&quot;&#10;var status = &quot;ok&quot;&#10;var msg = &quot;Request Received for liveliness probe flow&quot;&#10;&#10;---&#10;CustomLogMapper::logger(&#10;	{&#10;		correlationId: correlationId,&#10;		app: app,&#10;		mule: mule,&#10;		status: status,&#10;		message: msg, &#10;		env: p('mule.env')&#10;	}&#10;)]" />			
+        <flow-ref doc:name="health-liveness-probe" doc:id="09517944-d9a6-43e3-b401-1af259d21a61" name="health-liveness-probe"/>
+<logger level="INFO" doc:name="log-response" doc:id="ea892a46-a684-43d6-a6be-39cdcf018bf6" message="#[%dw 2.0&#10;output application/json skipNullOn=&quot;everywhere&quot;&#10;&#10;&#10;var logPayload = payload default &quot;&quot;&#10;var status = &quot;ok&quot;&#10;var msg = &quot;Response Received for liveliness probe flow&quot;&#10;&#10;---&#10;CustomLogMapper::logger(&#10;	{&#10;		correlationId: correlationId,&#10;		app: app,&#10;		mule: mule,&#10;		status: status,&#10;		message: msg, &#10;		env: p('mule.env')&#10;	}&#10;)]" />			
+	
+ 
+    </flow>
+    <flow name="get:\health-check\readiness-probe:api-config">
+        <logger level="INFO" doc:name="log-request-received" doc:id="eb7bed85-dc59-4a8c-869f-1b53071a780c" message="#[%dw 2.0&#10;output application/json skipNullOn=&quot;everywhere&quot;&#10;&#10;&#10;var logPayload = payload default &quot;&quot;&#10;var status = &quot;ok&quot;&#10;var msg = &quot;Request Received for readiness probe flow&quot;&#10;&#10;---&#10;CustomLogMapper::logger(&#10;	{&#10;		correlationId: correlationId,&#10;		app: app,&#10;		mule: mule,&#10;		status: status,&#10;		message: msg,	 &#10;		env: p('mule.env')&#10;	}&#10;)]" />			
+	 <flow-ref doc:name="health-readiness-probe" doc:id="00781df6-c3df-4ee7-a0bb-905245febf23" name="health-readiness-probe"/>
+<logger level="INFO" doc:name="log-response" doc:id="2f10c24b-ab50-4481-996e-9a7c0430858f" message="#[%dw 2.0&#10;output application/json skipNullOn=&quot;everywhere&quot;&#10;&#10;&#10;var logPayload = payload default &quot;&quot;&#10;var status = &quot;ok&quot;&#10;var msg = &quot;Response Received for readiness probe flow&quot;&#10;&#10;---&#10;CustomLogMapper::logger(&#10;	{&#10;		correlationId: correlationId,&#10;		app: app,&#10;		mule: mule,&#10;		status: status,&#10;		message: msg,	 &#10;		env: p('mule.env')&#10;	}&#10;)]" />			
+	
+    </flow>
+	
+	</mule>

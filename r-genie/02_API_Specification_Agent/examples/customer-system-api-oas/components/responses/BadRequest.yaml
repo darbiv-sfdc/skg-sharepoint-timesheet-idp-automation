@@ -1,0 +1,15 @@
+description: Bad Request - Validation Error
+content:
+  application/json:
+    schema:
+      $ref: '../schemas/Error.yaml'
+    example:
+      type: "/errors/validation-error"
+      title: "Validation Error"
+      status: 400
+      detail: "Request validation failed"
+      instance: "/customers"
+      errors:
+        - field: "email"
+          message: "Invalid email format"
+          code: "INVALID_FORMAT"

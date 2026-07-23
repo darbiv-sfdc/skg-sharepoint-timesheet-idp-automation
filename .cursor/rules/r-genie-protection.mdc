@@ -1,0 +1,25 @@
+---
+description: R-GENIE system file protection
+alwaysApply: true
+---
+
+# 🛡️ **R-GENIE SYSTEM PROTECTION**
+
+## ❌ **READ-ONLY: `r-genie/` folder**
+
+**NEVER modify files in `r-genie/` folders** - contains core R-GENIE agent architecture.
+
+**Exceptions:**
+- `*_Production_Learnings.md` files - ONLY via `/add-production-learnings` command with user approval.
+- **Agent Tuner**: May modify target agent files ONLY when activated via `/use-agent-tuner`, with backup created first and user approval at every phase.
+- **Agent Builder**: May create new agent files under `r-genie/` ONLY when activated via `/use-agent-builder`, with user-chosen location and approval at every phase.
+
+## 🔒 **GIT PUSH PROTECTION**
+
+**NEVER `git push` without explicit user confirmation** ("yes" or "confirm").
+
+## ✅ **EDITABLE PATHS**
+
+- `project/` - All input/output folders
+- `.cursor/commands/` and `.cursor/rules/`
+- Root config files (`.cursorignore`, `README.md`)

@@ -1,0 +1,491 @@
+---
+description: R-GENIE App Development Agent - Consolidated Guidance (Patterns, Components, Errors)
+author: Cheppali Shaik Sohail
+version: 2.1.0
+alwaysApply: false
+tags: [guidance, patterns, components, errors, reference, mulesoft]
+appliesTo: [app-development, mulesoft, generation]
+whenToUse:
+  - "Reference during application generation (Phase 2)"
+  - "Build error troubleshooting (Phase 3)"
+  - "Deployment configuration (Phase 4)"
+  - "Component pattern lookup"
+keywords: [patterns, components, errors, flow, connector, build, deploy]
+priority: HIGH
+role: Consolidated reference guide for patterns, components, and error resolution
+delegatesTo:
+  - "@03_App_Development.mdc - Main entry point"
+  - "@03-00_Phase_Orchestration.mdc - Phase workflow"
+---
+
+# 🧞‍♂️ **APP DEVELOPMENT GUIDANCE**
+
+> **Consolidated Reference**: Patterns, Components, Build/Deploy Troubleshooting
+> **Detailed Docs**: See `lib/docs/` for comprehensive reference material
+
+---
+
+## 📁 **PROJECT STRUCTURE**
+
+### Standard MuleSoft API Project
+
+```
+{project-name}/
+├── pom.xml                          # Maven configuration
+├── mule-artifact.json               # Mule artifact descriptor
+├── src/main/mule/
+│   ├── interface.xml                # API interface flows
+│   ├── global/
+│   │   ├── global-config.xml        # Global configurations
+│   │   └── global-error-handler.xml # Error handling
+│   ├── implementation/              # Endpoint implementations
+│   └── subflows/                    # Reusable subflows
+├── src/main/resources/
+│   ├── config/{env}.yaml            # Environment configs
+│   ├── dw/                          # DataWeave files
+│   └── api/                         # RAML specifications
+└── src/test/munit/                  # MUnit tests
+```
+
+### Eclipse/Studio Configuration Files
+<!-- Integrated: 2026-01-10 -->
+
+Generate Eclipse/Studio configuration files to ensure projects open in Mule Perspective (not Java).
+
+**Required Files:**
+
+`.project` - Use `muleStudioBuilder` and `muleStudioNature`:
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<projectDescription>
+    <name>{project-name}</name>
+    <buildSpec>
+        <buildCommand>
+            <name>org.eclipse.jdt.core.javabuilder</name>
+        </buildCommand>
+        <buildCommand>
+            <name>org.mule.tooling.core.muleStudioBuilder</name>
+        </buildCommand>
+    </buildSpec>
+    <natures>
+        <nature>org.mule.tooling.core.muleStudioNature</nature>
+        <nature>org.eclipse.jdt.core.javanature</nature>
+    </natures>
+</projectDescription>
+```
+
+`.classpath` - Include all POM connectors with exact versions, Mule Runtime, source folders:
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+    <classpathentry kind="con" path="MULE_LIB/com.mulesoft.munit/munit-tools/3.1.0"/>
+    <classpathentry kind="con" path="MULE_LIB/com.mulesoft.munit/munit-runner/3.1.0"/>
+    <classpathentry kind="con" path="MULE_LIB/{groupId}/{artifactId}/{version}"/>
+    <classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+    <classpathentry exported="true" kind="con" path="MULE_RUNTIME/org.mule.tooling.server.4.7.ee"/>
+    <classpathentry kind="src" path="src/main/mule"/>
+    <classpathentry kind="src" path="src/main/resources"/>
+    <classpathentry kind="src" output="target/test-classes" path="src/test/java"/>
+    <classpathentry kind="src" output="target/test-classes" path="src/test/resources"/>
+    <classpathentry kind="src" output="target/test-classes" path="src/test/munit"/>
+    <classpathentry kind="output" path="target/classes"/>
+</classpath>
+```
+
+`.settings/org.mulesoft.exportwizardsettings.prefs`:
+```
+eclipse.preferences.version=1
+```
+
+**Critical Rules:**
+- Connector versions in `.classpath` MUST match POM `<dependencies>`
+- Runtime version MUST match POM `<mule.version>` property
+- Include MUnit dependencies if MUnit is in POM
+
+### POM `<name>` Element Must Match `<artifactId>`
+<!-- Integrated: 2026-01-10 -->
+
+The `<name>` element in `pom.xml` MUST match the `<artifactId>` exactly for consistency with MuleSoft project conventions and to avoid potential IDE/build issues.
+
+```xml
+<!-- ✅ CORRECT -->
+<artifactId>customer-notification-publisher-sapi</artifactId>
+<name>customer-notification-publisher-sapi</name>
+
+<!-- ❌ INCORRECT -->
+<artifactId>customer-notification-publisher-sapi</artifactId>
+<name>Customer Notification Publisher System API</name>
+```
+
+**Why**: Matches working example project structure, ensures consistency, prevents potential build/IDE issues.
+
+---
+
+## 🌐 **ESSENTIAL COMPONENT PATTERNS**
+
+### HTTP Listener
+
+```xml
+<http:listener-config name="HTTP_Listener_Config">
+    <http:listener-connection host="0.0.0.0" port="${http.port}"/>
+</http:listener-config>
+
+<flow name="api-main-flow">
+    <http:listener config-ref="HTTP_Listener_Config" path="${http.base.path}/*">
+        <http:response statusCode="#[vars.httpStatus default 200]"/>
+        <http:error-response statusCode="#[vars.httpStatus default 500]"/>
+    </http:listener>
+    <apikit:router config-ref="api-config"/>
+</flow>
+```
+
+### HTTP Request (Outbound)
+
+```xml
+<http:request-config name="External_API_Config">
+    <http:request-connection host="${api.host}" port="${api.port}" protocol="HTTPS"/>
+</http:request-config>
+
+<http:request config-ref="External_API_Config" method="POST" path="${api.path}">
+    <http:headers>#[vars.outboundHeaders default {}]</http:headers>
+</http:request>
+```
+
+### Database Operations
+
+```xml
+<db:config name="Database_Config">
+    <db:generic-connection url="${db.url}" user="${db.user}" password="${db.password}"/>
+</db:config>
+
+<db:select config-ref="Database_Config">
+    <db:sql>SELECT * FROM table WHERE id = :id</db:sql>
+    <db:input-parameters>#[{'id': vars.recordId}]</db:input-parameters>
+</db:select>
+```
+
+### Global Error Handler
+
+```xml
+<error-handler name="Global_Error_Handler">
+    <on-error-propagate type="HTTP:UNAUTHORIZED, HTTP:FORBIDDEN">
+        <ee:transform>
+            <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{error: {code: error.errorType.identifier, message: "Auth failed", correlationId: correlationId}}]]></ee:set-payload>
+            <ee:set-variable variableName="httpStatus">401</ee:set-variable>
+        </ee:transform>
+    </on-error-propagate>
+    <on-error-propagate type="ANY">
+        <ee:transform>
+            <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{error: {code: "INTERNAL_ERROR", message: "Unexpected error", correlationId: correlationId}}]]></ee:set-payload>
+            <ee:set-variable variableName="httpStatus">500</ee:set-variable>
+        </ee:transform>
+    </on-error-propagate>
+</error-handler>
+```
+
+---
+
+## 🔧 **BUILD ERROR QUICK FIXES**
+
+### Dependency Errors
+
+| Error | Fix |
+|-------|-----|
+| `Could not find artifact` | Check version, add repository |
+| `Version conflict` | Use `<dependencyManagement>` |
+| `Missing classifier` | Add `<classifier>mule-plugin</classifier>` |
+
+### Syntax Errors
+
+| Error | Fix |
+|-------|-----|
+| `Unexpected element` | Check spelling, validate XML |
+| `Cannot resolve symbol` | Add missing namespace declaration |
+| `Invalid content` | Verify against XSD schema |
+
+### Deployment Errors
+
+| Error | Fix |
+|-------|-----|
+| `Property not found` | Add to environment YAML |
+| `Deployment failed` | Check credentials, app name uniqueness |
+| `OutOfMemoryError` | Increase worker size |
+
+---
+
+## 📋 **POM.XML ESSENTIALS**
+
+### Required Repositories
+
+```xml
+<repositories>
+    <repository>
+        <id>anypoint-exchange-v3</id>
+        <name>Anypoint Exchange</name>
+        <url>https://maven.anypoint.mulesoft.com/api/v3/maven</url>
+    </repository>
+    <repository>
+        <id>mulesoft-releases</id>
+        <name>MuleSoft Releases</name>
+        <url>https://repository.mulesoft.org/releases/</url>
+    </repository>
+</repositories>
+```
+
+### Common Dependencies
+
+```xml
+<dependencies>
+    <!-- HTTP Connector -->
+    <dependency>
+        <groupId>org.mule.connectors</groupId>
+        <artifactId>mule-http-connector</artifactId>
+        <version>1.7.3</version>
+        <classifier>mule-plugin</classifier>
+    </dependency>
+    
+    <!-- APIKit -->
+    <dependency>
+        <groupId>org.mule.modules</groupId>
+        <artifactId>mule-apikit-module</artifactId>
+        <version>1.8.0</version>
+        <classifier>mule-plugin</classifier>
+    </dependency>
+    
+    <!-- Database Connector -->
+    <dependency>
+        <groupId>org.mule.connectors</groupId>
+        <artifactId>mule-db-connector</artifactId>
+        <version>1.14.0</version>
+        <classifier>mule-plugin</classifier>
+    </dependency>
+</dependencies>
+```
+
+**⚠️ Runtime Modules - Do NOT Declare as Dependencies**
+<!-- Integrated: 2026-01-10 -->
+
+DataWeave (`ee:transform`) and Scheduler (`scheduler:scheduler`) are part of Mule Runtime 4.6+ and **MUST NOT** be declared as explicit dependencies. Adding them causes build failures when they require authentication or aren't available in public repositories.
+
+```xml
+<!-- ❌ INCORRECT - Do NOT add these -->
+<dependency>
+    <groupId>org.mule.modules</groupId>
+    <artifactId>mule-dw-module</artifactId>
+    <version>2.2.0</version>
+    <classifier>mule-plugin</classifier>
+</dependency>
+<dependency>
+    <groupId>org.mule.modules</groupId>
+    <artifactId>mule-scheduler-module</artifactId>
+    <version>1.1.0</version>
+    <classifier>mule-plugin</classifier>
+</dependency>
+
+<!-- ✅ CORRECT - These are runtime modules, no dependency needed -->
+<!-- DataWeave (ee:transform) and Scheduler are part of Mule Runtime 4.6+ -->
+```
+
+**Why**: Reduces unnecessary dependencies, avoids authentication issues, cleaner POM files, matches MuleSoft best practices.
+
+### Maven Plugin Configuration
+<!-- Integrated: 2026-01-10 -->
+
+The Mule Maven plugin **MUST** use groupId `org.mule.tools.maven` (NOT `org.apache.maven.plugins`) to prevent "Unresolveable build extension" errors.
+
+```xml
+<!-- ✅ CORRECT -->
+<plugin>
+    <groupId>org.mule.tools.maven</groupId>
+    <artifactId>mule-maven-plugin</artifactId>
+    <version>4.3.0</version>
+    <extensions>true</extensions>
+    <configuration>
+        <classifier>mule-application</classifier>
+    </configuration>
+</plugin>
+
+<!-- ❌ INCORRECT -->
+<plugin>
+    <groupId>org.apache.maven.plugins</groupId>
+    <artifactId>mule-maven-plugin</artifactId>
+    <version>4.3.0</version>
+    <extensions>true</extensions>
+</plugin>
+```
+
+**Why**: Correct Maven plugin resolution, prevents build extension errors, ensures proper Mule application packaging.
+
+---
+
+## 🔐 **SECURE PROPERTIES**
+
+### Configuration Pattern
+
+```yaml
+# config/dev.yaml
+http:
+  port: "8081"
+  base.path: "/api/v1"
+
+db:
+  url: "![encrypted-db-url]"
+  user: "![encrypted-user]"
+  password: "![encrypted-password]"
+```
+
+### Secure Properties Config
+
+```xml
+<secure-properties:config name="Secure_Config" 
+                          file="config/${mule.env}.yaml" 
+                          key="${mule.key}">
+    <secure-properties:encrypt algorithm="Blowfish"/>
+</secure-properties:config>
+```
+
+---
+
+## 📚 **DETAILED DOCUMENTATION**
+
+For comprehensive reference beyond this guidance:
+
+| Document | Location | Content |
+|----------|----------|---------|
+| Component Reference | `lib/docs/component-reference.md` | All connector patterns |
+| Error Patterns | `lib/docs/error-patterns.md` | Error fixes |
+| Version Compatibility | `lib/docs/version-compatibility.md` | MuleSoft versions |
+| **Example Project** | `examples/r-genie-mulesoft-mapping-generator/` | Complete working application |
+
+---
+
+## 📁 **EXAMPLE PROJECT REFERENCE**
+<!-- Integrated: 2026-01-10 -->
+
+Reference `examples/r-genie-mulesoft-mapping-generator/` for production-tested patterns:
+
+| Pattern | File | When to Use |
+|---------|------|-------------|
+| Multi-Config Loading | `global.xml` | Multiple YAML property files |
+| External API Integration | `implementation/*.xml` | HTTP Request with dynamic path |
+| DataWeave Templates | `implementation/*.xml` | String replacement patterns |
+| File Generation | `implementation/*.xml` | Excel/file output from JSON |
+| Web UI Serving | `interface.xml` | *Only if requirements need UI* |
+
+> **See**: `examples/README.md` for full documentation
+
+---
+
+## ⚡ **DATAWEAVE INTEGRATION**
+
+For DataWeave transformations, delegate to the DataWeave Agent:
+
+```
+@r-genie/03-01_Dataweave_Agent/rules/03-01_Dataweave.mdc
+```
+
+**Key Pattern:**
+```dataweave
+%dw 2.0
+output application/json
+---
+{
+  field: payload.sourceField,
+  calculated: payload.items reduce ((item, acc = 0) -> 
+    acc + (item.price as Number default 0)
+  )
+}
+```
+
+---
+
+## 🛡️ **QUALITY CHECKLIST**
+
+Before Phase completion, verify:
+
+- [ ] All configurations use properties (no hardcoded values)
+- [ ] Error handling covers all scenarios
+- [ ] Secure properties encrypted
+- [ ] Logging includes correlationId
+- [ ] MUnit tests exist for critical flows
+- [ ] Environment configs complete (dev, sit, uat, prd)
+
+---
+
+## 📎 **EVIDENCE-BOUND OUTPUTS**
+
+Every development decision must cite its source:
+
+| Decision Type | Evidence Format |
+|---------------|----------------|
+| Flow inclusion | "Added {flow} — Design doc specifies '{requirement}'" |
+| Connector choice | "Using {connector} — Design doc section '{reference}'" |
+| Config value | "Property {name}: {value} — Per design doc '{detail}'" |
+| Assumption | "⚠️ ASSUMPTION: {value} — Design doc unclear on '{detail}'" |
+| Gap entry | "GAP-{N}: Unable to confirm {detail} (asked {X} times)" |
+
+> If you cannot cite a source, flag as assumption. Never present assumptions as confirmed decisions.
+
+---
+
+## 🌳 **TREE OF THOUGHT (Ambiguous Decisions)**
+
+For decisions with multiple valid paths, evaluate branches before choosing:
+
+```
+<thinking>
+Branch A: [Option] — fits because [evidence]. Risk: [risk].
+Branch B: [Option] — fits because [evidence]. Risk: [risk].
+Best path: [chosen] — Confidence: {HIGH/MEDIUM/LOW}
+</thinking>
+```
+
+**Common ambiguous decisions in app development:**
+- Scatter-Gather vs Sequential processing
+- Batch vs real-time for large datasets
+- Subflow vs private flow for reusable logic
+- HTTP vs HTTPS for internal system calls
+
+---
+
+## 📝 **FEW-SHOT PATTERNS**
+
+### Maven Plugin GroupId
+
+❌ BAD:
+```xml
+<groupId>org.apache.maven.plugins</groupId>
+<artifactId>mule-maven-plugin</artifactId>
+```
+
+✅ GOOD:
+```xml
+<groupId>org.mule.tools.maven</groupId>
+<artifactId>mule-maven-plugin</artifactId>
+```
+
+**Why**: Correct groupId prevents "Unresolveable build extension" errors.
+
+### Runtime Module Dependencies
+
+❌ BAD - Declaring runtime modules:
+```xml
+<dependency>
+    <groupId>org.mule.modules</groupId>
+    <artifactId>mule-dw-module</artifactId>
+</dependency>
+```
+
+✅ GOOD - No dependency needed:
+```xml
+<!-- DataWeave (ee:transform) is part of Mule Runtime 4.6+ -->
+<!-- No explicit dependency needed -->
+```
+
+**Why**: Runtime modules cause auth/resolution failures when declared as dependencies.

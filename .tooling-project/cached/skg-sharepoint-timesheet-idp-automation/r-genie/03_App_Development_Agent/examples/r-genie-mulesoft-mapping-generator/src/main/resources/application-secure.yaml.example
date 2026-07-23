@@ -1,0 +1,40 @@
+# R-Genie MuleSoft Mapping Generator - Secure Configuration Template
+# Copy this file to application-secure.yaml and add your actual API keys
+# This file should NOT be committed to version control
+
+# Gemini API Key Configuration
+# Replace the placeholder value with your actual Gemini API key
+
+gemini:
+  api:
+    key: "your-gemini-api-key-here"
+
+# Optional: Database Configuration (if using persistent storage)
+# database:
+#   url: "jdbc:h2:mem:rgenie"
+#   username: "sa"
+#   password: ""
+#   driver: "org.h2.Driver"
+
+# Optional: External Service Configuration
+# services:
+#   external:
+#     apiKey: "your-external-service-api-key"
+#     baseUrl: "https://api.external-service.com"
+
+# Environment-specific Overrides
+# http:
+#   listener:
+#     host: "localhost"
+#     port: "8081"
+
+# file:
+#   output:
+#     defaultDirectory: "/custom/output/path"
+
+# Instructions:
+# 1. Copy this file to application-secure.yaml
+# 2. Replace all placeholder values with your actual API keys
+# 3. Add the application-secure.yaml file to your .gitignore
+# 4. Never commit the actual application-secure.yaml file to version control
+# 5. Set up your deployment environment to use the secure configuration

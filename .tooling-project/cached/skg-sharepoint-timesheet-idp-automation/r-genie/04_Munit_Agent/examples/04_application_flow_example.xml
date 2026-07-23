@@ -1,0 +1,184 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 🧞‍♂️ R-GENIE APPLICATION FLOW EXAMPLE -->
+<!-- Simplified from: s-sfdc-commerce-mst-api-at/src/main/mule/implementation/solace-listener-sfdc-account.xml -->
+
+<mule xmlns:salesforce="http://www.mulesoft.org/schema/mule/salesforce"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:tracing="http://www.mulesoft.org/schema/mule/tracing"
+	xmlns:solace="http://www.mulesoft.org/schema/mule/solace"
+	xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="...">
+
+	<!-- ✅ MAIN BUSINESS FLOW - This is what we test -->
+	<flow name="solace-listener-sfdc-account-flow" 
+		doc:id="edc0d07b-b91a-4a63-8f4f-06a65b9282b0"
+		maxConcurrency="5">
+		
+		<!-- 📥 INPUT: Solace Queue Listener -->
+		<solace:queue-listener
+			address="${solace.queueName.account}" 
+			doc:name="SFDC Account"
+			doc:id="722f3dbf-6e3c-4cc5-b31d-2c628b706e97"
+			config-ref="solace-pubsub-connector-sfdc-account-config"
+			ackMode="MANUAL_CLIENT" 
+			contentType="application/xml"/>
+		
+		<!-- 🔧 SETUP: Correlation ID and variables -->
+		<tracing:with-correlation-id
+			doc:id="062fafe7-0664-40b9-89fa-6971e59ccfe3"
+			correlationId="#[attributes.userProperties.'correlation_id' default correlationId]">
+			
+			<set-variable value="${resource.account}" variableName="resource"/>
+			
+			<!-- 📊 BUSINESS LOGIC: Implementation sub-flow -->
+			<flow-ref 
+				name="solace-listener-sfdc-account-implementation-sub-flow"
+				doc:id="feab2e30-b1ef-429a-98f2-7f69787a1a0a"/>
+			
+			<!-- ✅ ACK: Acknowledge message processing -->
+			<solace:ack 
+				doc:name="SFDC Account"
+				doc:id="bb48f72c-2a1c-4090-bf88-0b8e3a479967"  
+				config-ref="solace-pubsub-connector-sfdc-account-config"
+				messageRefId="#[vars.ackId]"/>
+		</tracing:with-correlation-id>
+	</flow>
+
+	<!-- ⚙️ IMPLEMENTATION SUB-FLOW - Core business logic -->
+	<sub-flow name="solace-listener-sfdc-account-implementation-sub-flow"
+		doc:id="360fef94-04ce-4ea1-a7db-17027d165535">
+		
+		<!-- 🔍 LOGGING: Entry point -->
+		<logger level="DEBUG" message='#["Entry at $(flow.name)"]'/>
+		
+		<!-- 📋 QUERIES: Get Account and User data from Salesforce -->
+		<scatter-gather doc:name="Query Account and User">
+			<route>
+				<set-variable value="${sfdc.query.account}" variableName="sfdcQuery"/>
+				<flow-ref 
+					name="sfdc-query-common-sub-flow"
+					doc:id="5b81a359-b965-424a-adec-a633910c8d58"  target="sfdcQueryAccountResponse"/> <!-- This is the doc:id we mock in tests -->
+			</route>
+			<route>
+				<set-variable value="${sfdc.query.user}" variableName="sfdcQuery"/>
+				<flow-ref 
+					name="sfdc-query-common-sub-flow"
+					target="sfdcQueryUserResponse"/>
+			</route>
+		</scatter-gather>
+		
+		<!-- 🔄 TRANSFORMATION: SAP XML to Salesforce Account format -->
+		<ee:transform 
+			doc:name="SAP XML to SFDC Account"
+			doc:id="975bcc9c-0af7-462b-93f6-6f4b6e1db1a9">  <!-- This is the doc:id we spy on in tests -->
+			<ee:message>
+				<ee:set-payload resource="dw/mappings/sap-to-sfdc-account-mapping.dwl"/>
+			</ee:message>
+		</ee:transform>
+		
+		<!-- ⚙️ SETUP: Variables for upsert operation -->
+		<ee:transform doc:name="vars: sfdcUpsert variables">
+			<ee:variables>
+				<ee:set-variable variableName="sfdcUpsertExternalIdFieldName" value="HNK_UniqueExternalAccountId__c"/>
+				<ee:set-variable variableName="sfdcUpsertObjectType" value="Account"/>
+				<ee:set-variable variableName="sfdcUpsertPayload" value="#[payload]"/>
+			</ee:variables>
+		</ee:transform>
+		
+		<!-- 💾 DATABASE OPERATION: Upsert to Salesforce -->
+		<flow-ref 
+			name="sfdc-upsert-common-sub-flow"
+			doc:id="6d8a4622-8d06-4872-8250-43f27701df1d"/>
+		
+		<!-- 📤 PUBLISHING: Send related data to other queues -->
+		<scatter-gather doc:name="Publish Records to Solace">
+			<route>
+				<!-- Account Relations -->
+				<set-variable value="${resource.accountRelations}" variableName="resource"/>
+				<ee:transform resource="dw/mappings/sap-to-sfdc-account-relations-mapping.dwl"/>
+				<flow-ref name="solace-publish-common-sub-flow"/>
+			</route>
+			<route>
+				<!-- Account Team Members -->
+				<set-variable value="${resource.accountTeamMember}" variableName="resource"/>
+				<ee:transform resource="dw/mappings/sap-to-sfdc-account-team-member-mapping.dwl"/>
+				<flow-ref name="solace-publish-common-sub-flow"/>
+			</route>
+			<route>
+				<!-- Contacts -->
+				<set-variable value="${resource.contact}" variableName="resource"/>
+				<ee:transform resource="dw/mappings/sap-to-sfdc-contact-mapping.dwl"/>
+				<flow-ref name="solace-publish-common-sub-flow"/>
+			</route>
+		</scatter-gather>
+		
+		<logger level="DEBUG" message='#["Exit from $(flow.name)"]'/>
+	</sub-flow>
+
+	<!-- 🔧 HELPER SUB-FLOW: SFDC Upsert -->
+	<sub-flow name="sfdc-upsert-common-sub-flow">
+		<foreach collection="#[payload]" batchSize="200">
+			<try>
+				<salesforce:upsert
+					objectType="#[vars.sfdcUpsertObjectType]"
+					externalIdFieldName="#[vars.sfdcUpsertExternalIdFieldName]"
+					doc:id="bd7a1bab-e965-4bad-a37e-bdef0aac65ea"  
+					config-ref="salesforce-config"/>
+				<choice>
+					<when expression="#[payload.successful == false]">
+						<async>
+							<logger level="ERROR" message="SFDC Upsert failed"/>
+						</async>
+					</when>
+				</choice>
+				<error-handler>
+					<on-error-continue>
+						<logger level="ERROR" message="SFDC Upsert error"/>
+					</on-error-continue>
+				</error-handler>
+			</try>
+		</foreach>
+	</sub-flow>
+
+	<!-- 📤 HELPER SUB-FLOW: Solace Publishing -->
+	<sub-flow name="solace-publish-common-sub-flow">
+		<solace:publish 
+			doc:name="Solace Publish"
+			doc:id="0459095c-4b81-45f5-9d41-7e6b0c97c823"  
+			address="#[vars.publishTopicName]" 
+			delivery-mode="PERSISTENT"
+			config-ref="solace-pubsub-connector-publish-config">
+			<solace:message correlationId="#[correlationId]">
+				<solace:body><![CDATA[#[vars.publishPayload]]]></solace:body>
+			</solace:message>
+		</solace:publish>
+	</sub-flow>
+
+</mule>
+
+<!-- 
+🧞‍♂️ KEY TESTING POINTS FROM THIS FLOW:
+
+✅ WHAT TO TEST:
+1. Main flow success path with realistic data
+2. DataWeave transformation (spy on doc:id 975bcc9c-0af7-462b-93f6-6f4b6e1db1a9)  
+3. Salesforce upsert operation (mock doc:id bd7a1bab-e965-4bad-a37e-bdef0aac65ea)
+4. Solace publish operations (mock doc:id 0459095c-4b81-45f5-9d41-7e6b0c97c823)
+5. Message acknowledgment (mock doc:id bb48f72c-2a1c-4090-bf88-0b8e3a479967)
+6. Error handling scenarios (Salesforce failures)
+
+✅ MOCKING STRATEGY (Updated 2026-01-04):
+- Mock all Salesforce operations with realistic responses
+- Mock all Solace operations (publish/ack)
+- Spy on DataWeave transformations to validate mappings
+- ⚠️ DO NOT mock flow-refs - let internal flows execute naturally (see Section 4.1)
+- Mock external connectors only to preserve business logic integrity
+
+✅ TEST DATA NEEDED:
+- Input: SAP XML payload (customer master data)
+- Expected: Salesforce Account JSON structure  
+- Mock responses: Salesforce query results
+- Attributes: Solace message properties (correlation_id, etc.)
+-->

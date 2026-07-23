@@ -1,0 +1,164 @@
+# R-Genie MuleSoft Mapping Generator - Git Ignore File
+
+# MuleSoft and Anypoint Studio files
+.metadata/
+.mule/
+.studio/
+bin/
+target/
+*.zip
+*.jar
+mule-project.xml
+.classpath
+.project
+.settings/
+
+# Security and configuration files
+src/main/resources/application-secure.yaml
+src/main/resources/application-prod.yaml
+**/secure-properties.yaml
+**/*-secure.yaml
+**/*-secret.yaml
+
+# API Keys and sensitive data
+.env
+.env.local
+.env.production
+**/.env
+**/api-keys.txt
+**/credentials.json
+**/secrets/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Logs
+logs/
+*.log
+*.out
+*.err
+mule-app-*.log
+application.log
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.temp
+
+# Build artifacts
+*.war
+*.ear
+*.rar
+dependency-reduced-pom.xml
+
+# Maven
+.m2/
+repository/
+
+# Output files (generated mappings)
+output/
+downloads/
+generated/
+mapping-sheets/
+*.xlsx
+*.xls
+
+# Node modules (if any JS tools are used)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS specific files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Backup files
+*.bak
+*.backup
+*~
+
+# Test results
+test-reports/
+coverage/
+.nyc_output/
+
+# Local development
+local/
+dev-output/
+sandbox/
+
+# Documentation builds
+docs/_build/
+site/
+
+# Cache directories
+.cache/
+.npm/
+.yarn/
+
+# Runtime files
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage/
+.nyc_output/
+
+# Dependency directories
+jspm_packages/
+
+# Optional npm cache directory
+.npm
+
+# Optional REPL history
+.node_repl_history
+
+# Output of 'npm pack'
+*.tgz
+
+# Yarn Integrity file
+.yarn-integrity
+
+# dotenv environment variables file
+.env
+.env.test
+
+# parcel-bundler cache (https://parceljs.org/)
+.cache
+.parcel-cache
+
+# next.js build output
+.next
+
+# nuxt.js build output
+.nuxt
+
+# vuepress build output
+.vuepress/dist
+
+# Serverless directories
+.serverless
+
+# FuseBox cache
+.fusebox/
+
+# DynamoDB Local files
+.dynamodb/
+
+# TernJS port file
+.tern-port
+.tooling-project

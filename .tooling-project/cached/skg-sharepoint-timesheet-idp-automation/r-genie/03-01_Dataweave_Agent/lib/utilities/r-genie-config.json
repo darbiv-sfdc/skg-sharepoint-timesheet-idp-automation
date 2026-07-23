@@ -1,0 +1,95 @@
+{
+  "_signature": "Q2hlcHBhbGlTaGFpa1NvaGFpbDE1MDgxOTkz",
+  "system": {
+    "maxWorkers": 8,
+    "maxWorkersUnit": "threads",
+    "timeout": 30000,
+    "timeoutUnit": "milliseconds",
+    "timeoutDisplay": "30 seconds",
+    "retryAttempts": 2,
+    "enableMetrics": true,
+    "enableCaching": true,
+    "maxCacheSize": 100,
+    "maxCacheSizeUnit": "entries",
+    "logLevel": "INFO"
+  },
+  "validation": {
+    "enablePreValidation": true,
+    "enableRequirementsAnalysis": true,
+    "enableErrorDetection": true,
+    "enableSecurityScanning": true,
+    "enableParallelProcessing": true,
+    "parallelThreshold": 3,
+    "accuracyThreshold": 80,
+    "securityThreshold": 70
+  },
+  "files": {
+    "maxFileSize": 10485760,
+    "maxFileSizeUnit": "bytes",
+    "maxFileSizeDisplay": "10MB",
+    "enableCompression": true,
+    "tempDirectory": "${OS_TEMP}",
+    "enableCleanup": true,
+    "cleanupInterval": 3600000,
+    "cleanupIntervalUnit": "milliseconds",
+    "cleanupIntervalDisplay": "1 hour"
+  },
+  "logging": {
+    "level": "INFO",
+    "enableConsole": true,
+    "enableFile": true,
+    "enableStructured": false,
+    "maxFileSize": 10485760,
+    "maxFiles": 5,
+    "enableColors": true,
+    "format": "standard"
+  },
+  "security": {
+    "enableHardcodeDetection": true,
+    "enableVulnerabilityScanning": true,
+    "maxScanDepth": 5,
+    "allowedPatterns": [],
+    "blockedPatterns": [
+      "(?i)password\\s*[:=]",
+      "(?i)secret[_-]?key",
+      "(?i)auth[_-]?token",
+      "(?i)api[_-]?key",
+      "(?i)private[_-]?key",
+      "(?i)access[_-]?token",
+      "(?i)bearer[_-]?token",
+      "(?i)jwt[_-]?token"
+    ],
+    "blockedPatternsLegacy": [
+      "password",
+      "secret",
+      "key",
+      "token"
+    ]
+  },
+  "performance": {
+    "enableProfiling": false,
+    "enableMetrics": true,
+    "metricsInterval": 60000,
+    "metricsIntervalUnit": "milliseconds",
+    "metricsIntervalDisplay": "1 minute",
+    "memoryLimit": 536870912,
+    "memoryLimitUnit": "bytes",
+    "memoryLimitDisplay": "512MB",
+    "enableGC": true
+  },
+  "dataweave": {
+    "cliPath": "dw",
+    "timeout": 30000,
+    "enableValidation": true,
+    "enableExecution": true,
+    "maxOutputSize": 5242880
+  },
+  "development": {
+    "enableDebugMode": false,
+    "enableVerboseLogging": false,
+    "enableStackTraces": false,
+    "enableHotReload": true,
+    "enableTestMode": false
+  },
+  "_watermark": "CS150893‌"
+}

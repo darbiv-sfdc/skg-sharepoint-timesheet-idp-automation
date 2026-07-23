@@ -1,0 +1,29 @@
+---
+description: Execute-or-ask (single attempt) for write-protected files like .cursorignore
+alwaysApply: true
+---
+
+# 🔐 **EXECUTE-OR-ASK — ONE ATTEMPT FOR WRITE-PROTECTED FILES**
+
+Cursor hard-protects certain files from agent writes inside the IDE sandbox — notably **`.cursorignore`** and **`.vscode/settings.json`**. Every agent write to these fails with `operation not permitted` / `permission denied`, whether via terminal (`sed -i`, `perl -i`, `>` / `>>` redirects, `tee`) or via edit tools (`edit` / `StrReplace` / `write_to_file`). This is **by design and cannot be worked around by the agent** — only the user's own (unsandboxed) terminal can write these files.
+
+## ✅ **REQUIRED BEHAVIOR**
+
+When any command (`/use-XX`, `/enable-all-agents`, `/disable-all-agents`, `/toggle-rgenie-visibility`, the Master Orchestrator's per-stage toggles, etc.) tells you to modify a protected file:
+
+1. **Attempt the given command exactly ONCE**, as written.
+2. **If it succeeds** → continue.
+3. **If it is blocked** (`operation not permitted` / `permission denied`):
+   - **STOP immediately. Do NOT retry, and do NOT try alternatives.** No `edit` / `StrReplace` / `write_to_file`, no `perl` / `printf` / `tee` / temp-file rewrites, no `request_smart_mode_approval` re-runs, no checking file flags with `ls -lO` / `stat`.
+   - **Show the user the exact command** (copy-paste ready, in a code block) and ask them to run it in **their own terminal**.
+   - **WAIT** for the user to confirm before continuing.
+
+## ❌ **ANTI-PATTERN (never do this)**
+
+Trying the same write five-to-seven different ways — `sed -i` → `edit` → `perl -i` → `printf > file` → smart-mode re-approval → `ls -lO` — before finally asking. **A single failed attempt is sufficient signal. Ask the user.**
+
+## 📋 **SCOPE**
+
+- Protected paths the agent must treat this way: `.cursorignore`, `.vscode/**`, `.cursor/*.json`, `.git/config`.
+- Applies to every R-GENIE agent activation and management command.
+- The user's manual run is the **sanctioned** path for these files — not a failure.

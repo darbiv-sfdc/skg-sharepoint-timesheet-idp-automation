@@ -1,0 +1,163 @@
+# Salesforce Solution Architecture — Style YAML
+# This file is the authoritative source for deliverable structure.
+# Loaded by Phase 0 (per `@00_Template_Configuration.mdc` PRE-GENERATION CHECKLIST)
+#
+# Author: Cheppali Shaik Sohail
+# Version: 1.0.0
+
+deliverable:
+  filename_pattern: "{scenario-slug}-solution-architecture.md"
+  output_dir: "project/output_salesforce_solution_architect/"
+  verbosity_anchor: "examples/01_fnol_insurance_guidewire/solution_architecture_fnol_guidewire.md"
+  target_lines: "400-700 (Medium-form HLD; benchmark against anchor)"
+
+frontmatter:
+  required:
+    - "# Salesforce Solution Architecture — {Scenario Title}"
+    - "**Author**: {Architect / Team Name}"
+    - "**Date**: {YYYY-MM-DD}"
+    - "**Version**: 1.0.0"
+    - "**Scenario**: {1-line scenario summary}"
+
+structure:
+  sections:
+    - id: 1
+      name: "Business & Technical Context"
+      marker: "<!-- SECTION: business-technical-context -->"
+      include: true
+      written_in_phase: 0
+      sub_stops: 0
+      content_summary: "Scenario overview, business drivers, stakeholders, success criteria, in-scope / out-of-scope, key NFRs, regulatory context"
+
+    - id: 2
+      name: "Recommended Architecture"
+      marker: "<!-- SECTION: recommended-architecture -->"
+      include: true
+      written_in_phase: 1
+      sub_stops: 0
+      content_summary: "SFDC clouds, integration platform, key components, design patterns; mandatory ≥1 trade-off table"
+
+    - id: 3
+      name: "Architecture Diagram"
+      marker: "<!-- SECTION: architecture-diagram -->"
+      include: true
+      written_in_phase: 2
+      sub_stops: 0
+      content_summary: "Mermaid flowchart/graph diagram per Mermaid Standards"
+      diagram_tool: "mermaid"
+
+    - id: 4
+      name: "Data Model Design"
+      marker: "<!-- SECTION: data-model-design -->"
+      include: true
+      written_in_phase: 3
+      sub_stops: 1                        # Phase 3 sub-stop 4-a
+      content_summary: "Entities, fields, relationships; FSC/Industry Cloud objects vs custom"
+
+    - id: 5
+      name: "Data Model Diagram (Lucidchart Instructions)"
+      marker: "<!-- SECTION: data-model-diagram -->"
+      include: true
+      written_in_phase: 3
+      sub_stops: 1                        # Phase 3 sub-stop 4-b
+      content_summary: "Numbered Lucidchart steps; shapes, entities, relationships, cardinality, color-coding"
+      diagram_tool: "lucidchart"
+
+    - id: 6
+      name: "Integration & Event Pattern"
+      marker: "<!-- SECTION: integration-event-pattern -->"
+      include: true
+      written_in_phase: 4
+      sub_stops: 0
+      content_summary: "Async vs sync vs event-driven; Platform Events / CDC / Pub-Sub; message contracts; retry/replay/DLQ"
+
+    - id: 7
+      name: "Automation & Orchestration"
+      marker: "<!-- SECTION: automation-orchestration -->"
+      include: true
+      written_in_phase: 5
+      sub_stops: 0
+      content_summary: "Flows, triggers, batch, Async Apex, Queueable, scheduled jobs; orchestration patterns (Saga / Choreography / Orchestration)"
+
+    - id: 8
+      name: "Security & Compliance"
+      marker: "<!-- SECTION: security-compliance -->"
+      include: true
+      written_in_phase: 6
+      sub_stops: 0
+      content_summary: "Auth (SSO/OAuth/JWT), encryption (Shield, field-level), PII/PHI classification, sharing/visibility, HIPAA/PCI/GDPR/SOX posture, audit logging"
+
+    - id: 9
+      name: "Scalability & Performance"
+      marker: "<!-- SECTION: scalability-performance -->"
+      include: true
+      written_in_phase: 7
+      sub_stops: 1                        # Phase 7 sub-stop 8-a
+      content_summary: "Sizing math (EXPLICIT ARITHMETIC), governor limits, bulk patterns, caching, async offload, queue depth"
+      numeric_verification_required: true
+
+    - id: 10
+      name: "Reusability & Productization"
+      marker: "<!-- SECTION: reusability-productization -->"
+      include: true
+      written_in_phase: 7
+      sub_stops: 1                        # Phase 7 sub-stop 8-b
+      content_summary: "≥3 named accelerators, unlocked/managed package potential, multi-org/multi-tenant considerations"
+      minimum_accelerators: 3
+
+    - id: 11
+      name: "Risks & Mitigations"
+      marker: "<!-- SECTION: risks-mitigations -->"
+      include: true
+      written_in_phase: 8
+      sub_stops: 1                        # Phase 8 sub-stop 9-a
+      content_summary: "Risk register table: ≥5 rows; risk, likelihood (H/M/L), impact (H/M/L), mitigation, owner"
+      minimum_risks: 5
+
+    - id: 12
+      name: "References"
+      marker: "<!-- SECTION: references -->"
+      include: true
+      written_in_phase: 8
+      sub_stops: 1                        # Phase 8 sub-stop 9-b
+      content_summary: "SFDC Trailhead, official docs, whitepapers, vendor docs (Guidewire/MuleSoft/etc.) — credible sources only"
+
+  consolidate_phase:
+    phase: 8
+    mode: "CONSOLIDATE_AND_POLISH"
+    tasks:
+      - "Re-read full deliverable file"
+      - "Cross-section consistency edits (entity names, terminology, vendor naming)"
+      - "Replace residual placeholders left by skipped/incomplete phases"
+      - "Run validate-solution-doc.js (mandatory)"
+      - "Apply script-flagged fixes"
+      - "Final style + length self-check against verbosity_anchor"
+      - "Verify zero standalone <!-- SECTION: ... --> markers remain"
+    forbidden:
+      - "Regenerating sections already written and approved in Phases 0-7"
+      - "Adding new content not previously approved"
+
+quality_checklist:
+  - "All 12 sections present, in order, non-empty"
+  - "Every architectural decision has a trade-off table"
+  - "Every Mermaid diagram passes the 12-item pre-emit self-check"
+  - "Every numeric claim (TPS, volume, latency, sizing) shows explicit arithmetic"
+  - "PII/PHI fields identified + Shield Platform Encryption posture documented"
+  - "Reusability section names ≥3 concrete accelerators"
+  - "Risk register has ≥5 rows with risk + likelihood + impact + mitigation + owner"
+  - "References cite SFDC Trailhead / official docs / vendor docs (no marketing pages)"
+  - "Cross-section consistency: entities in §4 appear in §6 and §7"
+  - "Verbosity within ±20% of anchor for similar-complexity scenarios"
+  - "All ⚠️ ASSUMPTION markers paired with explicit user-validation request"
+  - "Lucidchart instructions in §5 (NEVER Mermaid)"
+
+scope_guardrails:
+  excluded:
+    - "Apex / LWC / Flow code generation"
+    - "Live Salesforce org metadata pulls"
+    - "DataWeave transformations"
+    - "Integration-platform source code (Mule projects, Boomi processes, etc.)"
+    - "Test code of any kind (Apex tests, MUnit, integration tests)"
+    - "Source-code review"
+    - "Production deployment / DevOps pipelines / CI-CD configs"
+  positioning: "Strictly document-level architecture deliverable; implementation is out of scope."

@@ -1,0 +1,401 @@
+---
+description: R-GENIE Master Orchestrator - Per-Stage Execution Details, Handoff Templates & I/O Mapping
+author: Cheppali Shaik Sohail
+version: 3.0.0
+alwaysApply: false
+tags: [guidance, stages, handoff, execution, input-output, enable-disable]
+appliesTo: [r-genie, orchestration, pipeline, stage-management]
+whenToUse:
+  - "Entering any pipeline stage — need execution details"
+  - "Creating handoff documents between stages"
+  - "Need to enable/disable agents"
+  - "Need input/output mapping between stages"
+whenNotToUse:
+  - "Starting new pipeline → Use @00_Master_Orchestrator.mdc"
+  - "Need stop point rules → Use @00-02_Mandatory_Stop_Points.mdc"
+  - "Need phase overview → Use @00-00_Phase_Orchestration.mdc"
+keywords: [guidance, stages, handoff, execution, input, output, enable, disable, template]
+priority: HIGH
+role: Stage execution guide - Per-stage details, handoff templates, agent enable/disable
+---
+
+# 🧞‍♂️ **MASTER ORCHESTRATOR GUIDANCE V3**
+
+> **PURPOSE**: Per-stage execution instructions, handoff document templates, I/O mapping, agent enable/disable
+> **CROSS-REFERENCE**: `@00-00_Phase_Orchestration.mdc` for phase tables, `@00-02_Mandatory_Stop_Points.mdc` for checkpoints
+> **IDE SUPPORT**: Works with **Cursor** and **Windsurf** IDEs
+
+---
+
+## 🖥️ **MULTI-IDE SUPPORT**
+
+| IDE | Commands/Workflows | Ignore File | Rules Folder |
+|-----|-------------------|-------------|--------------|
+| **Cursor** | `.cursor/commands/` | `.cursorignore` | `.cursor/rules/` |
+| **Windsurf** | `.windsurf/workflows/` | `.windsurfignore` | `.windsurf/rules/` |
+
+```
+DETECT_IDE():
+  IF .windsurf/ is primary OR user mentions Windsurf:
+    IGNORE_FILE = ".windsurfignore"
+  ELSE:
+    IGNORE_FILE = ".cursorignore"
+```
+
+---
+
+## 📋 **STAGE-BY-STAGE EXECUTION GUIDE**
+
+### **Stage 1: Technical Design (Agent 01)**
+
+**Enable:** Comment `/r-genie/01_Technical_Design_Agent/` in ignore file
+**Load:** `@r-genie/01_Technical_Design_Agent/rules/01_Technical_Design.mdc`
+
+**Execution Instructions:**
+1. Agent reads user requirements from chat or `project/input_01_design/`
+2. Phase 0: Creates document skeleton from template
+3. Phase 1: Validates requirements → 🛑 Agent stop point
+4. Phase 2: Generates architecture + sequence diagram → 🛑
+5. Phase 3: Creates field mappings + error/connector diagrams → 🛑
+6. Phase 4: Completes full design document → 🛑
+7. Phase 5 (optional): Generates config files + supplementary sections
+
+**Key Outputs:**
+- `project/output_01_design/{project}-technical-design.md`
+- Minimum 3 Mermaid diagrams (connector, sequence, error handling)
+- Field mapping tables with source/target columns
+
+**Quality Gate:** 85+/135 points
+
+**After completion → Create handoff-01-to-02.md, then DISABLE agent**
+
+---
+
+### **Stage 2: API Specification (Agent 02)**
+
+**Enable:** Comment `/r-genie/02_API_Specification_Agent/` in ignore file
+**Load:** `@r-genie/02_API_Specification_Agent/rules/02_API_Specification.mdc`
+**Read:** `project/output_00_orchestrator/handoff-01-to-02.md`
+
+**Setup:** Copy Stage 1 design doc to `project/input_02_api/`
+
+**Execution Instructions:**
+1. Phase 0: File discovery — agent finds design doc in input folder
+2. Phase 1: Format selection (RAML 1.0 or OpenAPI 3.0) + requirements extraction → 🛑
+3. Phase 2: Specification structure design → 🛑
+4. Phase 3: Quality enhancement + modular components → 🛑
+5. Phase 4: Validation + delivery → 🛑
+
+**Key Outputs:**
+- `project/output_02_api/{api-name}.raml` or `.yaml` (OAS)
+- Modular components (data types, traits, examples)
+- RFC 7807 error responses
+
+**Quality Gate:** 85+/105 points
+
+**After completion → Create handoff-02-to-03.md, then DISABLE agent**
+
+---
+
+### **Stage 3: App Development (Agent 03)**
+
+**Enable:** Comment `/r-genie/03_App_Development_Agent/` in ignore file
+**Load:** `@r-genie/03_App_Development_Agent/rules/03_App_Development.mdc`
+**Read:** `project/output_00_orchestrator/handoff-02-to-03.md`
+
+**Setup:** Copy Stage 1 design + Stage 2 API spec to `project/input_03_app/`
+
+**Execution Instructions:**
+1. Phase 0: Requirements + template analysis → 🛑
+2. Phase 1: Design analysis + implementation plan → 🛑
+3. Phase 2: Application generation (flows, configs, DW) → 🛑
+4. Phase 3: Build optimization → �
+5. Phase 3.5: Secure properties/credentials → 🛑
+6. Phase 4: Deployment preparation → 🛑
+7. Phase 5: Final validation + delivery → 🛑
+
+**Key Outputs:**
+- `project/output_03_app/` — complete MuleSoft 4.6+ project
+- Flow XML files, pom.xml, configs
+- DataWeave transformation files (.dwl)
+
+**Quality Gate:** 85+/100 points, Maven build-ready
+
+**After completion → Create handoff-03-to-0301.md, then DISABLE agent**
+
+---
+
+### **Stage 4: DataWeave Review (Agent 03-01) — REVIEW MODE**
+
+**Enable:** Comment `/r-genie/03-01_Dataweave_Agent/` in ignore file
+**Load:** `@r-genie/03-01_Dataweave_Agent/rules/03-01_Dataweave.mdc`
+**Read:** `project/output_00_orchestrator/handoff-03-to-0301.md`
+
+> ⚠️ **CRITICAL**: Tell the agent: "Review and optimize the DataWeave transforms in `project/output_03_app/`. These were generated by App Development. Analyze each .dwl file for production safety."
+
+**Execution Instructions:**
+1. Phase 0: Scenario detection — agent identifies all .dwl files in Stage 3 output
+2. Phase 1: Requirements analysis on existing transforms (runs analyzer script)
+3. Phase 2: Review + optimize each script for production safety
+4. Phase 3: Run validation suite on all transforms
+5. Phase 4: Quality gates + delivery of optimized scripts
+
+**Key Outputs:**
+- Optimized `.dwl` files (updated in place or in `project/output_03_01_dataweave/`)
+- Validation results for each transform
+- Production safety report
+
+**Quality Gate:** All transforms pass quality gates, no unsafe coercions
+
+**After completion → Create handoff-0301-to-04.md, then DISABLE agent**
+
+---
+
+### **Stage 5: MUnit Testing (Agent 04)**
+
+**Enable:** Comment `/r-genie/04_Munit_Agent/` in ignore file
+**Load:** `@r-genie/04_Munit_Agent/rules/04_Munit.mdc`
+**Read:** `project/output_00_orchestrator/handoff-0301-to-04.md`
+
+**Setup:** Copy Stage 3 app (with Stage 4 DW optimizations) to `project/input_04_munit/`
+
+**Execution Instructions:**
+1. Phase 0: Project setup + validation
+2. Phase 1: Flow discovery + classification
+3. Phase 2: Logic analysis (displayed in-chat, NOT as files) → 🛑
+4. Phase 3: Test scenario design (in-chat) → 🛑
+5. Phase 4: Test data generation
+6. Phase 5: MUnit test file generation → 🛑
+7. Phase 6: Mock + spy generation
+8. Phase 7: Coverage optimization loop (iterate until ≥85%) → 🛑
+9. Phase 8: Build verification (Maven)
+10. Phase 9: Final delivery → 🛑
+
+**Key Outputs:**
+- `project/output_04_munit/{project}/src/test/munit/` — test files
+- Mock configurations, test data
+- Coverage report ≥85%
+
+**Quality Gate:** 85%+ coverage, all tests pass, Maven build succeeds
+
+**After completion → Create handoff-04-to-05.md, then DISABLE agent**
+
+---
+
+### **Stage 6: ReadMe Documentation (Agent 05)**
+
+**Enable:** Comment `/r-genie/05_ReadMe_Agent/` in ignore file
+**Load:** `@r-genie/05_ReadMe_Agent/rules/05_ReadMe.mdc`
+**Read:** `project/output_00_orchestrator/handoff-04-to-05.md`
+
+**Setup:** Copy Stage 3 app to `project/input_05_readme/`
+
+**Execution Instructions:**
+1. Phase 0: Confirm project location → �
+2. Phase 1: Template loading
+3. Phase 2: Project analysis + metadata extraction → 🛑
+4. Phase 3: Section-by-section generation → 🛑
+5. Phase 4: Mermaid diagrams + quality check → 🛑
+6. Phase 5: Final delivery → 🛑
+
+**Key Outputs:**
+- `project/output_05_readme/README.md`
+- Minimum 2 Mermaid diagrams
+- Professional documentation with all standard sections
+
+**Quality Gate:** 90+/100 points
+
+**After completion → Create handoff-05-to-06.md, then DISABLE agent**
+
+---
+
+### **Stage 7: Code Review (Agent 06) — Review Against Design**
+
+**Enable:** Comment `/r-genie/06_Code_Review_Agent/` in ignore file
+**Load:** `@r-genie/06_Code_Review_Agent/rules/06_Code_Review.mdc`
+**Read:** `project/output_00_orchestrator/handoff-05-to-06.md`
+
+**Setup:** Copy Stage 3 app to `project/input_06_review/` AND copy Stage 1 design document as requirements reference
+
+> ⚠️ **CRITICAL**: Tell the agent: "Review this MuleSoft application against the technical design document at `project/input_06_review/{project}-technical-design.md`. Use it as the requirements source for Phase 2."
+
+**Execution Instructions:**
+1. Phase 1: Validate inputs + count files → 🛑
+2. Phase 2: Extract requirements from Stage 1 design → 🛑
+3. Phase 3: Flow-by-flow analysis — RGV multi-pass (stop between each pass) → 🛑 per pass
+4. Phase 4: Field mapping verification — RGV multi-pass → 🛑 per pass
+5. Phase 5: Calculate score + finalize → Auto-completes
+
+**Key Outputs:**
+- `project/output_06_review/{project}-code-review.md`
+- 0-100 quality score with per-category breakdown
+- Findings tagged by RGV pass number
+
+**Quality Gate:** 80+/100 points, no CRITICAL findings unresolved
+
+**After completion → Pipeline complete! No further handoff needed.**
+
+---
+
+## � **HANDOFF DOCUMENT TEMPLATE**
+
+After EACH stage (except Stage 7), create this file:
+
+**Location:** `project/output_00_orchestrator/handoff-{from}-to-{to}.md`
+
+```markdown
+# Handoff: Stage {N} ({Agent Name}) → Stage {N+1} ({Next Agent Name})
+
+## Summary
+- **Stage completed:** {N} - {Agent Name}
+- **Duration:** {elapsed time}
+- **Quality score:** {score if applicable}
+
+## Key Decisions Made
+- {Decision 1 — e.g., "RAML 1.0 selected over OpenAPI 3.0"}
+- {Decision 2 — e.g., "3 API layers: Experience, Process, System"}
+- {Decision 3}
+
+## Output Files
+| File | Path | Description |
+|------|------|-------------|
+| {file1} | `project/output_{XX}/...` | {description} |
+| {file2} | `project/output_{XX}/...` | {description} |
+
+## Input Instructions for Next Agent
+- **Copy these files to:** `project/input_{next_XX}/`
+- **Tell the agent:** "{specific instruction for next agent}"
+- **Key context:** {any important context the next agent needs}
+
+## Quality Gate Results
+- {Gate 1}: ✅ PASS / ❌ FAIL
+- {Gate 2}: ✅ PASS / ❌ FAIL
+```
+
+---
+
+## � **AGENT ENABLE/DISABLE PROTOCOL**
+
+### **Enable Pattern**
+
+```
+# In .cursorignore OR .windsurfignore:
+# /r-genie/01_Technical_Design_Agent/    ← ENABLED (commented = AI can read)
+/r-genie/01_Technical_Design_Agent/      ← DISABLED (uncommented = AI ignores)
+```
+
+### **Enable/Disable Per Stage**
+
+| Stage | Enable This Agent | Disable Previous |
+|-------|-------------------|-----------------|
+| 1 | `01_Technical_Design_Agent` | (none — first stage) |
+| 2 | `02_API_Specification_Agent` | `01_Technical_Design_Agent` |
+| 3 | `03_App_Development_Agent` | `02_API_Specification_Agent` |
+| 4 | `03-01_Dataweave_Agent` | `03_App_Development_Agent` |
+| 5 | `04_Munit_Agent` | `03-01_Dataweave_Agent` |
+| 6 | `05_ReadMe_Agent` | `04_Munit_Agent` |
+| 7 | `06_Code_Review_Agent` | `05_ReadMe_Agent` |
+
+> ⚠️ Update BOTH ignore files if project is used in both Cursor and Windsurf.
+
+---
+
+## � **EVIDENCE-BOUND OUTPUTS**
+
+Every orchestrator decision must cite its source:
+
+| Decision Type | Evidence Format |
+|---------------|----------------|
+| Stage skip | "Skipping Stage {N} — User stated '{reason}' at checkpoint" |
+| Agent config | "Using {setting} — Handoff document specifies '{detail}'" |
+| Assumption | "⚠️ ASSUMPTION: {value} — User said '{vague answer}'" |
+| Gap entry | "GAP-{N}: Unable to confirm {detail} (asked {X} times)" |
+
+> If you cannot cite a source, flag as assumption. Never present assumptions as confirmed decisions.
+
+---
+
+## 🌳 **TREE OF THOUGHT (Stage Decisions)**
+
+For ambiguous stage decisions, evaluate branches:
+
+```
+<thinking>
+Branch A: [Option] — fits because [evidence]. Risk: [risk].
+Branch B: [Option] — fits because [evidence]. Risk: [risk].
+Best path: [chosen] — Confidence: {HIGH/MEDIUM/LOW}
+</thinking>
+```
+
+**Common orchestrator decisions requiring Tree of Thought:**
+- Skip vs execute a stage when partial outputs already exist
+- Review mode vs creation mode for Stage 4 (DataWeave)
+- Continue vs stop when a quality gate fails
+
+---
+
+## 📝 **FEW-SHOT EXAMPLES**
+
+### Example: Stage Transition
+
+❌ BAD — Skipping handoff:
+```
+Stage 1 complete. Moving to Stage 2 now.
+[Loads Agent 02 without handoff document]
+```
+
+✅ GOOD — Proper transition:
+```
+Stage 1 complete. Creating handoff document...
+📄 Saved: project/output_00_orchestrator/handoff-01-to-02.md
+🛑 CHECKPOINT: Review Stage 1 summary above.
+→ Reply "continue" to proceed to Stage 2: API Specification
+```
+
+**Why**: Handoff documents are the context bridge. Skipping them causes State Amnesia (Gap 6) across stages.
+
+### Example: Quality Gate Failure
+
+❌ BAD — Ignoring quality gate:
+```
+Score: 72/100. Proceeding to next stage anyway.
+```
+
+✅ GOOD — Flagging quality concern:
+```
+Score: 72/100 (below 80 threshold).
+⚠️ Quality gate NOT met. Recommend:
+→ "modify" to improve current stage
+→ "continue" to proceed with acknowledged risk
+Waiting for your decision...
+```
+
+**Why**: Specification Gaming (Gap 14) — the orchestrator must not shortcut quality gates.
+
+---
+
+## ✅ **QUALITY CHECKLIST (Per Stage)**
+
+Before presenting any stage checkpoint, verify:
+
+- [ ] All agent phases completed (not summarized/skipped)
+- [ ] Agent's internal stop points were respected
+- [ ] All deliverables listed in phase table are present
+- [ ] Quality gate score meets threshold (or flagged)
+- [ ] Handoff document includes: summary, key decisions, output files, next-agent instructions
+- [ ] RGV count matches: deliverables produced = deliverables expected
+- [ ] Assumptions marked with ⚠️ ASSUMPTION
+
+---
+
+## �🔗 **QUICK REFERENCE**
+
+| Need | Reference |
+|------|-----------|
+| Pipeline overview | `@00_Master_Orchestrator.mdc` |
+| Phase tables per stage | `@00-00_Phase_Orchestration.mdc` |
+| Stop points | `@00-02_Mandatory_Stop_Points.mdc` |
+
+---
+
+🧞‍♂️ **Master Orchestrator Guidance V3 - Per-Stage Execution with Handoffs!** ✨

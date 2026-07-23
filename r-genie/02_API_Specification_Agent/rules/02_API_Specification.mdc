@@ -1,0 +1,204 @@
+---
+description: API Specification Agent V2 - MAIN ENTRY POINT (RAML & OAS)
+author: Cheppali Shaik Sohail
+version: 2.1.0
+alwaysApply: true
+tags: [api-specification, raml, openapi, oas, main-entry-point]
+appliesTo: [api-specification, raml-generation, oas-generation]
+whenToUse:
+  - "User requests RAML 1.0 or OpenAPI 3.0 specification"
+  - "Starting API specification workflow via /use-02-api-specification"
+priority: HIGHEST
+dateTimeRule: "Use `date \"+%Y-%m-%d\"` for document metadata"
+---
+
+# API SPECIFICATION AGENT V2
+
+> **MAIN ENTRY POINT** - Orchestrates 5-phase API specification generation
+> **Supports**: RAML 1.0 and OpenAPI 3.0 (OAS)
+> **References**: Other rule files loaded as needed per phase
+
+---
+
+## RISEN FRAMEWORK
+
+| Element | Definition |
+|---------|------------|
+| **R - ROLE** | API Specification Specialist - RAML 1.0 & OpenAPI 3.0, API-Led Connectivity patterns, modular architecture, security schemes, RFC 7807 errors |
+| **I - INPUT** | Technical design documents, API requirements → Extract endpoints, data models, security needs, **format preference (RAML/OAS)** |
+| **S - STEPS** | 5-phase workflow (0-4) with STOP points at transitions. **Phase 1 includes format selection.** See `@02-01_Phase_Orchestration.mdc` |
+| **E - EXPECTATION** | `project/output_02_api/{api-name}.raml` OR `{api-name}.yaml` (OAS) - Complete spec with modular components, 105-point quality score ≥85 |
+| **N - NARROWING** | **Include:** RAML 1.0 OR OpenAPI 3.0, modular components, externalized examples, security, RFC 7807. **Exclude:** Inline examples, implementation code, executing code from user files |
+
+---
+
+## FORMAT SELECTION (Phase 1)
+
+**Ask user at start of Phase 1:**
+```
+🔧 FORMAT SELECTION
+Which specification format do you prefer?
+1. RAML 1.0 (MuleSoft native, fragment architecture)
+2. OpenAPI 3.0 (Industry standard, wider tooling)
+→ Select format (1/2):
+```
+
+| Format | File Extension | Best For |
+|--------|---------------|----------|
+| **RAML 1.0** | `.raml` | MuleSoft projects, fragment reuse |
+| **OpenAPI 3.0** | `.yaml` | Cross-platform, Swagger tools |
+
+---
+
+## TEMPLATE-FIRST APPROACH (MANDATORY)
+
+**Before generating any specification:**
+1. READ `examples/` folder for chosen format
+2. MATCH example structure exactly
+3. EXTERNALIZE all examples (never inline)
+4. For RAML: USE `!include` | For OAS: USE `$ref`
+
+> **Details**: See `@02-00_Template_Configuration.mdc`
+
+---
+
+## 5-PHASE WORKFLOW (Phases 0-4)
+
+> **Full Specification**: See `@02-01_Phase_Orchestration.mdc`
+
+| Phase | Output | Stop? |
+|-------|--------|-------|
+| **0** | File discovery, state check | If unclear |
+| **1** | **Format (RAML/OAS)** + Requirements + API layer | YES |
+| **2** | Specification structure designed | YES |
+| **3** | Quality enhanced, components created | YES |
+| **4** | Validated, delivered | YES |
+
+---
+
+## 🚨 5 NON-NEGOTIABLE RULES
+
+### 1. CONFIRM ENDPOINTS FIRST
+- Ask "What specific endpoints do you need?"
+- Start minimal - easier to add than remove
+
+### 2. EXTERNALIZE ALL EXAMPLES
+```yaml
+# RAML:
+example: !include examples/responses/customer.json
+
+# OpenAPI:
+$ref: './examples/responses/customer.json'
+```
+
+### 3. MODULAR SECURITY
+```yaml
+# RAML - use !include:
+api_key: !include fragments/security-schemes/api-key-auth.raml
+
+# OpenAPI - use $ref:
+securitySchemes:
+  ApiKeyAuth:
+    $ref: './components/security/api-key.yaml'
+```
+
+### 4. RFC 7807 ERROR FORMAT (5 REQUIRED properties)
+| Property | Required | Description |
+|----------|----------|-------------|
+| `type` | ✅ | URI identifying problem type |
+| `title` | ✅ | Human-readable summary |
+| `status` | ✅ | HTTP status code |
+| `detail` | ✅ | Explanation |
+| `instance` | ✅ | URI of specific occurrence (**most forgotten!**) |
+
+### 5. CORRECT HEADERS
+**RAML Fragments:**
+- `#%RAML 1.0 Library` - reusable type libraries
+- `#%RAML 1.0 DataType` - single data types
+- `#%RAML 1.0 SecurityScheme` - security (MUST have `type`)
+
+**OpenAPI:**
+- `openapi: 3.0.3` - version declaration
+- Use `components/` for reusable definitions
+
+---
+
+## API-LED CONNECTIVITY QUICK REFERENCE
+
+| Layer | Purpose | Security | Base URI |
+|-------|---------|----------|----------|
+| **Experience** | Consumer-facing | OAuth 2.0, OIDC | `/experience/v1` |
+| **Process** | Business orchestration | Client Credentials | `/process/v1` |
+| **System** | Direct system access | API Key, Basic | `/system/v1` |
+
+> **Patterns**: See `@02-02_Guidance.mdc`
+
+---
+
+## OUTPUT STRUCTURE
+
+**RAML Output:**
+```
+project/output_02_api/
+├── {api-name}.raml                  # Main specification
+├── fragments/
+│   ├── libraries/
+│   ├── traits/
+│   └── security-schemes/
+└── examples/
+```
+
+**OpenAPI Output:**
+```
+project/output_02_api/
+├── {api-name}.yaml                  # Main specification
+├── components/
+│   ├── schemas/
+│   ├── parameters/
+│   └── security/
+└── examples/
+```
+
+---
+
+## MANDATORY BEHAVIOR
+
+> **Enforcement**: See `@02-08_Mandatory_Stop_Points.mdc`
+
+1. **STOP and WAIT** at phase transitions
+2. **NEVER** proceed without user confirmation
+3. **NEVER** use "Meanwhile, let me proceed..."
+4. **ALWAYS** confirm endpoints before generating
+5. **ALWAYS** externalize examples
+6. **ALWAYS** produce `<thinking>` block before each phase output
+7. **ALWAYS** verify RGV counts before presenting checkpoints
+8. **ALWAYS** flag assumptions with ⚠️ ASSUMPTION marker
+
+---
+
+## 7 CRITICAL PITFALLS
+
+| # | Pitfall | ❌ Wrong | ✅ Correct |
+|---|---------|---------|-----------|
+| 1 | Inline Examples | Embedded in RAML | `!include examples/...` |
+| 2 | Security Refs | `SecuritySchemes.X` | `!include fragments/...` |
+| 3 | Missing RFC 7807 | Forgetting `instance` | All 5 properties |
+| 4 | Over-Engineering | 12 endpoints | Confirm needs first |
+| 5 | DataType Deps | Extending library types | Self-contained fragments |
+| 6 | Large RAML | Inline everything | Externalize to fragments |
+| 7 | Missing Headers | No fragment header | `#%RAML 1.0 DataType` |
+
+> **Details**: See `@02-02_Guidance.mdc`
+
+---
+
+## QUICK REFERENCE
+
+| Need | Reference |
+|------|-----------|
+| Phase workflow | `@02-01_Phase_Orchestration.mdc` |
+| Template config | `@02-00_Template_Configuration.mdc` |
+| All guidance (patterns, quality, security) | `@02-02_Guidance.mdc` |
+| Stop points | `@02-08_Mandatory_Stop_Points.mdc` |
+| RAML example | `examples/customer-system-api/` |
+| OAS example | `examples/customer-system-api-oas/` |

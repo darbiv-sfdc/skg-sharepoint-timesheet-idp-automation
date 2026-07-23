@@ -1,0 +1,95 @@
+---
+description: Template Configuration Guide
+author: Cheppali Shaik Sohail
+version: 2.0.0
+alwaysApply: false
+tags: [template, configuration, phase-0]
+appliesTo: [technical-design, templates]
+whenToUse:
+  - "Phase 0: Template loading"
+  - "Customizing design output"
+priority: HIGH
+---
+
+# TEMPLATE CONFIGURATION
+
+> **Phase 0 Reference** - Template-first approach
+
+---
+
+## TEMPLATE LOCATION
+
+```
+r-genie/01_Technical_Design_Agent/
+├── templates/
+│   ├── design-style.yaml           # Structure, naming, diagrams config
+│   └── design-template-guide.md   # Content guide: what goes where, when to produce
+└── examples/
+    └── *.md                        # Example formats to match
+```
+
+---
+
+## PRE-DESIGN CHECKLIST (MANDATORY)
+
+Before generating ANY content:
+
+- [ ] `templates/design-style.yaml` read (structure and inclusion rules)
+- [ ] `templates/design-template-guide.md` read (content guidance: what goes where, when to produce)
+- [ ] `examples/` folder read (all .md files for formatting reference)
+- [ ] Matching example selected for project type
+- [ ] Sections identified per template structure
+- [ ] Diagram placements identified per template guide
+- [ ] Mermaid diagrams planned (NOT ASCII)
+
+**If ANY check fails → DO NOT PROCEED → Fix first**
+
+---
+
+## TEMPLATE STRUCTURE
+
+```yaml
+# design-style.yaml structure
+structure:
+  sections:           # Core sections with include: true/false
+    - name: "..."
+      include: true   # Generate this section
+  
+  supplementary:      # Optional sections for Phase 5
+    - name: "..."
+      include: true   # Offer in Phase 5 if user requests
+
+# Diagram placement defined in design-template-guide.md
+# Section names and numbers defined in template, not rules
+```
+
+---
+
+## TEMPLATE-DRIVEN RULES
+
+### Main Document (Phases 0-4)
+Generate sections where `structure.sections[].include: true`
+
+### Supplementary (Phase 5)
+- READ `structure.supplementary`
+- ONLY offer items where `include: true`
+- NEVER show items where `include: false`
+- If user says "all per template" → generate ALL enabled items
+
+---
+
+## PHASE 0 OUTPUT
+
+```
+📋 Template Configuration Loaded:
+   ✅ Style: [Custom | Default]
+   ✅ Sections: [X sections]
+   ✅ Diagrams: 3 essential + [Y] optional
+   ✅ Example: [selected file]
+```
+
+---
+
+## NO CONFIGURATION?
+
+If templates unconfigured or empty → Use default R-GENIE style automatically

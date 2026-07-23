@@ -1,0 +1,69 @@
+Dear Leaders,
+
+Please find the Weekly Status Report for the {{project_name}} as of {{wsr_date}}
+
+**Overall Delivery status** is **{{overall_status_color}}**
+
+**GDC project status** is **{{gdc_status_color}}**
+
+Summary of WSR:
+{{#each summary_bullets}}
+  - {{this.text}}
+  {{#each this.children}}
+    - {{this.text}}
+  {{/each}}
+{{/each}}
+
+{{#if has_completed}}
+Completed
+{{#each completed_bullets}}
+  - {{this}}
+{{/each}}
+{{/if}}
+
+{{#if has_in_progress}}
+In Progress
+{{#each in_progress_bullets}}
+  - {{this}}
+{{/each}}
+{{/if}}
+
+
+Ask for/ Attention required by Leaders:
+
+Ask : {{ask_content_or_none}}
+
+Attention:
+{{#if has_attention_items}}
+{{#each attention_items}}
+  - {{this}}
+{{/each}}
+{{else}}
+None as of now
+{{/if}}
+
+
+Delivery Metrics & Quality Details:
+
+Delivery Metrics- Sprint {{sprint_number}}
+
+| Metric                      | Details                                            | Comments                  |
+|-----------------------------|----------------------------------------------------|---------------------------|
+| Capacity Utilisation: {{capacity_utilisation_value}}% | Capacity: {{capacity_actual}} vs Planned: {{capacity_planned}} | {{capacity_comments}} |
+| User Story Delivered: {{user_story_delivered_value}}% | Planned: {{story_planned}} vs Dev Completed: {{story_completed}} | {{story_comments}} |
+
+{{release_year}} Release
+
+| Phase              | Days | Valid Defects | Defect Per Days (DpD) |
+|--------------------|------|---------------|------------------------|
+{{#each release_phases}}
+| {{this.phase}} | {{this.days}} | {{this.defects}} | {{this.dpd}} |
+{{/each}}
+
+{{#if release_note}}
+Note: {{release_note}}
+{{/if}}
+
+
+Thanks
+{{sender_name}}

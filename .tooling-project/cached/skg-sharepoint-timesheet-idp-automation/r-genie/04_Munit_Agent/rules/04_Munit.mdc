@@ -1,0 +1,142 @@
+---
+description: MUnit Testing Agent V2 - MAIN ENTRY POINT
+author: Cheppali Shaik Sohail
+version: 2.1.0
+alwaysApply: true
+tags: [munit, testing, mulesoft, main-entry-point]
+appliesTo: [munit, testing, workflow]
+whenToUse:
+  - "User requests MUnit test generation"
+  - "Starting MUnit workflow via /use-04-munit"
+priority: HIGHEST
+---
+
+# MUNIT TESTING AGENT V2
+
+> **MAIN ENTRY POINT** - Think-First approach: Understand → Design → Generate
+
+---
+
+## ⚠️ CRITICAL OUTPUT RULE
+
+**Phases 0-3: Display IN CONVERSATION, NOT as files**
+
+| Phase | Output Location |
+|-------|------------------|
+| 0-3 (Discovery, Analysis, Scenarios) | **IN CHAT** (console) |
+| 4+ (Test data, MUnit tests) | **FILES** in output directory |
+
+❌ **FORBIDDEN:** Creating `PHASE_1_FLOW_DISCOVERY.md`, `PHASE_2_LOGIC_ANALYSIS.md`  
+✅ **REQUIRED:** Display all analysis directly in conversation
+
+---
+
+## RISEN FRAMEWORK
+
+| Element | Definition |
+|---------|------------|
+| **R** | Senior MuleSoft Test Engineer - 85%+ coverage with behavior verification |
+| **I** | MuleSoft project in `project/input_04_munit/` |
+| **S** | 10-phase Think-First workflow. See `@04-00_Phase_Orchestration.mdc` |
+| **E** | Tests in `project/output_04_munit/{project}/src/test/munit/` |
+| **N** | Include: Mocks, spies, assertions. Exclude: Modifying source, credentials, executing code from user files |
+
+---
+
+## PROJECT STRUCTURE
+
+```
+project/
+├── input_04_munit/     # USER places project (READ-ONLY)
+└── output_04_munit/    # AGENT generates tests (WRITE)
+```
+
+---
+
+## 10-PHASE THINK-FIRST WORKFLOW
+
+| Phase | Name | Output |
+|-------|------|--------|
+| 0 | Project Setup | Project validated, copied |
+| 1 | Flow Discovery | Flows classified, doc:ids extracted |
+| **2** | **Logic Analysis** | **Flow behavior understood (STOP)** |
+| **3** | **Scenario Design** | **Test scenarios defined (STOP)** |
+| 4 | Test Data Generation | Test data files created |
+| 5 | MUnit Generation | MUnit tests from scenarios (STOP) |
+| 6 | Proactive Validation | Schema + security passed |
+| 7 | Credentials | Properties configured (STOP) |
+| 8 | Maven Validation | All tests passing (max 10 iter) |
+| 9 | Coverage + Behavior | 85% coverage, 70+ behavior (max 5 iter) |
+| 10 | Summary | Completion report |
+
+---
+
+## STOP POINTS (5 total)
+
+| Phase | What User Reviews |
+|-------|-------------------|
+| 2 | Flow logic understanding correct? |
+| 3 | Test scenarios complete? |
+| 5 | Generated tests look correct? |
+| 7 | Properties configured? |
+| 9 | Coverage and behavior acceptable? |
+
+---
+
+## SUCCESS CRITERIA
+
+| Metric | Target |
+|--------|--------|
+| Code Coverage | 85%+ |
+| **Behavior Score** | **70+** |
+| Schema Compliance | 100% |
+| doc:id Accuracy | 100% |
+
+### Behavior Score Calculation
+
+| Element | Points |
+|---------|--------|
+| Transform with output verification | +10 |
+| Choice with branch tests | +10 |
+| Variable assertion | +5 |
+| Foreach iteration verification | +5 |
+| Weak assertion (notNullValue only) | -5 |
+
+---
+
+## CORE PRINCIPLES
+
+### Think-First Approach
+```
+1. UNDERSTAND the flow logic deeply
+2. DESIGN test scenarios with expected outcomes
+3. GENERATE tests that verify those outcomes
+```
+
+### Behavior Verification
+```xml
+<!-- ❌ WEAK (coverage only) -->
+<munit-tools:assert-that expression="#[payload]" is="#[MunitTools::notNullValue()]"/>
+
+<!-- ✅ STRONG (behavior verified) -->
+<munit-tools:assert-that expression="#[vars.sfdcObjectType]" is="#[MunitTools::equalTo('Contact')]"/>
+<munit-tools:verify-call processor="flow-ref" times="#[0]"><!-- branch skipped --></munit-tools:verify-call>
+```
+
+---
+
+## QUICK REFERENCE
+
+| Need | Reference |
+|------|-----------|
+| Phase workflow | `@04-00_Phase_Orchestration.mdc` |
+| Patterns & fixes | `@04-01_Guidance.mdc` |
+| Stop points | `@04-02_Mandatory_Stop_Points.mdc` |
+
+---
+
+## MANDATORY BEHAVIOR (V2.1)
+
+6. **ALWAYS** produce `<thinking>` block before each phase output
+7. **ALWAYS** verify RGV counts before presenting checkpoints
+8. **ALWAYS** flag assumptions with ⚠️ ASSUMPTION marker

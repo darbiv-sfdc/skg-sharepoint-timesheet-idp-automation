@@ -1,0 +1,156 @@
+openapi: 3.0.3
+info:
+  title: Customer Data System API
+  description: |
+    System API providing direct access to customer data in CRM.
+    API-Led Layer: System | Auth: API Key | Consumers: Process APIs
+  version: v1
+  contact:
+    name: API Support
+    email: api-support@company.com
+
+servers:
+  - url: https://api.company.com/system/v1
+    description: Production
+
+security:
+  - ApiKeyAuth: []
+
+tags:
+  - name: customers
+    description: Customer operations
+  - name: health
+    description: Health check
+
+paths:
+  /customers:
+    get:
+      tags: [customers]
+      summary: List customers with pagination
+      operationId: listCustomers
+      parameters:
+        - $ref: './components/parameters/page.yaml'
+        - $ref: './components/parameters/pageSize.yaml'
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [active, inactive, pending]
+        - name: search
+          in: query
+          schema:
+            type: string
+            minLength: 2
+      responses:
+        '200':
+          description: Customers retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: './components/schemas/CustomerList.yaml'
+              example:
+                $ref: './examples/responses/customer-list.json'
+        '400':
+          $ref: './components/responses/BadRequest.yaml'
+    
+    post:
+      tags: [customers]
+      summary: Create a new customer
+      operationId: createCustomer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: './components/schemas/CustomerCreate.yaml'
+            example:
+              $ref: './examples/requests/create-customer.json'
+      responses:
+        '201':
+          description: Customer created successfully
+          headers:
+            Location:
+              schema:
+                type: string
+              example: "/customers/cust-12345"
+          content:
+            application/json:
+              schema:
+                $ref: './components/schemas/Customer.yaml'
+              example:
+                $ref: './examples/responses/customer.json'
+        '400':
+          $ref: './components/responses/BadRequest.yaml'
+
+  /customers/{customerId}:
+    parameters:
+      - name: customerId
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: ^cust-[a-zA-Z0-9]{8,}$
+        example: "cust-12345abc"
+    
+    get:
+      tags: [customers]
+      summary: Get customer by ID
+      operationId: getCustomer
+      responses:
+        '200':
+          description: Customer retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: './components/schemas/Customer.yaml'
+              example:
+                $ref: './examples/responses/customer.json'
+        '404':
+          $ref: './components/responses/NotFound.yaml'
+    
+    put:
+      tags: [customers]
+      summary: Update customer
+      operationId: updateCustomer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: './components/schemas/CustomerUpdate.yaml'
+            example:
+              $ref: './examples/requests/update-customer.json'
+      responses:
+        '200':
+          description: Customer updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: './components/schemas/Customer.yaml'
+    
+    delete:
+      tags: [customers]
+      summary: Delete customer
+      operationId: deleteCustomer
+      responses:
+        '204':
+          description: Customer deleted
+
+  /health:
+    get:
+      tags: [health]
+      summary: API health check
+      operationId: healthCheck
+      security: []
+      responses:
+        '200':
+          description: API is healthy
+          content:
+            application/json:
+              example:
+                $ref: './examples/responses/health.json'
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      $ref: './components/security/api-key.yaml'

@@ -1,0 +1,216 @@
+---
+description: Error Analysis Guidance - RISEN, Error Patterns
+author: Cheppali Shaik Sohail
+version: 2.1.0
+alwaysApply: false
+tags: [guidance, risen, patterns]
+appliesTo: [error-analysis]
+whenToUse:
+  - "Phase 1-2 analysis work"
+  - "Reference for error patterns"
+priority: HIGH
+---
+
+# ERROR ANALYSIS GUIDANCE
+
+> **Reference** for error patterns and troubleshooting
+
+---
+
+## 1. HTTP CONNECTOR ERRORS
+
+### Connection Timeout
+**Signature:** `timeout exceeded`
+**Root Cause:** Target system not responding
+**Fix:** Check URL, network, increase timeout
+**Config:** `<http:response-timeout>30000</http:response-timeout>`
+
+### SSL Certificate Error
+**Signature:** `PKIX path building failed`
+**Root Cause:** Certificate not trusted
+**Fix:** Import certificate into truststore
+**For CloudHub:** Add to security settings
+
+### 401 Unauthorized
+**Signature:** `unauthorized (401)`
+**Causes:** Invalid credentials, expired token, missing header
+**Fix:** Verify credentials, check token refresh, confirm auth format
+
+---
+
+## 2. DATABASE ERRORS
+
+### Connection Pool Exhausted
+**Signature:** `Timeout waiting for idle object`
+**Root Cause:** All connections in use
+**Fix:** Increase pool size, optimize queries
+**Config:**
+```xml
+<db:pooling-profile maxPoolSize="20" minPoolSize="5"/>
+```
+
+### SQL Syntax Error
+**Signature:** `SQLSyntaxErrorException`
+**Fix:** Use parameterized queries, test in DB client
+
+---
+
+## 3. DATAWEAVE ERRORS
+
+### Null Pointer
+**Signature:** `Cannot coerce Null to Object/String`
+**Root Cause:** Accessing property on null
+**Fix:**
+```dataweave
+// Use default
+payload.field default ""
+// Or safe navigation
+payload.parent?.child default ""
+```
+
+### Type Coercion
+**Signature:** `Cannot coerce String to Number`
+**Fix:**
+```dataweave
+(payload.amount as Number) default 0
+```
+
+### Array Index Out of Bounds
+**Signature:** `Unable to get index 0`
+**Fix:**
+```dataweave
+if (sizeOf(payload.items) > 0) payload.items[0] else null
+```
+
+---
+
+## 4. DEPLOYMENT ERRORS
+
+### Artifact Failed
+**Causes:** Dependency conflict, invalid pom.xml, resource issue
+**Debug:** Check full logs, verify pom.xml, check CloudHub dashboard
+
+### Out of Memory
+**Signature:** `OutOfMemoryError: Java heap space`
+**Causes:** Memory leak, large payload, unbounded collection
+**Fix:** Increase vCore/heap, use streaming, implement pagination
+
+---
+
+## 5. SEVERITY QUICK REFERENCE
+
+| Error Pattern | Severity | Action |
+|--------------|----------|--------|
+| Connection Timeout | HIGH | Check network, increase timeout |
+| SSL Certificate | HIGH | Import certificate |
+| 401 Unauthorized | HIGH | Verify credentials |
+| Pool Exhausted | CRITICAL | Increase pool, restart |
+| Null Pointer | MEDIUM | Add null checks |
+| Type Coercion | MEDIUM | Add validation |
+| Out of Memory | CRITICAL | Increase memory |
+
+---
+
+## 6. TROUBLESHOOTING TIPS
+
+**When stuck:**
+1. **Simplify** - Remove complexity, test basic functionality
+2. **Isolate** - Test components individually
+3. **Compare** - Check working vs. broken environments
+4. **Monitor** - Add logging and metrics
+5. **Ask** - "What changed recently?"
+
+**Red flags:**
+- No error handling in flows
+- Hardcoded configurations
+- No monitoring or alerting
+- Missing input validation
+
+---
+
+## 7. QUICK DIAGNOSIS CHECKLIST
+
+| Symptom | First Check |
+|---------|-------------|
+| Timeout | Network, target health, timeout config |
+| 401/403 | Credentials, token expiry, auth format |
+| Null pointer | Input data structure, optional fields |
+| Pool exhausted | Concurrent load, query performance |
+| OOM | Payload size, streaming config, vCore |
+
+---
+
+## 8. EVIDENCE-BOUND OUTPUTS
+
+Every diagnosis decision must cite its source:
+
+| Decision Type | Evidence Format |
+|---------------|----------------|
+| Error classification | "Classified as {type} — Signature: '{error message}'" |
+| Root cause | "Root cause: {cause} — Stack trace line: '{trace line}'" |
+| Severity | "Severity: {level} — Impact: {description}" |
+| Assumption | "⚠️ ASSUMPTION: {value} — Error context unclear on '{detail}'" |
+| Gap entry | "GAP-{N}: Unable to confirm {detail} (asked {X} times)" |
+
+> If you cannot cite an error signature or stack trace line, flag as assumption. Never present assumptions as confirmed diagnoses.
+
+---
+
+## 9. TREE OF THOUGHT (Ambiguous Decisions)
+
+For decisions with multiple valid paths, evaluate branches before choosing:
+
+```
+<thinking>
+Branch A: [Option] — fits because [evidence]. Risk: [risk].
+Branch B: [Option] — fits because [evidence]. Risk: [risk].
+Best path: [chosen] — Confidence: {HIGH/MEDIUM/LOW}
+</thinking>
+```
+
+**Common ambiguous decisions in error analysis:**
+- Connection timeout: network issue vs target system overload
+- Null pointer: missing data vs incorrect transformation
+- 401 error: expired token vs wrong credentials vs missing header
+- OOM: memory leak vs large payload vs unbounded collection
+
+---
+
+## 10. FEW-SHOT PATTERNS
+
+### Confidence-Based Analysis
+
+❌ BAD - Guessing without evidence:
+```
+The error is probably caused by a timeout issue.
+Here's how to fix it...
+```
+
+✅ GOOD - Evidence-based with confidence:
+```
+Based on the error signature `timeout exceeded` at line 42
+and the HTTP request config showing 30s timeout,
+this is a connection timeout to the target system (HIGH confidence).
+
+Immediate fix: Increase timeout to 60s
+Long-term: Add circuit breaker pattern
+```
+
+**Why**: Evidence-based diagnosis prevents misdiagnosis and wasted troubleshooting time.
+
+### Root Cause vs Symptom
+
+❌ BAD - Treating symptom:
+```
+The NullPointerException can be fixed by adding a null check.
+```
+
+✅ GOOD - Addressing root cause:
+```
+The NullPointerException at line 15 occurs because the upstream
+HTTP request returns null when the external API is down.
+Root cause: Missing error handler on the HTTP request.
+Immediate: Add null check. Long-term: Add error handler + retry.
+```
+
+**Why**: Symptom fixes mask underlying issues that will resurface.

@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mule xmlns="http://www.mulesoft.org/schema/mule/core" 
+	xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" 
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" 
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+	xsi:schemaLocation="
+		http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+		http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+		http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+
+	<!-- Frontend Interface Flow -->
+	<flow name="serve-frontend-main-flow" doc:id="serve-frontend-main-flow">
+		<http:listener doc:name="Frontend" doc:id="frontend-listener" 
+			config-ref="HTTP_Listener_config" path="/" />
+		
+		<logger level="INFO" doc:name="Entry" doc:id="frontend-entry-log" 
+			message='#["Entry at $(flow.name)"]' />
+		
+		<http:load-static-resource doc:name="mapping_generator_ui" doc:id="load-ui" 
+			resourceBasePath='#[mule.home ++ "/apps/" ++ app.name ++ "/webapp/index.html"]' />
+		
+		<logger level="INFO" doc:name="Exit" doc:id="frontend-exit-log" 
+			message='#["Exit from $(flow.name)"]' />
+	</flow>
+
+	<!-- API Endpoint for Mapping Generation -->
+	<flow name="generate-mapping-api-flow" doc:id="generate-mapping-api-flow">
+		<http:listener doc:name="/api/generate-mapping" doc:id="api-generate-mapping-listener" 
+			config-ref="HTTP_Listener_config" path="/api/generate-mapping" allowedMethods="POST">
+			<http:response statusCode="#[vars.httpStatus default 200]">
+				<http:headers><![CDATA[#[vars.outboundHeaders default {}]]]></http:headers>
+			</http:response>
+			<http:error-response statusCode="#[vars.httpStatus default 500]">
+				<http:body><![CDATA[#[payload]]]></http:body>
+				<http:headers><![CDATA[#[vars.outboundHeaders default {}]]]></http:headers>
+			</http:error-response>
+		</http:listener>
+		
+		<logger level="INFO" doc:name="Entry" doc:id="api-entry-log" 
+			message='#["Entry at $(flow.name)"]' />
+		
+		<flow-ref doc:name="r-genie-mapping-generator-sub-flow" doc:id="main-mapping-ref" 
+			name="r-genie-mapping-generator-sub-flow" />
+		
+		<logger level="INFO" doc:name="Exit" doc:id="api-exit-log" 
+			message='#["Exit from $(flow.name)"]' />
+	</flow>
+</mule>

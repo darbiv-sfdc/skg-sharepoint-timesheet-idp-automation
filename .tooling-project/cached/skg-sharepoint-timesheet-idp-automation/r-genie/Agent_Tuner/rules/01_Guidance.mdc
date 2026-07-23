@@ -1,0 +1,514 @@
+---
+description: Agent Tuner Guidance - Customization Patterns, Agent-Specific Flows, Validation
+author: Cheppali Shaik Sohail
+version: 1.2.0
+alwaysApply: false
+tags: [guidance, customization-patterns, agent-specific, validation]
+appliesTo: [agent-tuning]
+whenToUse:
+  - "Phase 2-4 customization work"
+  - "Reference for patterns and agent-specific flows"
+priority: HIGH
+---
+
+# AGENT TUNER GUIDANCE
+
+> **Reference** for customization patterns, agent-specific input collection, rules/templates decoupling, and architecture compliance
+
+---
+
+## SECTION 1: 7 CUSTOMIZATION DIMENSIONS
+
+| # | Dimension | What Changes | Files Affected |
+|---|-----------|--------------|----------------|
+| 1 | RISEN Framework | Role, inputs, steps, expectations, narrowing | `{ID}_{Agent}.mdc` |
+| 2 | Phase Workflow | Phase count, tasks, checkpoints, state schema | `Phase_Orchestration.mdc` |
+| 3 | Guidance Patterns | Domain patterns, naming, few-shot, checklists | `Guidance.mdc` |
+| 4 | Stop Points | Phase-specific stops, questions, self-check | `Mandatory_Stop_Points.mdc` |
+| 5 | Templates | Style YAML, template guide, section structure | `templates/` |
+| 6 | Examples | Reference examples, pattern projects, common modules | `examples/` |
+| 7 | Documentation | README, ARCHITECTURE, Production Learnings | Root docs |
+
+### Customization is NOT Just Config
+
+Customization can fundamentally rewrite the RISEN framework, phase structure, guidance patterns, and stop points while preserving the R-GENIE architecture skeleton. The skeleton (4-5 lean rule files, RISEN, phases, stop points, quick reference) MUST be preserved.
+
+---
+
+## SECTION 2: AGENT-SPECIFIC INPUT COLLECTION (Phase 2)
+
+### Agent 01: Technical Design
+
+```
+📋 TECHNICAL DESIGN CUSTOMIZATION — Input Collection
+
+To customize the Technical Design Agent for your project, I need:
+
+1. **Design Template/Example** (REQUIRED):
+   → Provide a screenshot, image, or markdown of your project's design template
+   → Or paste/attach a sample design document
+   → (I will convert it to a markdown example for you to confirm)
+
+2. **Section-Specific Standards** (REQUIRED):
+   → What sections does your design document require?
+   → Any specific naming conventions for sections?
+   → Any mandatory diagrams or tables per section?
+
+3. **Project Naming Standards** (RECOMMENDED):
+   → Artifact ID format (e.g., max length, prefix conventions)
+   → API naming conventions
+   → Exchange Asset naming rules
+   → Logging category format
+
+4. **Architecture Patterns** (RECOMMENDED):
+   → Preferred architecture patterns (API-Led, event-driven, etc.)
+   → Preferred connectors and technologies
+   → Error handling approach
+
+→ Start with your design template (screenshot, markdown, or description)
+```
+
+### Agent 02: API Specification
+
+```
+📋 API SPECIFICATION CUSTOMIZATION — Input Collection
+
+To customize the API Specification Agent for your project, I need:
+
+1. **Example API Project** (REQUIRED):
+   → Provide an existing RAML or OpenAPI project as reference
+   → This will be used as the example structure for future generation
+
+2. **Common Traits/Fragments** (REQUIRED):
+   → Do you have shared traits (e.g., pageable, sortable, secured)?
+   → Do you have shared data types or libraries?
+   → Do you have shared security scheme definitions?
+   → Provide files or describe them
+
+3. **Exchange Modules** (RECOMMENDED):
+   → Any shared exchange_modules or $ref components?
+   → Common error response formats?
+   → Shared example responses?
+
+4. **API Naming & Versioning Standards** (RECOMMENDED):
+   → Base URI pattern
+   → Resource naming conventions (kebab-case, plural, etc.)
+   → Version strategy (URI path, header, etc.)
+
+→ Start with your example API project
+```
+
+### Agent 03: App Development
+
+```
+📋 APP DEVELOPMENT CUSTOMIZATION — Input Collection
+
+To customize the App Development Agent for your project, I need:
+
+1. **Example MuleSoft Project** (REQUIRED):
+   → Provide a complete reference project (or multiple for different patterns)
+   → This will be the template for future app generation
+
+2. **Common Error Handling** (REQUIRED):
+   → Do you have a shared error handling module/flow?
+   → Global error handler patterns?
+   → Error response format?
+
+3. **Common Components** (REQUIRED):
+   → Shared parent POM / dependency management?
+   → Common sub-flows (logging, tracing, correlation ID)?
+   → Shared configuration patterns (properties structure, secrets management)?
+
+4. **Project Structure Standards** (RECOMMENDED):
+   → Folder structure conventions
+   → Flow naming conventions
+   → Property file organization (per-env, shared, secure)
+   → DataWeave file organization
+
+5. **Integration Patterns** (RECOMMENDED):
+   → What source/target patterns do you use? (e.g., Solace→SFDC, HTTP→SAP)
+   → Are there multiple patterns needing separate example projects?
+
+→ Start with your example project
+```
+
+### Agents 04-09: Generic
+
+```
+📋 {AGENT NAME} CUSTOMIZATION — Input Collection
+
+To customize this agent, I need:
+
+1. **Example Output** (RECOMMENDED):
+   → Provide a sample of what you expect this agent to produce
+
+2. **Project-Specific Standards** (RECOMMENDED):
+   → Any naming conventions, formatting rules, or structural requirements?
+
+3. **Additional Patterns** (OPTIONAL):
+   → Domain-specific patterns, few-shot examples, quality criteria?
+
+→ Describe your customization needs
+```
+
+---
+
+## SECTION 3: TEMPLATES & EXAMPLES TUNING (Phase 3)
+
+### Technical Design (01) — 3-Step Sub-Flow
+
+**Step 1 — Example First:**
+1. User provides design template (screenshot/image/markdown/description)
+2. Convert to markdown example matching `examples/*.md` format
+3. **STOP** → User confirms markdown example
+4. Place in `examples/` (new file or replace existing)
+
+**Step 2 — Template Guide (CONVERSATIONAL, section-by-section):**
+
+For EACH section detected in the confirmed example, ask:
+
+```
+📋 SECTION: {Section Name}
+
+Based on your example, this section contains:
+- {extracted subsections/content summary}
+
+Questions:
+1. Are there any project-specific standards for this section?
+   (e.g., mandatory fields, required tables, specific terminology)
+2. Any content that should ALWAYS or NEVER be included?
+3. Any specific diagram types or placements for this section?
+4. Any naming conventions or formatting rules?
+
+→ Describe standards, or reply "default" to keep as-is
+```
+
+After ALL sections covered:
+- Compile answers into `templates/design-template-guide.md`
+- Follow the structure: Section name → When to Produce → What Goes Here → Format
+- **STOP** → User confirms template guide
+
+**Step 3 — Style YAML:**
+- Auto-generate `templates/design-style.yaml` from confirmed template guide
+- Section structure (names, descriptions, include flags)
+- Supplementary sections (if any)
+- Naming, output configuration
+- **STOP** → User confirms
+
+### API Specification (02) Sub-Flow
+
+1. Read user's example RAML/OAS project completely
+2. Extract patterns: traits, fragments, security schemes, exchange_modules
+3. Place example project in `examples/` (as new named folder)
+4. Update `examples/README.md` with new example index entry
+5. If common traits/fragments provided → organize in example project structure
+6. Update Template Configuration rule with project-specific pre-generation checklist
+7. **STOP** → User confirms
+
+### App Development (03) Sub-Flow
+
+1. Read user's example MuleSoft project completely
+2. Extract patterns: flow structure, common modules, config, DataWeave
+3. Place example project in `examples/` with `pattern.md` (architecture description)
+4. If common error handling → add to `examples/common-projects/`
+5. If common components → add to `examples/common-projects/`
+6. Create/update `examples/patterns-index.md` or `examples/README.md`
+7. If multiple patterns → create `templates/patterns/` guides
+8. **STOP** → User confirms
+
+### Other Agents (04-09) Sub-Flow
+
+1. If user provided example output → place in `examples/`
+2. If agent has templates/ → update with project-specific structure
+3. Update `examples/README.md`
+4. **STOP** → User confirms
+
+---
+
+## SECTION 4: RULES TUNING (Phase 4)
+
+### Rules/Templates Decoupling (CRITICAL)
+
+**Before modifying any rule file, verify:**
+
+```
+RULES (Generic - Behavioral)          TEMPLATES (Specific - Structural)
+├── How to think                      ├── *-style.yaml (section structure)
+├── How to interact                   ├── *-template-guide.md (content)
+├── When to stop/wait                 └── examples/ (formatting reference)
+├── Phase transitions
+└── Decision strategies
+```
+
+| Content Type | Goes In | NOT In |
+|--------------|---------|--------|
+| Section numbers, names, structure | `templates/` | `rules/` |
+| Diagram placement details | `templates/` | `rules/` |
+| Content requirements per section | `templates/` | `rules/` |
+| Behavioral guidance | `rules/` | `templates/` |
+| Phase workflow, stop/wait | `rules/` | `templates/` |
+
+**Validation before writing rules (agents 01, 02, 05, 06, 07):**
+- [ ] Change does NOT contain specific section numbers
+- [ ] Change does NOT dictate specific section names
+- [ ] Change does NOT specify diagram placement locations
+- [ ] Change focuses on behavior/strategy, not content structure
+- [ ] If structural → target is templates/, not rules/
+
+### Tuning Sub-Steps
+
+**Attribution Preservation (ALL sub-steps):**
+- Preserve `author:` field (original agent author) in frontmatter — do NOT change to tuner's name
+- Preserve R-GENIE framework footer + original agent author footer at end of every file
+- Tuner attribution line will be appended in Phase 6 (Write & Activate)
+
+**4A. Main Entry ({ID}_{Agent}.mdc):**
+- Update RISEN framework (project-specific role, inputs, expectations)
+- Update critical rules section
+- Update output structure if different
+- Keep lean (≤200 lines, `alwaysApply: true`)
+
+**4B. Phase Orchestration:**
+- Adjust phase structure if project needs different phases
+- Update checkpoint messages with project context
+- Update state file schema if new fields needed
+
+**4C. Guidance:**
+- Add project-specific patterns to EXISTING sections (append, don't restructure)
+- Add few-shot examples (bad→good format)
+- Add decision matrices
+- Add quality checklist items
+- **Respect decoupling**: No section numbers or structural content
+
+**4D. Stop Points:**
+- Add project-specific stop points
+- Update self-check with project-specific conditions
+- Add forbidden/required phrases if needed
+
+**4E. Documentation:**
+- Regenerate README.md reflecting customized agent
+- Regenerate ARCHITECTURE.md with updated workflow
+- Update INDEX.md cross-references and version
+- Add project context to Production_Learnings.md header
+
+### Placement Rules (from integrate-production-learnings.md)
+
+| Learning Type | Target | Reason |
+|---------------|--------|--------|
+| Workflow change | Main .mdc | Affects user flow |
+| Error pattern | Guidance | Grouped fixes |
+| Best practice | Guidance | General patterns |
+| Structure/content change | `templates/` | Template-specific |
+
+- **`alwaysApply: true` files** → Only CRITICAL additions (context cost)
+- **Phase-specific** → Add to rule loaded during that phase
+- **Match existing style** → Never create new sections without clear need
+
+---
+
+## SECTION 5: TREE OF THOUGHT (Ambiguous Decisions)
+
+For decisions with multiple valid paths, evaluate branches before choosing:
+
+```
+<thinking>
+Branch A: [Option] — fits because [evidence]. Risk: [risk].
+Branch B: [Option] — fits because [evidence]. Risk: [risk].
+Best path: [chosen] — Confidence: {HIGH/MEDIUM/LOW}
+</thinking>
+```
+
+**Common ambiguous decisions in tuning:**
+- Scope selection unclear → evaluate "targeted tune" vs "full tune" tradeoffs
+- Conflicting user standards vs architecture compliance → evaluate override vs adapt
+- Content belongs in rules vs templates → evaluate behavioral vs structural nature
+
+---
+
+## SECTION 6: EVIDENCE-BOUND OUTPUTS
+
+Every customization decision must cite its source from user-stated facts:
+
+| Decision Type | Evidence Format |
+|---------------|----------------|
+| Template change | "Modified because user stated '{fact}' in Phase 2" |
+| Rule addition | "Added pattern per user's example: '{reference}'" |
+| Assumption | "⚠️ ASSUMPTION: {value} — User said '{vague answer}'" |
+| Gap entry | "GAP-{N}: Unable to confirm {detail} (asked {X} times)" |
+
+> If you cannot cite a source, flag as assumption. Never present assumptions as confirmed standards.
+
+---
+
+## SECTION 7: FEW-SHOT EXAMPLES
+
+### Example: Customizing RISEN Framework
+
+❌ BAD - Vague customization:
+```
+R - ROLE: MuleSoft expert who does designs
+```
+
+✅ GOOD - Specific to project:
+```
+R - ROLE: Senior MuleSoft Integration Architect - Perform forensic-level analysis, 
+map patterns to MuleSoft, simplify flows while preserving ALL functionality, 
+generate project-compliant technical designs
+```
+
+**Why**: RISEN must be specific enough to guide the agent's behavior for the project context.
+
+### Example: Adding Project-Specific Guidance
+
+❌ BAD - Hardcoding structure in rules:
+```markdown
+### Section 2.4 Connector Pattern Diagram
+Place the connector diagram in Section 2.4
+```
+
+✅ GOOD - Behavioral guidance in rules:
+```markdown
+### Connector Diagram Placement
+Embed connector diagrams contextually within their related architecture section 
+per template placement rules. See `templates/design-template-guide.md`.
+```
+
+**Why**: Section numbers belong in templates, not rules. Rules reference templates for structural details.
+
+### Example: Adding Project-Specific Stop Point
+
+❌ BAD - Generic stop:
+```
+Stop before proceeding
+```
+
+✅ GOOD - Project-specific stop:
+```
+🚨 CONNECTOR TYPE CONFIRMATION REQUIRED
+Before mapping ANY external system connector, ASK:
+"Is {system} a standard object endpoint or a custom REST API?"
+→ Standard object → Use built-in connector
+→ Custom REST API → Use HTTP Request connector
+Waiting for your answer...
+```
+
+**Why**: Project-specific stops prevent common mistakes unique to the project.
+
+---
+
+## SECTION 8: RULES TUNING PATTERNS
+
+### Pre-Write Validation (Run before Phase 6)
+
+**Per `lib/docs/AGENT_ARCHITECTURE_STANDARD.md`:**
+
+- [ ] 4 or 5 rule files in `rules/` (depending on template needs)
+- [ ] Main entry has RISEN framework (all 5 elements)
+- [ ] Main entry has Quick Reference table
+- [ ] Phase Orchestration has state machine or phase table
+- [ ] Phase Orchestration has `<thinking>` block template
+- [ ] Phase Orchestration has Confidence Calibration
+- [ ] Guidance has few-shot examples (bad→good)
+- [ ] Guidance has Evidence-Bound output citation rules
+- [ ] Guidance has Quick Reference table
+- [ ] Mandatory Stop Points has anti-patterns and forbidden phrases
+- [ ] Mandatory Stop Points has self-check section
+- [ ] Mandatory Stop Points has Quick Reference table
+- [ ] Each file has version in frontmatter (all matching)
+- [ ] `INDEX.md` up to date
+- [ ] All cross-references valid
+- [ ] DRY compliance: no duplicated patterns/definitions across rule files — each concept has one authoritative source, others cross-reference via `@file.mdc`
+- [ ] File sizes within limits
+- [ ] For agents 01/05/06: No section numbers in rules
+- [ ] README.md exists and reflects current state
+- [ ] ARCHITECTURE.md exists and reflects current workflow
+- [ ] Original `author:` field preserved in `.mdc` frontmatter (not overwritten by tuner)
+- [ ] Dual-author footer preserved (R-GENIE framework + original agent author)
+- [ ] Tuner attribution line appended to modified files
+
+> **Reference agent**: Study `examples/reference-agent-01-technical-design/` to understand what a correctly structured R-GENIE agent looks like before validating modifications.
+
+### File Size Limits
+
+| File | Standard | Complex (8+ phases) |
+|------|----------|---------------------|
+| Main Entry | ≤200 lines | ≤200 lines |
+| Template Configuration | ≤250 lines | ≤400 lines |
+| Phase Orchestration | ≤350 lines | ≤400 lines |
+| Guidance | ≤500 lines | ≤600 lines |
+| Mandatory Stop Points | ≤350 lines | ≤450 lines |
+
+If content exceeds limits → move detailed content to `lib/docs/`
+
+### LLM Behavioral Gap Coverage (Optional Validation)
+
+> Before finalizing tuning, optionally read `lib/docs/LLM_BEHAVIORAL_GAPS.md` and verify the tuned agent still addresses the 14 documented LLM behavioral gaps. Use the Summary Matrix and Technique-to-File Mapping sections to confirm no countermeasure was weakened by the tuning.
+
+---
+
+## SECTION 9: MERMAID STANDARDS RETROFIT
+
+> **When to apply:** Any tuning session where the target agent emits Mermaid diagrams (rule files or domain deliverables). In practice, every R-GENIE agent qualifies — the standard skeleton alone produces 3+ Mermaid blocks.
+>
+> **Full playbook:** `lib/docs/customization-patterns.md` §7 "Mermaid Standards Retrofit Pattern" — 12-point diagnostic checklist, 10 ordered retrofit steps, embedding template for the agent's Guidance file, and post-retrofit validation list.
+>
+> **Canonical rules:** `lib/docs/mermaid-diagram-best-practices.md` — ten non-negotiable rules (mandatory `curve: 'linear'` init directive, `<br/>` not `\n`, declaration-order layout control, arrow semantics, style placement, etc.), adopted from Agent Builder.
+
+### 9.1 Trigger Conditions — When Mermaid Retrofit Is MANDATORY
+
+Propose Mermaid Standards Retrofit (Phase 2 input collection or Phase 4 rules tuning) whenever ANY of these apply to the target agent:
+
+1. The agent's `rules/` contain any Mermaid block (Phase Orchestration state machine, INDEX.md maps, ARCHITECTURE.md flow).
+2. The agent's domain outputs include Mermaid diagrams (HLD, flow map, architecture doc, design doc).
+3. The agent's current Guidance file has **no** Mermaid Diagram Standards section.
+4. The agent's current Stop Points SELF-CHECK has **no** MERMAID RENDERING GUARD item.
+5. The agent predates Agent Builder v1.3.6 (first release carrying the full Mermaid standards).
+
+### 9.2 Tuning Flow Summary
+
+```
+Phase 2 Input Collection
+  ├─ Ask: "Does the agent emit Mermaid diagrams in rules/ or deliverables?" (Yes/No)
+  ├─ If Yes → run §9.1 trigger check
+  └─ If any trigger → queue Mermaid Retrofit in Phase 4 plan
+
+Phase 4 Rules Tuning
+  ├─ Follow customization-patterns.md §7.2 (10 ordered steps)
+  ├─ Backup first (§8 Backup procedure)
+  ├─ Diagnose all Mermaid blocks via §7.1 checklist
+  ├─ Fix diagrams with targeted edit/multi_edit (NEVER sed on Mermaid)
+  ├─ Embed §7.3 template in Guidance
+  ├─ Embed §12.4 guard (from Agent Builder) in Stop Points
+  └─ Validate via §7.4 post-retrofit checklist
+```
+
+### 9.3 What Not to Do
+
+- ❌ Do NOT regex-replace across Mermaid blocks — syntax is position-sensitive and structure-critical.
+- ❌ Do NOT skip the backup step — Mermaid edits are error-prone.
+- ❌ Do NOT combine Mermaid retrofit with unrelated tuning in a single commit — keep the retrofit auditable.
+- ❌ Do NOT copy diagrams between agents verbatim — colour palettes should be re-derived per the agent's domain.
+
+---
+
+## QUICK REFERENCE
+
+| Need | Section |
+|------|---------|
+| Customization dimensions | Section 1 |
+| Agent-specific inputs (Phase 2) | Section 2 |
+| Templates/examples tuning (Phase 3) | Section 3 |
+| Rules tuning (Phase 4) | Section 4 |
+| Tree of Thought (ambiguous decisions) | Section 5 |
+| Evidence-Bound outputs | Section 6 |
+| Few-shot examples | Section 7 |
+| Rules tuning patterns & compliance | Section 8 |
+| Mermaid standards retrofit | Section 9 |
+
+| Need | Reference |
+|------|-----------|
+| Main entry | `@Agent_Tuner.mdc` |
+| Phase workflow | `@00_Phase_Orchestration.mdc` |
+| Stop points | `@02_Mandatory_Stop_Points.mdc` |
+| Detailed patterns | `lib/docs/customization-patterns.md` |
+| Mermaid best practices | `lib/docs/mermaid-diagram-best-practices.md` |

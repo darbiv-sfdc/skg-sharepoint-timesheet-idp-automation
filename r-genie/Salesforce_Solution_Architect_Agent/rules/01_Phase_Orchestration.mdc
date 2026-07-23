@@ -1,0 +1,386 @@
+---
+description: Salesforce Solution Architect Agent - Phase Orchestration & Workflow State
+author: Cheppali Shaik Sohail
+version: 1.0.0
+alwaysApply: false
+tags: [phase, orchestration, workflow, salesforce, solution-architecture]
+appliesTo: [salesforce-solution-architecture, sfdc-integration-design]
+priority: HIGH
+---
+
+# PHASE ORCHESTRATION
+
+> **Purpose**: Manage 9-phase workflow with 15 user checkpoints (9 phase + 6 sub-stops), Template-First / Per-Phase Write Contract (Pattern #20 v2), Forensic Input Processing, and stateful resume.
+> **Enforcement**: See `@03_Mandatory_Stop_Points.mdc`
+
+---
+
+## WORKFLOW STATE MACHINE
+
+> **Mermaid Standards**: stateDiagram-v2 — states declared in phase order; `[*]` for start/end; transition labels are TRIGGER EVENTS (`user approved`), not actions. See `@02_Guidance.mdc` Mermaid Diagram Standards section. Pre-emit self-check applied.
+
+```mermaid
+stateDiagram-v2
+    [*] --> Phase0: /use-salesforce-solution-architect
+    Phase0 --> CP0: skeleton + Sec1 written
+    CP0 --> Phase1: user approved
+    Phase1 --> CP1: Sec2 written
+    CP1 --> Phase2: user approved
+    Phase2 --> CP2: Sec3 (Mermaid) written
+    CP2 --> Phase3: user approved + render check
+    Phase3 --> CP3a: Sec4 (Data Model) written
+    CP3a --> CP3b: user approved Sec4
+    CP3b --> Phase4: user approved Sec5 (Lucidchart)
+    Phase4 --> CP4: Sec6 written
+    CP4 --> Phase5: user approved
+    Phase5 --> CP5: Sec7 written
+    CP5 --> Phase6: user approved
+    Phase6 --> CP6: Sec8 written
+    CP6 --> Phase7: user approved
+    Phase7 --> CP7a: Sec9 written + arithmetic verified
+    CP7a --> CP7b: user approved Sec9
+    CP7b --> Phase8: user approved Sec10
+    Phase8 --> CP8a: Sec11 written
+    CP8a --> CP8b: user approved Sec11
+    CP8b --> CP8c: user approved Sec12
+    CP8c --> CP8d: validate-solution-doc.js passed
+    CP8d --> [*]: final approved (consolidate + polish complete)
+```
+
+---
+
+## PROGRESSIVE DOCUMENTATION v2 — PER-PHASE WRITE CONTRACT (MANDATORY)
+
+> **Source of truth**: `r-genie/Agent_Builder/lib/docs/prompt-engineering-patterns.md` Pattern #20 v2.
+> **Five Mechanics**: see `@02_Guidance.mdc` Section "Progressive Documentation v2".
+
+| Phase | Writes Section | Marker | Mode |
+|-------|----------------|--------|------|
+| **0** | Skeleton (all 12 markers) + §1 Business Context | `<!-- SECTION: business-technical-context -->` | Skeleton + targeted edit |
+| **1** | §2 Recommended Architecture | `<!-- SECTION: recommended-architecture -->` | Targeted edit |
+| **2** | §3 Architecture Diagram (Mermaid block) | `<!-- SECTION: architecture-diagram -->` | Targeted edit |
+| **3** | §4 Data Model + §5 Lucidchart Instructions | `<!-- SECTION: data-model-design -->`, `<!-- SECTION: data-model-diagram -->` | 2 targeted edits (sub-stops between) |
+| **4** | §6 Integration & Event Pattern | `<!-- SECTION: integration-event-pattern -->` | Targeted edit |
+| **5** | §7 Automation & Orchestration | `<!-- SECTION: automation-orchestration -->` | Targeted edit |
+| **6** | §8 Security & Compliance | `<!-- SECTION: security-compliance -->` | Targeted edit |
+| **7** | §9 Scalability + §10 Reusability | `<!-- SECTION: scalability-performance -->`, `<!-- SECTION: reusability-productization -->` | 2 targeted edits (sub-stops between) |
+| **8** | §11 Risks + §12 References → CONSOLIDATE | `<!-- SECTION: risks-mitigations -->`, `<!-- SECTION: references -->` | 2 edits + cross-section polish |
+
+**Per-edit budget**: ≤300 lines per `edit` (target), ≤500 lines absolute ceiling.
+**Forbidden**: chat-only accumulation across phases; full-file regeneration to update one section; shell-based mutation of the `.md` file (Gap #15).
+
+---
+
+## PHASE 0: Skeleton + Intake + Discovery
+
+**Tasks:**
+1. **READ** `@00_Template_Configuration.mdc` PRE-GENERATION CHECKLIST + 12-section structure
+2. **ACCEPT INTAKE** — user provides scenario via free-text, structured form, or uploaded RFP/BRD
+3. **IF input >500 lines** → Apply Forensic Input Processing (see below)
+4. **DISCOVERY Q&A** — ask targeted questions to fill gaps (audience, NFRs, scale targets, compliance, vendor preferences, in/out scope)
+5. **DERIVE** `{scenario-slug}` per `@00_Template_Configuration.mdc` FILENAME SLUG RULES
+6. **CREATE SKELETON** — write deliverable file with all 12 section markers + `_{pending Phase N}_` placeholders
+7. **WRITE §1 Business & Technical Context** via targeted `edit` to `<!-- SECTION: business-technical-context -->`
+8. **CREATE STATE FILE** at `project/output_salesforce_solution_architect/.salesforce-solution-architect-state.json`
+9. **CHECKPOINT (CP0)** — STOP, present scenario summary + §1 preview + skeleton confirmation
+
+**`<thinking>` block (mandatory before generation):**
+```
+<thinking>
+1. Key inputs received: [scenario text, uploaded files, discovery Q&A answers]
+2. Decisions: [scenario-slug derivation, audience interpretation, scope boundaries]
+3. Evidence from source: [cite specific user statements/file lines]
+4. Risks/gaps: [missing NFRs, vague scale targets, undefined compliance]
+5. Confidence: HIGH / MEDIUM / LOW [with justification]
+6. Premortem (if complex): weakest assumption + skeptical-reviewer challenge
+</thinking>
+```
+
+**RGV Pattern:**
+1. READ: scenario inputs → Expected: 1 scenario + N uploaded files + M discovery answers
+2. GENERATE: skeleton (12 markers) + §1 prose
+3. VERIFY: "Created 12/12 section markers; §1 captures {N} business drivers from input"
+4. FIX: any gaps before checkpoint
+
+---
+
+## PHASE 1: Recommended Architecture
+
+**Tasks:**
+1. Analyze scenario + §1 to identify SFDC clouds, integration platform, key components
+2. Apply decision matrices from `@02_Guidance.mdc` (Sync/Async, Industry Cloud vs Custom, etc.)
+3. Construct **trade-off table** for major decisions (≥1 table mandatory)
+4. **WRITE §2** via targeted `edit` to `<!-- SECTION: recommended-architecture -->`
+5. **CHECKPOINT (CP1)** — STOP, preview architecture pattern + key decisions in chat (compact)
+
+**Constraint**: NEVER make architectural assertions without trade-off justification. See Critical Rule #3 in `@Salesforce_Solution_Architect.mdc`.
+
+---
+
+## PHASE 2: Architecture Diagram (Mermaid)
+
+**Tasks:**
+1. Read `@02_Guidance.mdc` Mermaid Standards section (linear curve directive, `<br/>` not `\n`, styles at end)
+2. Generate Mermaid `flowchart TB` or `graph TB` showing systems, integration platform, SFDC clouds, data flows
+3. Run Mermaid pre-emit self-check (12-item checklist from Guidance)
+4. **WRITE §3** — insert Mermaid block at `<!-- SECTION: architecture-diagram -->`
+5. **CHECKPOINT (CP2)** — STOP, ask user to render in IDE preview and confirm visual correctness
+
+**Mermaid render check**: User must visually confirm. If render fails, fix in chat (1-2 attempts max), then re-write.
+
+---
+
+## PHASE 3: Data Model + Lucidchart Instructions
+
+**Sub-Stops**: 2 (CP3a after Sec 4, CP3b after Sec 5)
+
+**Tasks (Sec 4 — Data Model Design):**
+1. Identify entities (FSC/Industry Cloud objects vs custom objects vs vlocity)
+2. Define fields, relationships, record types, sharing model
+3. Apply decision matrix from `@02_Guidance.mdc` (Industry Cloud vs Custom)
+4. **WRITE §4** via targeted `edit` to `<!-- SECTION: data-model-design -->`
+5. **CHECKPOINT (CP3a)** — STOP, preview entity table + relationships in chat
+
+**Tasks (Sec 5 — Lucidchart Instructions):**
+1. Generate numbered step-by-step Lucidchart create-document instructions (10-20 steps)
+2. Include shapes per entity, lines per relationship, cardinality labels, color-coding for FSC vs custom vs external
+3. **WRITE §5** via targeted `edit` to `<!-- SECTION: data-model-diagram -->`
+4. **CHECKPOINT (CP3b)** — STOP, ask user to confirm Lucidchart steps make sense
+
+> **Why Lucidchart instructions, not Mermaid?** See `@00_Template_Configuration.mdc` Two Special Diagram Conventions.
+
+---
+
+## PHASE 4: Integration & Event Pattern
+
+**Tasks:**
+1. Apply Sync/Async/Event decision matrix from `@02_Guidance.mdc`
+2. Define message contracts (request/response payloads, event schemas)
+3. Specify retry/replay/dead-letter handling
+4. Trade-off table for pattern choice (mandatory)
+5. **WRITE §6** via targeted `edit` to `<!-- SECTION: integration-event-pattern -->`
+6. **CHECKPOINT (CP4)** — STOP, preview pattern + message contract sample
+
+---
+
+## PHASE 5: Automation & Orchestration
+
+**Tasks:**
+1. Identify automation needs (Flow vs Apex vs batch vs Async Apex vs Queueable)
+2. Apply Flow/Apex/Middleware decision matrix from `@02_Guidance.mdc`
+3. Specify orchestration pattern (Saga / Choreography / Orchestration) for multi-step flows
+4. **WRITE §7** via targeted `edit` to `<!-- SECTION: automation-orchestration -->`
+5. **CHECKPOINT (CP5)** — STOP, preview component table + orchestration pattern
+
+---
+
+## PHASE 6: Security & Compliance
+
+**Tasks:**
+1. Define auth model (SSO / OAuth / JWT / Connected App)
+2. Identify PII / PHI fields → encryption posture (Shield Platform Encryption, field-level)
+3. Define sharing/visibility model (OWD, sharing rules, manual sharing)
+4. Apply compliance posture (HIPAA / PCI / GDPR / SOX) per scenario regulatory context (from §1)
+5. Audit logging strategy
+6. **WRITE §8** via targeted `edit` to `<!-- SECTION: security-compliance -->`
+7. **CHECKPOINT (CP6)** — STOP, preview posture table + compliance summary
+
+**Anti-Pattern**: Skipping field-level encryption mention for PII/PHI in regulated industries (Top Mistake #3, see `@02_Guidance.mdc` Few-Shots).
+
+---
+
+## PHASE 7: Scalability + Reusability
+
+**Sub-Stops**: 2 (CP7a after Sec 9 with numeric verification, CP7b after Sec 10)
+
+**Tasks (Sec 9 — Scalability & Performance):**
+1. Compute sizing math with EXPLICIT ARITHMETIC (Critical Rule #4 in Main Entry)
+2. Show: daily volume → TPS sustained → TPS peak (with burst factor)
+3. Identify governor limit risks (SOQL rows, CPU time, callouts, async)
+4. Specify bulk patterns, caching strategy, async offload
+5. **WRITE §9** via targeted `edit` to `<!-- SECTION: scalability-performance -->`
+6. **CHECKPOINT (CP7a)** — STOP, preview arithmetic block + sizing table
+
+**Numeric Verification (Gap #13 — MANDATORY):**
+For every numeric claim, present in chat:
+```
+Claim: {X TPS sustained, Y TPS peak}
+Arithmetic: {daily volume} ÷ 86,400 sec × {burst factor} = {result}
+Source of inputs: {user statement / RFP line / industry benchmark}
+```
+
+**Tasks (Sec 10 — Reusability & Productization):**
+1. Identify ≥3 reusable accelerators (services, components, packages)
+2. Evaluate unlocked package / managed package potential
+3. Multi-org / multi-tenant considerations
+4. **WRITE §10** via targeted `edit` to `<!-- SECTION: reusability-productization -->`
+5. **CHECKPOINT (CP7b)** — STOP, preview accelerator list
+
+---
+
+## PHASE 8: Risks + References + CONSOLIDATE & POLISH
+
+**Sub-Stops**: 4 (CP8a Sec 11, CP8b Sec 12, CP8c script validation, CP8d final polish)
+
+**Tasks (Sec 11 — Risks & Mitigations):**
+1. Build risk register (≥5 rows): risk, likelihood (H/M/L), impact (H/M/L), mitigation, owner
+2. Cover technical, operational, security, vendor, scope risks
+3. **WRITE §11** via targeted `edit` to `<!-- SECTION: risks-mitigations -->`
+4. **CHECKPOINT (CP8a)** — STOP, preview risk register table
+
+**Tasks (Sec 12 — References):**
+1. Cite SFDC Trailhead modules, official docs, whitepapers, vendor docs
+2. URL + 1-line description per citation; no marketing pages
+3. **WRITE §12** via targeted `edit` to `<!-- SECTION: references -->`
+4. **CHECKPOINT (CP8b)** — STOP, preview citation list
+
+**Tasks (Script Validation — MANDATORY):**
+```
+🚨 MANDATORY SCRIPT — DO NOT SKIP:
+node r-genie/Salesforce_Solution_Architect_Agent/lib/scripts/validate-solution-doc.js \
+  project/output_salesforce_solution_architect/{scenario-slug}-solution-architecture.md
+DO NOT manually count sections or eyeball Mermaid lint. RUN THE SCRIPT FIRST.
+```
+1. Run script, capture output to `{scenario-slug}-validation-report.md`
+2. **CHECKPOINT (CP8c)** — STOP, present validation report; user replies "fix" or "proceed"
+3. If "fix" → apply targeted edits per script findings → re-run script
+
+**Tasks (CONSOLIDATE & POLISH — Pattern #20 v2 Mechanic 4):**
+1. **Re-read full deliverable file**
+2. Cross-section consistency edits (entity names, terminology, vendor naming alignment)
+3. Verify all 12 section markers replaced (zero standalone `<!-- SECTION: ... -->`)
+4. Replace any residual `_{pending Phase N}_` placeholders
+5. Final style/length self-check against `examples/01_fnol_insurance_guidewire/...md` anchor
+6. **CHECKPOINT (CP8d)** — STOP, present polish summary + final approval prompt
+
+**Forbidden in Phase 8 Consolidate mode**: regenerating sections already written and approved in Phases 0-7.
+
+---
+
+## CONFIDENCE CALIBRATION
+
+| Confidence | When | Action |
+|------------|------|--------|
+| **HIGH** | Clear scenario, complete intake, proven SFDC pattern fits | Proceed with recommendation |
+| **MEDIUM** | Partial info, reasonable inference, ⚠️ ASSUMPTION marker required | Flag assumptions, recommend user validation |
+| **LOW** | Vague scenario, conflicting requirements, multiple valid interpretations | **STOP** — request clarification before generating |
+
+---
+
+## RGV (READ-GENERATE-VERIFY) PATTERN
+
+Apply for every generation phase (0-8):
+```
+1. READ: [source: scenario, prior approved sections, decision matrices] → Expected: [list]
+2. GENERATE: [section prose, table, diagram] → Expected: [structural budget per template]
+3. VERIFY: "Processed {X}/{Y} items from source; section meets structural budget"
+4. FIX: Any gaps before checkpoint
+```
+
+If X ≠ Y → do NOT present checkpoint → fix gap first.
+
+---
+
+## FORENSIC INPUT PROCESSING (when uploaded RFP/BRD >500 lines)
+
+> **Embeddable patterns**: see `r-genie/Agent_Builder/lib/docs/prompt-engineering-patterns.md` Patterns #15-18 (Input Mind Map, Section-Level RGV, Positional Bias Scan, Within-Phase Chunking).
+
+**5-step protocol (Phase 0 only — when input is large):**
+1. **INVENTORY** — build mind map of input sections (structural index as verification baseline)
+2. **SECTION-BY-SECTION** — process each input section in isolation with its own RGV cycle
+3. **POSITIONAL BIAS SCAN** — re-read middle sections (30%-70% of input) to catch missed items (Gap #9)
+4. **COMPLETENESS VERIFICATION** — compare processed count against mind map baseline
+5. **CROSS-SECTION COHERENCE** — verify consistency across input sections, flag contradictions for user resolution
+
+**When input ≤500 lines**: skip forensic protocol, use standard RGV.
+
+---
+
+## STATE FILE
+
+**Location**: `project/output_salesforce_solution_architect/.salesforce-solution-architect-state.json`
+
+```json
+{
+  "agentName": "Salesforce_Solution_Architect_Agent",
+  "agentVersion": "1.0.0",
+  "scenarioSlug": "",
+  "scenarioSummary": "",
+  "deliverablePath": "",
+  "currentPhase": 0,
+  "phaseStatuses": {
+    "phase0": "PENDING", "phase1": "PENDING", "phase2": "PENDING",
+    "phase3": "PENDING", "phase4": "PENDING", "phase5": "PENDING",
+    "phase6": "PENDING", "phase7": "PENDING", "phase8": "PENDING"
+  },
+  "sectionStatuses": {
+    "sec1": "PENDING", "sec2": "PENDING", "sec3": "PENDING",
+    "sec4": "PENDING", "sec5": "PENDING", "sec6": "PENDING",
+    "sec7": "PENDING", "sec8": "PENDING", "sec9": "PENDING",
+    "sec10": "PENDING", "sec11": "PENDING", "sec12": "PENDING"
+  },
+  "intakeMode": "",
+  "discoveryAnswers": {},
+  "assumptionsLog": [],
+  "scriptValidationReport": "",
+  "createdAt": "",
+  "lastUpdatedAt": "",
+  "completedAt": null
+}
+```
+
+---
+
+## STATE FILE UPDATE PROTOCOL (MANDATORY)
+
+After each user approval (per phase or sub-stop):
+1. Update `currentPhase` to next (only after all sub-stops in current phase cleared)
+2. Set completed phase status to `"COMPLETED"` in `phaseStatuses`
+3. Set the just-written section to `"APPROVED"` in `sectionStatuses`
+4. Append any inferred values to `assumptionsLog` with timestamp
+5. Update `lastUpdatedAt` to current ISO timestamp
+
+Use native `edit` tool only (Gap #15 — no `sed`/`jq -i`/`echo >>`).
+
+---
+
+## RESUME CAPABILITY
+
+**On Activation:**
+1. Check for state file at `project/output_salesforce_solution_architect/.salesforce-solution-architect-state.json`
+2. **If exists** → display: scenario summary, last completed phase, section statuses; offer:
+   - "resume" → re-enter the next pending phase
+   - "restart" → archive existing state file (rename with timestamp) and start fresh
+   - "review" → open the in-progress deliverable file for inspection
+3. **If not exists** → start fresh from Phase 0
+
+---
+
+## ERROR RECOVERY
+
+| Situation | Action |
+|-----------|--------|
+| Phase fails | Save state, inform user, offer: retry / restart phase / abort |
+| User disconnects | State preserved (write-after-each-checkpoint protocol), resume on next activation |
+| Invalid input | Stay in current phase, request correction |
+| Mermaid render fails | Re-attempt with self-check (max 2 retries), then present problem to user |
+| Validation script fails | Apply targeted edits per finding, re-run; if persistent failure, surface to user |
+| File write error | Report error, offer retry; never silently skip |
+
+---
+
+## QUICK REFERENCE
+
+| Need | Reference |
+|------|-----------|
+| Main entry, RISEN, output structure | `@Salesforce_Solution_Architect.mdc` |
+| 12-section template + section markers | `@00_Template_Configuration.mdc` |
+| SFDC patterns, Mermaid standards, decision matrices, P20v2 Five Mechanics | `@02_Guidance.mdc` |
+| Stop points, self-check, anti-patterns, P20v2 self-check | `@03_Mandatory_Stop_Points.mdc` |
+| Forensic patterns (single source) | `r-genie/Agent_Builder/lib/docs/prompt-engineering-patterns.md` Patterns #15-18 |
+| Validation script | `lib/scripts/validate-solution-doc.js` |
+
+---
+
+> 🧞‍♂️ R-GENIE Agent Framework by Cheppali Shaik Sohail
+> ✍️ Agent Author: Cheppali Shaik Sohail | v1.0.0 | 2026-05-13

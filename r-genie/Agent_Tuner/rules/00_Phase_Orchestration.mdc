@@ -1,0 +1,409 @@
+---
+description: Agent Tuner - Phase Orchestration & Workflow State Management
+author: Cheppali Shaik Sohail
+version: 1.2.0
+alwaysApply: false
+tags: [phase, orchestration, workflow, agent-tuner]
+appliesTo: [agent-tuning]
+whenToUse:
+  - "Managing tuning phase transitions"
+  - "Tracking customization workflow state"
+priority: HIGH
+---
+
+# PHASE ORCHESTRATION V1.2
+
+> **Purpose**: Manage 7-phase agent customization workflow with user checkpoints
+> **Enforcement**: See `@02_Mandatory_Stop_Points.mdc`
+
+---
+
+## WORKFLOW STATE MACHINE
+
+```mermaid
+stateDiagram-v2
+    [*] --> Phase0: /use-agent-tuner
+    Phase0 --> Checkpoint0: Agent Studied
+    Checkpoint0 --> Phase1: Scope Selected
+    Phase1 --> Checkpoint1: Backup Created
+    Checkpoint1 --> Phase2: Backup Confirmed
+    Phase2 --> Checkpoint2: Standards Gathered
+    Checkpoint2 --> Phase3: Inputs Confirmed
+    Phase3 --> Checkpoint3: Templates/Examples Ready
+    Checkpoint3 --> Phase4: User Approved
+    Phase4 --> Checkpoint4: Rules Ready
+    Checkpoint4 --> Phase5: User Approved
+    Phase5 --> Checkpoint5: Validation Passed
+    Checkpoint5 --> Phase6: User Accepted
+    Phase6 --> [*]: Customization Complete
+```
+
+---
+
+## PHASE 0: Discovery & Agent Study
+
+**Tasks:**
+
+### 0A. Tuner Author Collection (BEFORE agent selection)
+
+Collect tuner author info as a dedicated step before agent selection:
+```
+🎯 AGENT TUNER — Author Information
+
+Before we begin, who is performing this tuning?
+→ Provide your name (this will appear as tuner attribution in modified files)
+
+Note: The original agent author and R-GENIE Framework attribution are preserved automatically.
+```
+
+Store as `tunerAuthor` in state file.
+
+### 0B. Agent Selection & Study
+
+1. Present available agents table (from `@Agent_Tuner.mdc`)
+2. User selects target agent
+3. **Enable target agent in ignore files** (so AI can read its files):
+   - Comment out the target agent line in `.cursorignore` and `.windsurfignore`
+   - e.g., `/r-genie/01_Technical_Design_Agent/` → `#/r-genie/01_Technical_Design_Agent/`
+4. **Deep study** target agent (MANDATORY before any modification):
+   - Read: README → ARCHITECTURE → rules/INDEX → all rule files
+   - Read: templates/ → examples/ (if they exist)
+   - Build mental model: phases, `alwaysApply` behavior, delegation chain, existing sections
+   - Identify which artifacts exist (templates/, examples/, lib/docs/)
+5. Present **Customization Menu**
+
+<thinking>
+1. Key inputs received: [list data/answers for this phase]
+2. Decisions I am making: [choice, strategy, rationale]
+3. Evidence from source: [cite specific user answers or agent file content]
+4. Risks/gaps identified: [what could go wrong, what is missing]
+5. Confidence: HIGH / MEDIUM / LOW [with justification]
+6. Production learnings applicable: [check Production_Learnings.md]
+</thinking>
+
+**Customization Menu Format:**
+```
+🎯 AGENT TUNER — Agent {ID}: {Name}
+
+Current State:
+- Rule files: {count} ({list})
+- Templates: {count} ({list}) or "None"
+- Examples: {count} files
+- Production Learnings: {exists/empty}
+
+Select customization scope:
+1. [ ] RISEN Framework — Role, inputs, steps, expectations
+2. [ ] Phase Workflow — Phase count, tasks, checkpoints
+3. [ ] Guidance Patterns — Domain patterns, few-shot, decisions
+4. [ ] Stop Points — Phase-specific stops, forbidden phrases
+5. [ ] Templates — Style YAML, template guides
+6. [ ] Examples — Reference examples, pattern projects
+7. [ ] Documentation — README, ARCHITECTURE, Production Learnings
+
+→ Reply with numbers (e.g., "1,3,5") or "all"
+→ Reply "preview {N}" to see current content
+
+Waiting for your selection...
+```
+
+**Checkpoint:** STOP after presenting menu. Wait for scope selection.
+
+---
+
+## PHASE 1: Backup & Safety
+
+**Tasks:**
+1. Create timestamped backup: `r-genie/{target_agent}/.backup-{YYYY-MM-DD-HHmmss}/`
+2. Copy ALL current files to backup
+3. Verify backup integrity (file count match)
+
+**Checkpoint Message:**
+```
+✅ BACKUP COMPLETE
+
+Location: r-genie/{target_agent}/.backup-{timestamp}/
+Files: {count} backed up
+- rules/: {count} files
+- templates/: {count} files
+- examples/: {count} files
+- Docs: {list}
+
+⚠️ Restore: Copy backup files back to original locations
+→ Reply "confirmed" to proceed
+→ Reply "abort" to cancel
+
+Waiting for your confirmation...
+```
+
+**Checkpoint:** STOP. Wait for confirmation.
+
+---
+
+## PHASE 2: Standards Gathering
+
+**Agent-specific input collection.** See `@01_Guidance.mdc` for detailed per-agent flows.
+
+**General flow:**
+1. ASK for project standards based on target agent type
+2. Collect all required inputs (templates, examples, standards docs)
+3. Confirm understanding with user
+
+**For Agent 01 (Technical Design):**
+- Request design template (screenshot/image/markdown/description)
+- Request section-specific standards
+- Request naming conventions, architecture patterns
+
+**For Agent 02 (API Specification):**
+- Request example RAML/OAS project
+- Request common traits, fragments, exchange_modules
+- Request API naming/versioning standards
+
+**For Agent 03 (App Development):**
+- Request example MuleSoft project
+- Request common error handling module/flows
+- Request common components, parent POM, config patterns
+
+**For Agents 04-09:**
+- Request example output
+- Request project-specific standards
+- Request additional patterns
+
+> **Full input collection formats**: See `@01_Guidance.mdc` Section 2
+
+**Checkpoint:** STOP after all inputs collected. Confirm understanding.
+
+---
+
+## PHASE 3: Templates & Examples Tuning
+
+**Order**: Templates/examples FIRST, then rules (Phase 4). Because rules reference templates, and the rules/templates decoupling principle means structural content goes to templates.
+
+**For Agent 01 (Technical Design) — 3 Steps:**
+
+*Step 1 — Example:*
+- Convert user's template to markdown example → **STOP** for confirmation
+- Place confirmed example in `examples/`
+
+*Step 2 — Template Guide (CONVERSATIONAL):*
+- Walk through EACH section from confirmed example
+- For each section: ASK about project-specific standards
+- Compile into `templates/design-template-guide.md` → **STOP** for confirmation
+
+*Step 3 — Style YAML:*
+- Auto-generate `templates/design-style.yaml` from template guide → **STOP** for confirmation
+
+**For Agent 02 (API Specification):**
+- Place example project in `examples/`
+- Extract and organize common traits/fragments
+- Update Template Configuration with project-specific checklist
+
+**For Agent 03 (App Development):**
+- Place example project(s) in `examples/` with `pattern.md`
+- Organize common modules in `examples/common-projects/`
+- Create/update pattern index
+
+> **Full sub-flows**: See `@01_Guidance.mdc` Section 3
+
+**Checkpoint:** STOP. Preview all template/example changes. Wait for approval.
+
+---
+
+## PHASE 4: Rules Tuning
+
+**Placement discipline** (from `integrate-production-learnings.md`):
+- `alwaysApply: true` files → Only CRITICAL changes (context cost)
+- Phase-specific files → Detailed changes
+- Match existing section style
+- **No section numbers/names in rules** (those go to templates)
+
+**Sub-steps:**
+1. Tune Main Entry ({ID}_{Agent}.mdc) — RISEN, critical rules, output structure
+2. Tune Phase Orchestration — Phase structure, checkpoints, state schema
+3. Tune Guidance — Project-specific patterns, few-shot examples, decision matrices
+4. Tune Stop Points — Project-specific stops, self-check conditions
+5. Update README, ARCHITECTURE, INDEX, Production_Learnings
+
+**Attribution Preservation (MANDATORY):**
+- Preserve existing `author:` field (original agent author) in frontmatter
+- Preserve existing R-GENIE framework footer and agent author footer
+- Do NOT overwrite or remove any existing attribution lines
+
+> **Full rules tuning patterns**: See `@01_Guidance.mdc` Section 4
+
+**Checkpoint:** STOP. Preview all rule changes as diff summary. Wait for approval.
+
+---
+
+## PHASE 5: Validation
+
+**Automated checks against `AGENT_ARCHITECTURE_STANDARD.md`:**
+
+| Check | What |
+|-------|------|
+| Architecture Compliance | RISEN, Quick Reference tables, required sections |
+| Dual-Author Footer Preserved | R-GENIE framework + original agent author footers intact |
+| Tuner Attribution Added | Tuner line appended to modified files |
+| File Size | Main ≤200, Phase ≤400, Guidance ≤600, Stops ≤450 |
+| Cross-References | All `@file.mdc` references valid |
+| Version Consistency | All rule files same version |
+| Rules/Templates Decoupling | No section numbers in rules (agents 01, 05, 06) |
+| Prompt Techniques | `<thinking>`, Confidence, RGV, Few-Shot, ReAct, HITL, Anti-Autopilot |
+
+**Checkpoint Message:**
+```
+📊 VALIDATION REPORT
+
+✅ Passed: {count}
+⚠️ Warnings: {count}
+❌ Failed: {count}
+
+{Detail per check}
+
+→ Reply "fix" to auto-fix issues
+→ Reply "proceed" to accept warnings
+→ Reply "review {check}" to discuss
+
+Waiting for your decision...
+```
+
+**Checkpoint:** STOP. Wait for user decision.
+
+---
+
+## PHASE 6: Write & Activate
+
+**Tasks:**
+1. Write all approved changes to target agent files
+2. **Append tuner attribution** to every modified file's footer:
+   `> 🔧 Tuned by {tunerAuthor} via R-GENIE Agent Tuner | {YYYY-MM-DD}`
+3. Update `INDEX.md` with new version and cross-references
+4. Update workflow file if needed
+5. **Restore ignore files** — Re-disable the target agent in `.cursorignore`/`.windsurfignore` (uncomment the line) so it returns to its original disabled-by-default state
+6. Show activation summary
+
+**Checkpoint Message:**
+```
+✅ CUSTOMIZATION COMPLETE — Agent {ID}: {Name}
+
+Files Modified:
+- rules/: {list}
+- templates/: {list}
+- examples/: {list}
+- Docs: {list}
+
+Backup: r-genie/{target_agent}/.backup-{timestamp}/
+Activate: /use-{ID}-{agent-name}
+Restore: Copy backup files back
+
+🧞‍♂️ Agent tuned to your project standards!
+```
+
+---
+
+## STATE FILE
+
+**Location:** `project/output_tuner/.tuner-state.json`
+
+```json
+{
+  "tunerAuthor": "",
+  "targetAgent": "01_Technical_Design_Agent",
+  "currentPhase": 0,
+  "selectedScope": [],
+  "backupPath": "",
+  "phases": {
+    "phase0": { "status": "PENDING" },
+    "phase1": { "status": "PENDING" },
+    "phase2": { "status": "PENDING" },
+    "phase3": { "status": "PENDING" },
+    "phase4": { "status": "PENDING" },
+    "phase5": { "status": "PENDING" },
+    "phase6": { "status": "PENDING" }
+  },
+  "modifiedFiles": []
+}
+```
+
+## STATE FILE UPDATE PROTOCOL (MANDATORY)
+
+**Update state file after EVERY phase completion** (not just at end).
+After user approves each phase:
+1. Update `currentPhase` to next phase number
+2. Set completed phase status to `"COMPLETED"`
+3. Add `completedAt` timestamp
+
+---
+
+## RESUME CAPABILITY
+
+**On Activation:**
+1. Check for existing state file
+2. If exists → show last completed phase, offer: resume / restart
+3. If not → start fresh from Phase 0
+
+---
+
+## PHASE EXECUTION RULES
+
+**Before each phase:**
+- Verify previous phase completed and approved
+- Load relevant guidance for this phase
+- Produce a `<thinking>` block (see template in Phase 0)
+
+**During each phase:**
+- Follow phase-specific tasks
+- Apply RGV cycle for phases that produce output (see below)
+- Assess Confidence before presenting checkpoint
+
+**After each phase:**
+- Present checkpoint, STOP and WAIT
+- Update state file on approval
+
+---
+
+## CONFIDENCE CALIBRATION
+
+| Confidence | When to Use | Action |
+|------------|------------|--------|
+| **HIGH** | Clear standards provided, proven pattern | Proceed with recommendation |
+| **MEDIUM** | Partial info, reasonable inference | Flag assumptions, recommend user validation |
+| **LOW** | Vague input, multiple interpretations | **STOP** — request clarification before proceeding |
+
+---
+
+## RGV (READ-GENERATE-VERIFY) PATTERN
+
+Apply for Phases 3, 4, and 6 (phases that produce/modify files):
+
+```
+1. READ: [target agent files / user standards] → Expected: [count/list]
+2. GENERATE: [modified templates / rules / examples] → Expected: [count/list]
+3. VERIFY: "Processed {X}/{Y} items from source"
+4. FIX: Any gaps before presenting checkpoint to user
+```
+
+> If X ≠ Y, do NOT present the checkpoint. Fix the gap first.
+
+---
+
+## ERROR RECOVERY
+
+| Situation | Action |
+|-----------|--------|
+| Phase fails | Save state, inform user, offer: retry / restart phase / abort |
+| User disconnects | State preserved, resume on next activation |
+| Invalid input | Stay in current phase, request correction |
+| Validation fails | Return to Phase 4 for fixes |
+| Restore needed | Copy backup files back to original locations |
+
+---
+
+## QUICK REFERENCE
+
+| Need | Reference |
+|------|-----------|
+| Main entry | `@Agent_Tuner.mdc` |
+| Customization patterns | `@01_Guidance.mdc` |
+| Stop points | `@02_Mandatory_Stop_Points.mdc` |
+| Detailed patterns | `lib/docs/customization-patterns.md` |
+| Architecture standard | `lib/docs/AGENT_ARCHITECTURE_STANDARD.md` |

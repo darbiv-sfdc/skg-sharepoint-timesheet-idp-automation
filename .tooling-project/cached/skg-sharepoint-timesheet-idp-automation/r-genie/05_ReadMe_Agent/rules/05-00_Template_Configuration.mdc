@@ -1,0 +1,113 @@
+---
+description: Template Configuration Guide
+author: Cheppali Shaik Sohail
+version: 2.1.0
+alwaysApply: false
+tags: [template, configuration, phase-1]
+appliesTo: [readme-generation, templates]
+whenToUse:
+  - "Phase 1: Template loading"
+  - "Customizing README output"
+priority: HIGH
+---
+
+# TEMPLATE CONFIGURATION
+
+> **Phase 1 Reference** - Template-first approach
+
+---
+
+## TEMPLATE LOCATION
+
+```
+r-genie/05_ReadMe_Agent/
+├── templates/
+│   ├── readme-style.yaml        # Structure and style configuration
+│   └── readme-template-guide.md # Content guide: what goes where
+└── examples/
+    └── *.md                      # Example formats to match
+```
+
+---
+
+## PRE-GENERATION CHECKLIST (MANDATORY)
+
+Before generating ANY content:
+
+- [ ] `templates/readme-style.yaml` read (structure and inclusion rules)
+- [ ] `templates/readme-template-guide.md` read (content guidance)
+- [ ] `examples/` folder read (all .md files for formatting reference)
+- [ ] Matching example selected for project type
+- [ ] Sections identified per template structure
+- [ ] Diagram placements identified per template guide
+- [ ] Mermaid diagrams planned (NOT ASCII)
+
+**If ANY check fails → DO NOT PROCEED → Fix first**
+
+---
+
+## TEMPLATE STRUCTURE
+
+```yaml
+# readme-style.yaml
+structure:
+  sections:
+    - name: "Overview"
+      include: true
+    - name: "Architecture"
+      include: true
+    # ... more sections
+
+style:
+  include_diagram: true      # Mermaid required
+  include_badges: true       # Version badges
+  include_toc: true          # Table of contents
+  include_attribution: true  # R-GENIE footer
+```
+
+---
+
+## EXAMPLE SELECTION
+
+| Project Type | Matching Example |
+|--------------|------------------|
+| API/REST | `01_api_project_readme.md` |
+| Batch/Scheduled | `02_batch_project_readme.md` |
+| Event-driven | Closest match + adaptations |
+
+---
+
+## TEMPLATE-DRIVEN RULES
+
+### Main Document
+- Generate sections where `structure.sections[].include: true`
+- Match example formatting EXACTLY
+
+### Mermaid Requirements
+- At least **2 Mermaid diagrams** per README
+- `flowchart TB` for system design
+- `flowchart TD` for process flows
+- **NO ASCII art** - use Mermaid only
+
+---
+
+## PHASE 1 OUTPUT
+
+```
+📋 Template Configuration Loaded:
+   ✅ Style: [Custom | Default]
+   ✅ Sections: [X sections]
+   ✅ Diagrams: Mermaid required
+   ✅ Example: [selected file]
+```
+
+---
+
+## NO CONFIGURATION?
+
+If templates unconfigured or empty:
+- Use default R-GENIE style
+- 7 standard sections
+- 2 Mermaid diagrams
+- Dynamic badges
+- R-GENIE attribution footer

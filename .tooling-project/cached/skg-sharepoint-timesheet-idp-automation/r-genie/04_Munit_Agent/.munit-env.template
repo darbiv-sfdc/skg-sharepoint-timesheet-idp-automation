@@ -1,0 +1,75 @@
+#!/bin/bash
+# ============================================
+# 🧞‍♂️ R-GENIE MUNIT SECURE PROPERTIES TEMPLATE
+# ============================================
+# 
+# SETUP INSTRUCTIONS:
+# 1. Copy this file to your MuleSoft project root:
+#    cp r-genie/04_Munit_Agent/.munit-env.template /path/to/your/project/.munit-env.sh
+# 2. Edit .munit-env.sh with your actual credentials
+# 3. The .munit-env.sh file is ignored by Git and Cursor (AI cannot see it)
+#
+# USAGE:
+# source .munit-env.sh && mvn clean test
+#
+# ============================================
+
+# --------------------------------------------
+# HTTP API CREDENTIALS
+# --------------------------------------------
+export MUNIT_HTTP_API_KEY=""
+export MUNIT_HTTP_AUTH_TOKEN=""
+export MUNIT_HTTP_BASIC_USER=""
+export MUNIT_HTTP_BASIC_PASS=""
+
+# --------------------------------------------
+# DATABASE CREDENTIALS
+# --------------------------------------------
+export MUNIT_DB_HOST=""
+export MUNIT_DB_PORT=""
+export MUNIT_DB_NAME=""
+export MUNIT_DB_USER=""
+export MUNIT_DB_PASSWORD=""
+
+# --------------------------------------------
+# SALESFORCE CREDENTIALS
+# --------------------------------------------
+export MUNIT_SF_USERNAME=""
+export MUNIT_SF_PASSWORD=""
+export MUNIT_SF_TOKEN=""
+export MUNIT_SF_CLIENT_ID=""
+export MUNIT_SF_CLIENT_SECRET=""
+
+# --------------------------------------------
+# AWS CREDENTIALS
+# --------------------------------------------
+export MUNIT_AWS_ACCESS_KEY=""
+export MUNIT_AWS_SECRET_KEY=""
+export MUNIT_AWS_REGION=""
+
+# --------------------------------------------
+# ANYPOINT PLATFORM CREDENTIALS
+# --------------------------------------------
+export MUNIT_ANYPOINT_CLIENT_ID=""
+export MUNIT_ANYPOINT_CLIENT_SECRET=""
+
+# --------------------------------------------
+# JMS/MESSAGING CREDENTIALS
+# --------------------------------------------
+export MUNIT_JMS_USER=""
+export MUNIT_JMS_PASSWORD=""
+export MUNIT_JMS_BROKER_URL=""
+
+# --------------------------------------------
+# CUSTOM PROPERTIES
+# --------------------------------------------
+# Add your project-specific credentials below:
+# export MUNIT_CUSTOM_KEY=""
+
+# ============================================
+# 🛡️ SECURITY NOTES:
+# - NEVER commit .munit-env.sh to version control
+# - NEVER paste credentials in AI chat
+# - This file pattern is blocked in .cursorignore
+# ============================================
+

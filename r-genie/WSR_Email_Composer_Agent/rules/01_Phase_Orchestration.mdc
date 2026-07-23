@@ -1,0 +1,339 @@
+---
+description: WSR Email Composer - Phase Orchestration (v1.2.1 — 3 phases, 2 stop points, stateless)
+author: Cheppali Shaik Sohail
+version: 1.2.1
+alwaysApply: false
+tags: [phase, orchestration, workflow, wsr, infer-first, llm-native, stateless]
+appliesTo: [wsr-composition]
+whenToUse:
+  - "Managing WSR composition phase transitions"
+priority: HIGH
+watermark: "R-GENIE-CS150893"
+---
+
+# PHASE ORCHESTRATION V1.2.1
+
+> **Purpose**: Manage the lean 3-phase WSR composition workflow. The LLM infers maximum context silently in Phase 0 (no script invocation), asks the user a single batch in Phase 1, drafts and validates in Phase 2 — total 2 stop points, 4-file output bundle.
+>
+> **Goal**: Composing a WSR via this agent should be FASTER than typing the email manually.
+>
+> **v1.2.1 change — stateless design**: the WSR flow completes in a single chat session; the LLM's context window holds the entire run (reference + Phase 0 inferences + Phase 1 batch reply + Phase 2 draft). No runtime state file (`.wsr-state.json`) is written or required. `run_metadata.json` is still produced at SP2 as a *post-hoc audit artifact* (not runtime state).
+>
+> **Enforcement**: See `@03_Mandatory_Stop_Points.mdc`
+
+---
+
+## WORKFLOW DIAGRAM (single-session, stateless)
+
+```mermaid
+stateDiagram-v2
+    [*] --> Phase0: /use-wsr-email-composer
+    Phase0 --> Phase1: Ingest + Infer (LLM-native, silent)
+    Phase1 --> SP1: Single Batch Prompt
+    SP1 --> Phase2: User Reply Received
+    Phase2 --> SP2: Draft + Silent Validation + Inline Preview
+    SP2 --> [*]: Approved → 4-file Bundle Written
+    SP2 --> Phase1: Edit Requested
+    SP2 --> [*]: Aborted
+```
+
+---
+
+## PHASE 0 — Ingest & Infer (SILENT, no stop point)
+
+**Purpose:** Detect mode, LLM-natively read any prior reference, auto-fill date/time, and build a maximally-populated draft state — all without asking the user anything and without invoking any parser script.
+
+**Tasks:**
+1. **Auto-set today's date** via `date "+%d-%b-%y"`. Never prompt.
+2. **Detect mode:**
+   - If user attached/pasted a `.eml` or email text → **Mode A**
+   - If user described a screenshot in their initial message → **Mode A** (text-described)
+   - Else → **Mode B (Fresh)**
+3. **Mode A only:** LLM reads the reference content directly and extracts (within `<thinking>` block):
+   - Subject components (date will be overridden by today's)
+   - Sender, CC list, region, project name
+   - Status colors (Overall + GDC)
+   - All 6 section contents
+   - Metric values + per-phase Days/Defects/DpD
+   - Team labels, workstream names
+4. **Load** `templates/team-roster.yaml` for active team members count
+5. **Load** prior days totals from the LLM-extracted reference (if present)
+6. **Hold the draft in context** — `mode`, `inferences`, and the populated sections live in the LLM's conversation context (no file written)
+7. **LLM self-assesses confidence** (HIGH / MEDIUM / LOW). Used internally — surfaced to user only if LOW.
+
+<thinking>
+1. Key inputs received: User's initial message (may include .eml path / pasted email / screenshot description / nothing)
+2. Decisions I am making: Mode detection, LLM-native extraction (no script), date auto-injection, draft state construction
+3. Evidence from source: Reference text I am reading directly
+4. Risks/gaps identified: My inference confidence LOW → tighten Phase 1 prompt to ask for missing fields
+5. Confidence: HIGH if Mode A and reference is complete; MEDIUM if Mode B; LOW if reference is sparse
+6. Production learnings applicable: [check Production_Learnings.md]
+</thinking>
+
+**No checkpoint** — proceed directly to Phase 1 with the populated draft state.
+
+---
+
+## PHASE 1 — Per-Section Updates (SINGLE BATCH — Stop #1)
+
+**Purpose:** Present the inferred draft + ask the user a SINGLE batch of updates. The user replies once with everything.
+
+**Tasks:**
+1. Render the 6 inferred sections (Mode A) OR placeholder skeletons (Mode B)
+2. Add the leaves prompt
+3. Add the Jira-paste prompt for metrics (LLM will parse the reply natively in Phase 2)
+4. Add a free-form "any other updates" line
+5. **Bidirectional sycophancy guard preview** — if inferred status is Green AND inferred Attention/blockers list is non-empty, OR vice versa, include a one-line nudge in the batch
+6. Mark inferred fields with `[from reference]` so the user knows what's already known
+7. Mark missing fields with `⚠️ MISSING — please provide`
+
+### RGV (Read-Generate-Verify)
+```
+1. READ:    Phase 0 inferences from context → Expected: 6 sections + status + metrics + sender + region
+2. GENERATE: Single batch message with all inferences shown + 4 prompts
+3. VERIFY:   Every required field is either [from reference] OR ⚠️ MISSING in the batch
+4. FIX:      Any inference key missing from batch → fix before presenting
+```
+
+### Stop Point #1 — Single Batch Format
+```
+🧞‍♂️ WSR DRAFT — please review and reply ONCE with all updates
+
+📇 Project Card  (auto-filled — date is today)
+   Project : {name} [from reference]
+   Region  : {region} [from reference]
+   Date    : {today auto}
+   Sender  : {sender} [from reference]
+   CC      : {cc list} [from reference]
+
+🚦 Status — Overall Delivery: {color} [from reference]   GDC Project: {color} [from reference]
+{optional: ⚠️ Sycophancy nudge — "Reference says Green; you may want to reconsider if {reason}"}
+
+📝 Section drafts (from reference):
+
+  Summary of WSR:
+  {bullet block}
+
+  Completed:        {bullet block}
+  In Progress:      {bullet block}
+
+  Ask :             {None as of now | items}
+  Attention:        {items}
+
+📊 Metrics — please paste your Jira sprint export OR describe this week's metrics
+   (capacity actual/planned, planned vs delivered stories, defects per phase)
+   → {paste here}
+
+📅 Days — leaves/holidays this week?
+   Format: Name=days_off (e.g., Akshay=2, Bhawna=1) or "none"
+   → {your input}
+
+✏️ Any other updates / additions / removals to any section?
+   → {your input or "none"}
+
+Reply with everything in one message.
+```
+
+**STOP. Wait for the user's single batch reply.**
+
+---
+
+## PHASE 2 — Draft, Validate, Approve (Stop #2)
+
+**Purpose:** Take the Phase 1 reply, integrate updates, run silent validation, present the full draft + inline preview + inline gap list for one final approval.
+
+**Tasks:**
+1. **LLM parses the batch reply natively:**
+   - Extract leaves dict from `Akshay=2, ...`
+   - Extract metrics inputs from Jira paste / free-text → produce structured dict for `metrics_calculator.py`
+   - Extract free-form section updates per section
+2. **Apply updates** to the in-context draft (additions, removals, edits)
+3. **Compute days** via `python lib/calculators/days_calculator.py --prior {prior_days} --leaves "..." --weeks 1`
+4. **Compute metrics** via `python lib/calculators/metrics_calculator.py --input {parsed_metrics_json}`
+5. **Bidirectional sycophancy guard (post-update):** Re-check status vs blockers in BOTH directions
+   - If user's update added blockers but kept Green → flag once, accept user override
+   - If user's update cleared blockers but kept Amber/Red → flag once, accept user override
+6. **LLM self-checks** (no separate scripts): date is `dd-mmm-yy`, recipient is `gdc-project-collaboration@salesforce.com`, no `Re:`/`Fw:` in subject, all 6 sections in correct order, no forbidden headers (`Project Update:`, `Summary: TBD`)
+7. **Run all 6 validators silently:** auto-fix safe issues (Utilization → Utilisation, decimal formats); collect failures
+8. **Build the final draft** — subject + HTML body
+9. **Render inline plain-text preview** in chat (NOT to a file) — visual review for the user
+10. **Render inline gap list** in chat — consolidated `⚠️ MISSING` markers
+11. **Generate run_metadata.json** with: mode, inferences, inputs_summary, gaps[], timestamp, tuner attribution
+12. **Write the 4-file bundle** to `project/output_wsr/{YYYY-MM-DD-HHmm}_{project-slug}/`
+13. **Present checkpoint** with subject + inline preview + validation summary + gap list + open-in-browser send instructions
+
+### RGV
+```
+1. READ:    Updated in-context draft + leaves + LLM-parsed metrics
+2. GENERATE: Subject + HTML body + inline plain-text preview + inline gap list + validation report + metadata
+3. VERIFY:   All 4 artifacts written; no validator FAIL surfaced without auto-fix or visibility
+4. FIX:      Any unresolved critical FAIL → return to Phase 1 with specific ask, do not present
+```
+
+### Stop Point #2 — Final Draft Approval
+```
+📦 WSR DRAFT READY — final approval required
+
+📂 Bundle: project/output_wsr/{YYYY-MM-DD-HHmm}_{project-slug}/
+   Files: subject.txt · email_body.html · validation_report.md · run_metadata.json
+
+📧 Subject:
+   {exact subject line}
+
+📋 Plain-Text Preview (inline — for visual review only; HTML is the actual deliverable):
+   {full email body rendered as plain text}
+
+🛡️ Validation Summary
+   ✅ 6 / 6 PASS  (X auto-fixes applied: Utilization→Utilisation, ...)
+   {OR}
+   ❌ 1 FAIL — body_structure_validator: missing "Attention:" header
+       → please add Attention items in your reply
+
+⚠️ Gaps ({N}):
+   {inline list, or "none"}
+
+📤 To Send:
+   1. Open email_body.html in your browser (double-click the file)
+   2. Cmd+A then Cmd+C to copy
+   3. Compose a FRESH email in Gmail/Outlook (do NOT Reply/Forward)
+   4. TO: gdc-project-collaboration@salesforce.com
+   5. CC: {cc list}
+   6. Paste subject from subject.txt; paste body with Cmd+V (Gmail preserves the rendered tables)
+   7. Send
+
+Reply "approved" to lock the bundle  |  "edit {section}" to revise  |  "abort" to cancel
+```
+
+**STOP. Wait for explicit approval.**
+
+On approval: finalize `run_metadata.json`, end session.
+On `edit {section}`: re-enter Phase 1 with focused prompt for just that section (draft still in context).
+On `abort`: preserve bundle as draft on disk; exit.
+
+---
+
+## IN-CONTEXT DRAFT SHAPE (no file — LLM context only)
+
+The agent carries the following dict-shaped draft in its conversation context — no file written. A Phase 0 `<thinking>` block should establish this shape; subsequent phases update it in-memory:
+
+```
+{
+  mode: "A" | "B",
+  inferences: {
+    source:        "<.eml path / pasted text / screenshot description / null>",
+    confidence:    "HIGH" | "MEDIUM" | "LOW",
+    extracted:     { subject, sender, status, sections, metrics, team_labels, workstream_names },
+    missing:       [ ... field names ... ]
+  },
+  project:       { name, region, date: <today>, sender, ccList },
+  status:        { overallDelivery: {color, rationale}, gdcProject: {color, rationale} },
+  sections:      { summary, completed, inProgress, ask, attention },   // bullets + evidenceMap per bullet
+  inputs:        { leaves, weeksElapsed, jiraPaste, freeformUpdates },  // from Phase 1 reply
+  metrics:       { sprint, capacityUtilisation, userStoryDelivered, defectsPerDays (per-phase) },
+  gaps:          [ ... "⚠️ MISSING — ..." strings ... ],
+  validationReport: { ... from silent Phase 2 run ... },
+  sycophancyNudgesShown: [ ... ]
+}
+```
+
+**Persistence policy:**
+- This draft lives ONLY in the LLM context window during the run. No file writes.
+- The **only** on-disk artifacts are the 4 bundle files written at SP2 (one-shot, post-approval):
+  `subject.txt`, `email_body.html`, `validation_report.md`, `run_metadata.json`.
+- `run_metadata.json` is a **post-hoc audit snapshot** of the run (mode, inferences, inputs, gaps, timestamp) — not runtime state.
+
+> **Why stateless?** A WSR run is a short, single-session flow (3 phases, 2 stops, completes in minutes). The LLM's 200k context window comfortably holds reference + inferences + batch reply + draft + validation without needing file persistence. Resume across sessions is not required for this use case.
+
+---
+
+## CONFIDENCE CALIBRATION
+
+| Confidence | When to Use | Action |
+|------------|-------------|--------|
+| **HIGH** | Mode A with complete reference; user's batch reply addresses all gaps | Proceed to Stop #2 |
+| **MEDIUM** | Mode A with partial reference, OR Mode B with thorough user reply | Flag inferred values with `⚠️ INFERRED — confirm` markers in Phase 2 draft |
+| **LOW** | Mode A with sparse/ambiguous reference, OR Mode B with sparse user reply | Surface specific missing fields in Phase 2; render them as `⚠️ MISSING` in draft |
+
+---
+
+## RGV (READ-GENERATE-VERIFY) PATTERN
+
+Applied in Phases 1 and 2:
+
+```
+1. READ:     All inferences + user inputs from in-context draft
+2. GENERATE: Structured content (batch prompt OR final draft + inline preview)
+3. VERIFY:   Every required field present (either populated or marked MISSING)
+4. FIX:      Any unsourced content → mark MISSING; missing structural blocks → add
+```
+
+> If VERIFY fails, do NOT present the checkpoint. Fix first.
+
+---
+
+## FORENSIC INPUT PROCESSING (Phase 1 reply > 500 lines)
+
+Triggered when the user's batch reply includes a very large Jira paste or notes:
+
+1. **INVENTORY** — Mind map of themes/workstreams/teams mentioned
+2. **SECTION-BY-SECTION** — Process each theme with its own RGV
+3. **POSITIONAL BIAS SCAN** — Re-read middle 30-70% of input
+4. **COMPLETENESS** — Compare extracted bullets against mind map
+5. **CROSS-SECTION COHERENCE** — Ensure no contradictions
+
+---
+
+## SESSION LIFECYCLE (stateless)
+
+The agent has no cross-session memory. Each run is self-contained:
+
+1. User activates → Phase 0 begins fresh (no state-file check)
+2. Flow proceeds Phase 0 → SP1 → Phase 2 → SP2 in a single chat session
+3. Bundle written at SP2 → session ends
+
+**If the session is interrupted** (window closed, chat reset, etc.) → the user restarts from Phase 0 in a new session. This is intentional: the cost of typing "hi, same project as last week, here's the reference" and pasting the prior email is lower than maintaining a runtime state-file schema.
+
+---
+
+## BACKWARD NAVIGATION (in-session only)
+
+Within a single active session, the user can navigate backward at SP2 — the draft is still in the LLM's context:
+
+| User Says (during Phase 2) | Action |
+|---------------------------|--------|
+| `edit {section}` | Re-enter Phase 1 with a focused single-section prompt (draft retained in context) |
+| `revise metrics` | Re-enter Phase 1 with metrics-only prompt |
+| `revise status` | Re-enter Phase 1 with status-color prompt + bidirectional sycophancy check |
+| `change project name` | Re-enter Phase 0 (LLM re-reads reference if Mode A; affects subject) |
+
+---
+
+## ERROR RECOVERY
+
+| Situation | Action |
+|-----------|--------|
+| LLM extraction fails or low confidence (Mode A) | Surface `⚠️ Reference unclear — please confirm essentials` in Phase 1 batch; continue with what was extracted |
+| User provides no batch reply | Stay at Stop #1; offer "type 'minimal' to render with all gaps marked MISSING" |
+| Critical validator FAIL after Phase 1 reply | Return to Phase 1 with focused ask for the failing field |
+| `days_calculator.py` or `metrics_calculator.py` missing | Compute inline using formula; show math explicitly in SP2; flag `⚠️ CALCULATOR-INLINE` |
+| `html_email_builder.py` missing | Generate HTML inline using template; flag `⚠️ BUILDER-INLINE` |
+| File write error during bundle | Report error; offer retry; no runtime state to corrupt |
+| Session interrupted mid-flow | No state to recover — user re-activates and restarts from Phase 0 (fast: reference paste + single batch reply) |
+
+---
+
+## QUICK REFERENCE
+
+| Need | Reference |
+|------|-----------|
+| Main entry | `@WSR_Email_Composer_Agent.mdc` |
+| Template + inference + days/metrics rules | `@00_Template_Configuration.mdc` |
+| Domain guidance + infer-first patterns | `@02_Guidance.mdc` |
+| Stop points (2) | `@03_Mandatory_Stop_Points.mdc` |
+| Scripts pillar (9 tools) | `lib/docs/scripts_README.md` |
+
+---
+
+> 🧞‍♂️ R-GENIE Agent Framework by Cheppali Shaik Sohail
+> ✍️ Agent Author: Cheppali Shaik Sohail | v1.0.0 | 2026-04-17
+> 🔧 Tuned by sohail via R-GENIE Agent Tuner | v1.1.0 → v1.2.0 → v1.2.1 | 2026-04-22

@@ -1,0 +1,250 @@
+---
+description: WSR Email Composer - Template Configuration Guide (v1.2 — LLM-Native, Lean)
+author: Cheppali Shaik Sohail
+version: 1.2.0
+alwaysApply: false
+tags: [template, configuration, wsr, email, section-specs, team-roster, inference, days-calculator, llm-native]
+appliesTo: [wsr-composition, email-templates]
+whenToUse:
+  - "Phase 0: LLM reference reading + draft state construction"
+  - "Phase 1: Per-section batch presentation + days/metrics inputs"
+  - "Phase 2: Email assembly rendering (HTML only)"
+priority: HIGH
+watermark: "R-GENIE-CS150893"
+---
+
+# TEMPLATE CONFIGURATION (v1.2)
+
+> **Template-First Reference** — Email structure, section specs, team roster, inference policy, days calculation for the lean 3-phase WSR composition workflow. v1.2 removed scripts the LLM does natively (parser, plain-text builder, metrics inference, gap reporter, 5 trivial validators).
+
+---
+
+## TEMPLATE & RESOURCE LOCATION
+
+```
+r-genie/WSR_Email_Composer_Agent/
+├── templates/
+│   ├── wsr-email-template.html        # Parser-ready HTML skeleton (Gmail-compatible) — THE deliverable
+│   ├── wsr-email-template.txt         # Plain-text skeleton (structural reference for INLINE chat preview)
+│   ├── wsr-section-specs.yaml         # Section rules + inference + days policy + 4-file bundle spec
+│   └── team-roster.yaml               # 3 teams × 14 members; days_calculator source
+├── examples/
+│   ├── reference_wsr_heineken.eml     # Fallback style anchor (LLM reads this when user provides no reference)
+│   └── README.md                      # How the LLM uses examples
+└── lib/
+    ├── builders/html_email_builder.py # HTML generation (Gmail-compatible inline styles)
+    ├── calculators/days_calculator.py # Cumulative running days totals
+    ├── calculators/metrics_calculator.py # Capacity %, Story %, DpD math
+    └── validators/                    # 6 validators: subject_line, status_format, british_spelling,
+                                       # metric_name, numeric_format, body_structure
+```
+
+**Removed in v1.2** (LLM does these natively): `lib/parsers/`, `lib/reporters/`, `plaintext_email_builder.py`, `metrics_inference.py`, `subject_completeness_checker.py`, `date_format_validator.py`, `recipient_validator.py`, `fresh_email_checker.py`, `section_order_validator.py`, `forbidden_header_scanner.py`.
+
+---
+
+## PRE-COMPOSITION CHECKLIST (MANDATORY)
+
+Before generating ANY WSR email content:
+
+- [ ] `templates/wsr-section-specs.yaml` read (section order, inference policy, days/metrics rules, 4-file bundle)
+- [ ] `templates/wsr-email-template.html` read (HTML structure + inline styles)
+- [ ] `templates/wsr-email-template.txt` read (plain-text layout — used for INLINE chat preview)
+- [ ] `templates/team-roster.yaml` read (active team members for `days_calculator`)
+- [ ] `examples/reference_wsr_heineken.eml` available (fallback style anchor)
+- [ ] Today's date captured via `date "+%d-%b-%y"` (auto-injection — never ask user)
+- [ ] Output directory planned: `project/output_wsr/{YYYY-MM-DD-HHmm}_{project-slug}/`
+
+**If ANY check fails → DO NOT PROCEED → Fix first**
+
+---
+
+## INFERENCE POLICY (Mode A — v1.2 LLM-Native)
+
+The lean flow's central principle: **LLM infers first, asks second, never re-asks**.
+
+### Mode Detection (Phase 0)
+```
+IF user provides .eml file OR pastes email text OR describes a screenshot
+  → Mode A (Reference)
+ELSE
+  → Mode B (Fresh)
+```
+Auto-detected at the start of Phase 0 — the agent does not ask "are you in Mode A?".
+
+### LLM-Extracted (Mode A only — no script invocation)
+The LLM reads the reference content directly and extracts:
+- Subject components (prefix, date, project name, status color, region)
+- Sender name (from "Thanks\\n{name}" sign-off)
+- CC list (from .eml headers when available)
+- Status colors (Overall Delivery + GDC Project)
+- Section content (Summary, Completed, In Progress, Ask, Attention)
+- Metric values (Capacity %, User Story %, per-phase Days/Defects/DpD)
+- Team labels (Team 1, Team 2, ...)
+- Workstream names (Build / Design / UAT Support / Business Go live)
+
+> **Why no script (v1.2 change)?** Modern LLMs read structured/semi-structured email text far more flexibly than regex. The dropped `prior_email_parser.py` only handled the specific Heineken-like format; the LLM handles arbitrary formats.
+
+### Always Auto-Set (both modes)
+- **Date** — always today via `date "+%d-%b-%y"` — NEVER asked
+- **Time-stamped output folder** — `{YYYY-MM-DD-HHmm}_{project-slug}/`
+- **Active team roster** — from `team-roster.yaml`
+
+### Asked in the Phase 1 Single Batch (always)
+- Leaves/holidays this week (`Name=days_off, ...` or `none`)
+- Jira paste or metric description (LLM parses natively)
+- Free-form section updates / additions / removals
+- (Conditional) sycophancy nudge if status–blockers contradict in either direction
+
+---
+
+## DAYS CALCULATION (script-backed, auditable math)
+
+`days_calculator.py` consumes `team-roster.yaml` + leaves dict from the user's reply.
+
+**Formula:**
+```
+new_total = prior_total + (active_members × 5 × weeks_elapsed) − sum(leaves)
+```
+
+**Defaults:**
+- `active_members` = 14 (read from `team-roster.yaml`)
+- `weeks_elapsed` = 1
+- `leaves` = parsed from user's batch reply (e.g., `Akshay=2,Bhawna=1`)
+
+**Per-phase behavior:**
+- Build / SIT / UAT all increment by the same amount (cumulative project-day pool)
+- PROD stays at 0 in pre-release projects (override via `--prod-active` if post-release)
+- "Over All Delivery" mirrors the highest active phase total
+
+**Worked example** (prior=579, leaves Akshay=2):
+```
+new_total = 579 + (14 × 5 × 1) − 2 = 579 + 70 − 2 = 647
+```
+
+> Math kept as a script (not LLM-handled) because LLMs are unreliable at multi-step arithmetic and auditable numbers matter for delivery reporting.
+
+---
+
+## METRICS INFERENCE (v1.2 — LLM-Native + script-backed math)
+
+**User prompt (Phase 1 batch):**
+> *"Paste your Jira sprint export OR describe this week's metrics (capacity, planned vs delivered stories, defects per phase)."*
+
+**LLM parses natively** (no script):
+- `Capacity 102 / 102` → capacity_actual=102, capacity_planned=102
+- `43 stories planned, 10 dev completed` → story_planned=43, story_completed=10
+- Jira-like rows (`ABC-123  Done`) → counted toward dev_completed
+- Tabular paste (`Build | 646 | 0 | 0.00`) → per-phase days/defects/dpd
+- Labelled (`SIT 4 defects, UAT 5 defects`) → per-phase defects
+- Edge cases / new formats — LLM adapts; regex couldn't
+
+**Script-backed math** (`metrics_calculator.py`):
+```
+capacity_percent = (actual / planned) * 100      # rounded
+story_percent    = (completed / planned) * 100   # rounded
+dpd_per_phase    = defects / days                # decimal (0.00, 0.01, ...)
+overall_dpd      = sum(defects) / max(days)      # decimal
+```
+
+**Fallback:** any field still missing after LLM inference → `⚠️ MISSING` rendered into the draft AND captured in `run_metadata.json`'s `gaps[]` array.
+
+---
+
+## SECTION SPECS STRUCTURE (excerpt — see `templates/wsr-section-specs.yaml` for full)
+
+```yaml
+metadata:
+  agent_version: "1.2.0"
+  parser_endpoint: "gdc-project-collaboration@salesforce.com"
+  date_format: "dd-mmm-yy"
+  subject_regex: '^WSR \| \d{2}-[A-Z][a-z]{2}-\d{2} \| .+ \| Status - (Green|Amber|Red) \| .+$'
+
+inference_policy:
+  modes: { mode_a_reference, mode_b_fresh }
+  auto_detect: true
+  ask_only_if_missing: true
+  date_policy: "always_today_never_ask"
+  parser_script: null                     # v1.2: LLM-native
+
+days_calculation:
+  source_file: "templates/team-roster.yaml"
+  formula: "new_total = prior_total + (active_members × 5 × weeks_elapsed) − sum(leaves)"
+  calculator_script: "lib/calculators/days_calculator.py"
+
+metrics_inference:
+  prompt_to_user: "Paste your Jira sprint export OR describe this week's metrics ..."
+  inference_script: null                  # v1.2: LLM-native
+  computation_script: "lib/calculators/metrics_calculator.py"
+
+output_artifacts:
+  directory_pattern: "project/output_wsr/{YYYY-MM-DD-HHmm}_{project-slug}/"
+  files: [subject.txt, email_body.html, validation_report.md, run_metadata.json]   # 4, not 6
+  chat_only: [plain-text preview, gap list]
+```
+
+---
+
+## TEMPLATE-DRIVEN RULES
+
+### Core Sections (all phases)
+Generate ONLY sections where `body_sections[].required: true` — all WSR body sections ARE required; none may be omitted.
+
+### Missing Data Handling
+- NEVER default values or invent content
+- If a required field is empty → render section header with `⚠️ MISSING — please provide {field}` inline
+- LLM aggregates all `⚠️ MISSING` markers into the inline chat list at SP2 AND into `run_metadata.json`'s `gaps[]` array
+
+### Metric Naming (ZERO tolerance — script-enforced)
+- `Capacity Utilisation` — British `s`, always `%` (`british_spelling_linter`)
+- `User Story Delivered` — exact phrase, always `%` (`metric_name_validator`)
+- `Defects Per Days` — decimal, NEVER `%` (`numeric_format_validator`)
+
+### Subject Line (constructed in Phase 2)
+Must match `subject_regex`; validated by `subject_line_validator.py` (covers completeness in v1.2).
+
+### Recipient Line (rendered at handoff — LLM checks)
+```
+TO: gdc-project-collaboration@salesforce.com
+CC: {user_provided_cc OR inherited from reference}
+⚠️ REMINDER: Open email_body.html in browser, copy-paste into Gmail. Compose a FRESH email. Do NOT Reply or Forward.
+```
+
+---
+
+## PHASE 0 OUTPUT (Ingest & Infer — silent)
+
+```
+📋 Template Configuration Loaded:
+   ✅ Section Specs: templates/wsr-section-specs.yaml
+   ✅ HTML Skeleton: templates/wsr-email-template.html
+   ✅ Plain-text Reference: templates/wsr-email-template.txt (used for inline chat preview)
+   ✅ Team Roster: templates/team-roster.yaml (14 members across 3 teams)
+   ✅ Today's Date: {dd-mmm-yy}  (auto-injected)
+   ✅ Mode Detected: A (Reference) | B (Fresh)
+   ✅ LLM Inference Confidence: HIGH | MEDIUM | LOW   (self-assessed)
+```
+
+---
+
+## NO CONFIGURATION?
+
+If templates missing or empty → HALT Phase 0. Agent cannot compose a compliant WSR without the template/specs files. Instruct user to restore the `templates/` folder before retrying.
+
+---
+
+## QUICK REFERENCE
+
+| Need | Reference |
+|------|-----------|
+| Main entry | `@WSR_Email_Composer_Agent.mdc` |
+| Phase workflow (3 phases) | `@01_Phase_Orchestration.mdc` |
+| Domain guidance (patterns, decisions, infer-first) | `@02_Guidance.mdc` |
+| Stop points (2 stops) | `@03_Mandatory_Stop_Points.mdc` |
+| Scripts pillar (9 tools) | `lib/docs/scripts_README.md` |
+
+---
+
+> 🧞‍♂️ R-GENIE Agent Framework by Cheppali Shaik Sohail
+> ✍️ Agent Author: Cheppali Shaik Sohail | v1.0.0 | 2026-04-17
+> 🔧 Tuned by sohail via R-GENIE Agent Tuner | v1.1.0 → v1.2.0 | 2026-04-22

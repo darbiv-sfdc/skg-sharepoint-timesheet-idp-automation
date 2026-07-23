@@ -1,0 +1,334 @@
+---
+description: Phase Orchestration & Workflow State Management
+author: Cheppali Shaik Sohail
+version: 2.0.0
+alwaysApply: false
+tags: [phase, orchestration, workflow, checkpoints]
+appliesTo: [technical-design, workflow]
+whenToUse:
+  - "Managing phase transitions"
+  - "Tracking workflow state"
+priority: HIGH
+---
+
+# PHASE ORCHESTRATION V2
+
+> **Purpose**: Manage 6-phase workflow with user checkpoints
+> **Enforcement**: See `@01-03_Mandatory_Stop_Points.mdc`
+
+---
+
+## PHASE SPECIFICATION
+
+### **PHASE 0: Document Initialization** (1-2 min)
+
+**Tasks:**
+1. Read `templates/design-style.yaml` and `examples/` folder
+2. Create document skeleton per template structure
+3. Validate requirements input exists
+
+**Checkpoints:**
+- [ ] Templates/examples read
+- [ ] Document created with placeholders
+- [ ] Requirements detected
+
+**Output:** Document skeleton matching template structure
+
+---
+
+### **PHASE 1: Strategic Technical Analysis** (10-15 min)
+
+**Tasks:**
+1. Analyze requirements (functional, non-functional, integration scope)
+2. Present recommendations IN CONVERSATION (not document)
+3. Get user approval
+4. **Show preview** of what will be written to document
+5. Get confirmation, THEN write clean content to document
+
+**Checkpoints:**
+- [ ] Requirements identified and validated
+- [ ] User approved approach
+- [ ] Technical Architecture section populated
+
+**Checkpoint Message:**
+```
+✅ PHASE 1 COMPLETE - Review Required
+
+**Completed:**
+- Requirements identified: {count} functional and non-functional requirements extracted
+- Processing strategy: {strategy} (approved)
+- Project Overview section added per template structure
+
+**What was added:**
+- Sections per template (business context, integration scope, volume, requirements)
+
+**Please review the Project Overview section above and confirm:**
+→ Reply "approved" to proceed to Phase 2
+→ Reply "review [section]" to discuss specific sections
+→ Reply with changes needed
+
+Waiting for your review...
+```
+
+---
+
+### **PHASE 2: MuleSoft Flow Architecture** (10-15 min)
+
+**Tasks:**
+1. **PRESENT OPTIONS** - Show architecture alternatives with recommendation
+2. **WAIT FOR APPROVAL** - Do NOT proceed until user approves
+3. After approval: Design flow architecture
+4. Generate **Essential Diagram 1: Integration Sequence**
+
+**🚨 CRITICAL: Architecture Proposal Format (BEFORE designing)**
+```
+🎯 ARCHITECTURE PROPOSAL - Requires Your Approval
+
+Based on your requirements ({volume}, {source}→{target}), here are the options:
+
+**🥇 RECOMMENDED: [Pattern Name]**
+| Aspect | Details |
+|--------|---------|
+| Pattern | [System API / System+Process / Full API-Led] |
+| Processing | [Real-time / Batch / Event-driven] |
+| Rationale | [Why this fits your requirements] |
+
+**🥈 ALTERNATIVE: [Pattern Name]**
+| Aspect | Details |
+|--------|---------|
+| Pattern | [...] |
+| When to use | [Scenarios where this is better] |
+| Trade-offs | [Pros and cons vs recommended] |
+
+**Before I design the architecture and generate diagrams:**
+→ Reply "approved" for recommended approach
+→ Reply "alternative" for the other option
+→ Reply with questions or modifications
+
+Waiting for your decision...
+```
+
+**Checkpoints:**
+- [ ] Architecture options presented to user
+- [ ] User approved an option
+- [ ] Pattern selected and justified in document
+- [ ] Diagrams embedded per template placement rules
+- [ ] User validated final architecture
+
+**Checkpoint Message (AFTER architecture complete):**
+```
+✅ PHASE 2 COMPLETE - Review Required
+
+**Completed:**
+- Architecture Pattern: {pattern} (user approved)
+- Processing Strategy: {strategy}
+- Flow Architecture: {step count} steps defined
+- Diagrams embedded per template placement rules
+
+**What was added:**
+- Technical Architecture section (pattern, strategy, connectors, diagram)
+- Flow Architecture section (flow steps, sequence diagram)
+
+**Please review the architecture and flow design above:**
+→ Reply "approved" to proceed to Phase 3
+→ Reply "review [section]" to discuss specific sections
+→ Reply with changes needed
+
+Waiting for your review...
+```
+
+---
+
+### **PHASE 3: Field Mappings & Error Handling** (10-15 min)
+
+**Tasks:**
+1. **MANDATORY**: Request data sample confirmation (even if file exists)
+2. **WAIT** for user confirmation before creating mappings
+3. Create field mapping tables (NO DataWeave code)
+4. Design error handling patterns
+5. Generate remaining diagrams per template placement rules
+
+**🚨 CRITICAL: Data Sample Confirmation (MANDATORY)**
+
+**Even if data file exists in `project/input_01_design/`:**
+1. Show what was found (filename, format, sample records)
+2. Request explicit confirmation
+3. Ask about target format
+4. **STOP and WAIT** for user response
+5. Only after confirmation → create mappings
+
+**Data Sample Request Format:**
+```
+🚨 DATA SAMPLE CONFIRMATION REQUIRED - Cannot Design Mappings
+
+I found the following in your input folder:
+- File: [filename]
+- Format: [CSV/JSON/XML]
+- Sample: [Show first 2-3 records]
+
+Please confirm:
+1. Is this the correct source data format? (yes/no/modify)
+2. What is the target system expected format? (describe/paste/file)
+3. Any transformation rules? (describe/skip)
+
+→ Reply "confirm" to proceed with mappings
+→ Reply "modify" to provide different data
+→ Reply with target format details
+
+Waiting for your confirmation...
+```
+
+**Checkpoints:**
+- [ ] Data sample found and shown to user
+- [ ] User confirmed data format
+- [ ] Target format confirmed
+- [ ] Mapping tables created (no code)
+- [ ] Error handling defined
+- [ ] Diagrams embedded per template placement rules
+- [ ] User reviewed mappings (checkpoint)
+
+**Checkpoint Message (AFTER mappings complete):**
+```
+✅ PHASE 3 COMPLETE - Review Required
+
+**Completed:**
+- Data sample confirmed: {format} with {fields}
+- Target format confirmed: {target format details}
+- Mapping tables created: Source-to-target mapping with validation rules
+- Error handling defined: Error categories, retry patterns, notification strategy
+- All diagrams embedded per template placement rules
+
+**What was added:**
+- Field Mapping section per template structure
+- Error Handling section per template structure
+
+**Please review the mappings and error handling above:**
+→ Reply "approved" to proceed to Phase 4 (Document Completion)
+→ Reply "review [section]" to discuss specific sections
+→ Reply with changes needed
+
+All 3 essential diagrams are now embedded contextually per template.
+
+Waiting for your review...
+```
+
+---
+
+### **PHASE 4: Document Completion** (5-10 min)
+
+**Tasks:**
+1. Verify all 3 essential diagrams embedded per template placement rules
+2. Verify document structure matches template (all core sections complete)
+3. Prompt for Phase 5 supplementary content
+
+**Phase 4 Checkpoint Message:**
+```
+✅ PHASE 4 COMPLETE - Design Document Ready
+
+**Completed:**
+- All 3 essential diagrams verified and embedded per template
+- Document structure complete: All core sections populated
+- Document matches template structure from `design-style.yaml`
+
+**Design document complete!**
+
+Available supplementary sections (per template):
+{FOR EACH item in template.supplementary WHERE include: true}
+- [ ] {item.name} - {item.description}
+{END FOR}
+
+Note: Items with include: false are disabled in template and will not be generated.
+
+Reply:
+- "all per template" - Generate all enabled supplementary sections
+- "{item.name}" - Generate only specific section
+- "skip" - Complete document as-is (no supplementary sections)
+
+Waiting for your choice...
+```
+
+---
+
+### **PHASE 5: Optional Supplementary** (on request)
+
+**Tasks (template-driven):**
+- Generate config files in `config/` folder (if template enabled)
+- Generate supplementary document (if template enabled)
+
+**Rule:** Only generate sections where `template.supplementary[].include: true`
+
+---
+
+## STATE FILE
+
+**Location:** `project/output_01_design/.design-workflow-state.json`
+
+```json
+{
+  "projectName": "...",
+  "currentPhase": 0,
+  "phases": {
+    "phase0": { "status": "COMPLETED", "checkpoints": {...} },
+    "phase1": { "status": "IN_PROGRESS", "checkpoints": {...} }
+  },
+  "outputFiles": []
+}
+```
+
+**On Activation:**
+1. Check for existing state file
+2. If exists → offer resume/restart options
+3. If not → create new state, start Phase 0
+
+---
+
+## `<thinking>` BLOCK TEMPLATE
+
+Produce before EVERY phase output:
+
+```
+<thinking>
+1. Key inputs received: [list data/answers for this phase]
+2. Decisions I am making: [choice, strategy, rationale]
+3. Evidence from source: [cite specific user requirements or data]
+4. Risks/gaps identified: [what could go wrong, what is missing]
+5. Confidence: HIGH / MEDIUM / LOW [with justification]
+6. Production learnings applicable: [check 01_Production_Learnings.md]
+</thinking>
+```
+
+---
+
+## CONFIDENCE CALIBRATION
+
+| Confidence | When to Use | Action |
+|------------|------------|--------|
+| **HIGH** | Clear requirements, proven pattern | Proceed with recommendation |
+| **MEDIUM** | Partial info, reasonable inference | Flag assumptions, recommend validation |
+| **LOW** | Vague, multiple interpretations | **STOP** — request clarification before proceeding |
+
+---
+
+## RGV (READ-GENERATE-VERIFY) PATTERN
+
+Apply for Phases 2, 3, and 4 (phases that produce document content):
+
+```
+1. READ: [requirements / data samples] → Expected: [count/list]
+2. GENERATE: [design sections / diagrams / mappings] → Expected: [count/list]
+3. VERIFY: "Processed {X}/{Y} items from source"
+4. FIX: Any gaps before presenting checkpoint to user
+```
+
+> If X ≠ Y, do NOT present the checkpoint. Fix the gap first.
+
+---
+
+## ERROR RECOVERY
+
+| Situation | Action |
+|-----------|--------|
+| Phase fails | Save state, inform user, offer: retry / restart phase / abort |
+| User disconnects | State preserved, resume on next activation |
+| Invalid input | Stay in current phase, request correction |
+| Restart from phase N | Load state, reset phases N+ to PENDING, continue |

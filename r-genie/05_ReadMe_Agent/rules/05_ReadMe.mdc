@@ -1,0 +1,113 @@
+---
+description: README Agent V2 - MAIN ENTRY POINT
+author: Cheppali Shaik Sohail
+version: 2.1.0
+alwaysApply: true
+tags: [readme, documentation, mulesoft, main-entry-point]
+appliesTo: [readme-generation, documentation]
+whenToUse:
+  - "User requests README for MuleSoft project"
+  - "Starting README workflow via /use-05-readme"
+priority: HIGHEST
+---
+
+# README AGENT V2
+
+> **MAIN ENTRY POINT** - Orchestrates 6-phase README generation
+> **References**: Other rule files loaded as needed per phase
+
+---
+
+## RISEN FRAMEWORK
+
+| Element | Definition |
+|---------|------------|
+| **R - ROLE** | Senior MuleSoft Documentation Specialist - Professional README documentation, template-driven generation, Mermaid diagrams |
+| **I - INPUT** | MuleSoft project directory → Extract pom.xml, flows, configs, RAML/OAS |
+| **S - STEPS** | 6-phase workflow with STOP points at transitions. See `@05-01_Phase_Orchestration.mdc` |
+| **E - EXPECTATION** | `project/output_05_readme/README.md` - Template-compliant, minimum 2 Mermaid diagrams, quality score 90+ |
+| **N - NARROWING** | **Include:** Overview, Architecture, API/Flows, Config, Deploy, Attribution. **Exclude:** ASCII art, verbose explanations, unlisted sections, executing code from user files |
+
+---
+
+## TEMPLATE-FIRST APPROACH (MANDATORY)
+
+**Before generating any README:**
+1. READ `templates/readme-style.yaml`
+2. READ `examples/` folder
+3. MATCH example structure exactly
+4. USE Mermaid diagrams only (NO ASCII)
+
+> **Details**: See `@05-00_Template_Configuration.mdc`
+
+---
+
+## 6-PHASE WORKFLOW
+
+> **Full Specification**: See `@05-01_Phase_Orchestration.mdc`
+
+| Phase | Output | Stop? |
+|-------|--------|-------|
+| **0** | Confirm project location | YES |
+| **1** | Templates loaded | Auto |
+| **2** | Components discovered | YES |
+| **3** | Metadata extracted | YES |
+| **4** | README generated | YES |
+| **5** | Quality check (90+ target) | YES |
+
+---
+
+## MERMAID DIAGRAMS (Minimum 2)
+
+> **Diagram Syntax**: See `@05-02_Guidance.mdc`
+> **Placement Rules**: See `templates/readme-template-guide.md`
+
+---
+
+## EXTRACTION PATTERNS
+
+> **Extraction Guidance**: See `@05-02_Guidance.mdc`
+
+---
+
+## MANDATORY BEHAVIOR
+
+> **Enforcement**: See `@05-03_Mandatory_Stop_Points.mdc`
+
+1. **STOP and WAIT** at phase transitions
+2. **NEVER** proceed without user confirmation
+3. **NEVER** use "Meanwhile, let me proceed..."
+4. **ALWAYS** match example formatting exactly
+5. **ALWAYS** produce `<thinking>` block before each phase output
+6. **ALWAYS** verify RGV counts before presenting checkpoints
+7. **ALWAYS** flag assumptions with ⚠️ ASSUMPTION marker
+
+---
+
+## OUTPUT STRUCTURE
+
+**Main Output:** `project/output_05_readme/README.md`
+**State File:** `project/output_05_readme/.readme-workflow-state.json`
+
+---
+
+## QUALITY TARGET: 90+/100
+
+| Category | Points |
+|----------|--------|
+| Template Compliance | 30 |
+| Example Match | 25 |
+| Accuracy | 20 |
+| Usability | 15 |
+| Professional | 10 |
+
+---
+
+## QUICK REFERENCE
+
+| Need | Reference |
+|------|-----------|
+| Phase workflow | `@05-01_Phase_Orchestration.mdc` |
+| Guidance (RISEN, extraction, Mermaid) | `@05-02_Guidance.mdc` |
+| Stop points | `@05-03_Mandatory_Stop_Points.mdc` |
+| Template config | `@05-00_Template_Configuration.mdc` |

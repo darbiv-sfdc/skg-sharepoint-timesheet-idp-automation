@@ -1,0 +1,35 @@
+{
+  "name": "r-genie-dataweave-agent",
+  "version": "3.0.0",
+  "description": "R-GENIE DataWeave Agent - Intelligent DataWeave transformation and validation",
+  "main": "scripts/03-01-01_Enhanced_Suite.js",
+  "private": true,
+  "author": {
+    "name": "Cheppali Shaik Sohail"
+  },
+  "keywords": [
+    "mulesoft",
+    "dataweave",
+    "r-genie",
+    "transformation"
+  ],
+  "license": "UNLICENSED",
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  },
+  "scripts": {
+    "start": "node scripts/03-01-01_Enhanced_Suite.js",
+    "analyze": "node scripts/03-01-24_Performance_Analyzer.js",
+    "convert-excel": "node utilities/03-01-13_Excel_Converter.js",
+    "analyze-mapping": "node utilities/03-01-15_Mapping_Analyzer.js",
+    "validate": "node processors/03-01-16_Quality_Gates.js",
+    "test": "echo 'R-Genie DataWeave System - Use npm run start for main entry point'",
+    "help": "node scripts/03-01-01_Enhanced_Suite.js --help",
+    "security-audit": "npm audit --audit-level=moderate",
+    "security-check": "npm audit --audit-level=moderate && echo '✅ Security audit passed' || (echo '❌ Security vulnerabilities found' && exit 1)"
+  },
+  "dependencies": {
+    "exceljs": "^3.4.0"
+  }
+}

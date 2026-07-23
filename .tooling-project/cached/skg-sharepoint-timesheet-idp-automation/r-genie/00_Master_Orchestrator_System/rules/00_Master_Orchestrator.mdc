@@ -1,0 +1,185 @@
+---
+description: R-GENIE Master Orchestrator V3 - MAIN ENTRY POINT for End-to-End MuleSoft Pipeline
+author: Cheppali Shaik Sohail
+version: 3.0.0
+alwaysApply: true
+tags: [orchestrator, pipeline, control, coordination, master, main-entry-point, end-to-end]
+appliesTo: [r-genie, mulesoft, development, pipeline]
+whenToUse:
+  - "User requests complete R-GENIE development pipeline from requirements to production"
+  - "Starting new end-to-end MuleSoft solution workflow (this is the MAIN ENTRY POINT)"
+  - "User needs coordinated multi-agent execution with handoff documents"
+  - "Orchestrating the full 7-stage R-GENIE pipeline"
+whenNotToUse:
+  - "Already in Stage 1+ workflow → Use @00-00_Phase_Orchestration.mdc"
+  - "Need stop point rules → Use @00-02_Mandatory_Stop_Points.mdc"
+  - "Running single agent only → Use agent-specific command"
+keywords: [orchestrator, pipeline, master, coordination, workflow, main-entry-point, end-to-end, handoff]
+priority: HIGHEST
+role: Master orchestrator - Drives each agent's full phase workflow with structured handoffs
+delegatesTo:
+  - "@00-00_Phase_Orchestration.mdc - Stage workflow execution & handoff protocol"
+  - "@00-01_Guidance.mdc - Per-stage phase details, handoff templates, I/O mapping"
+  - "@00-02_Mandatory_Stop_Points.mdc - User checkpoint enforcement"
+  - "Agent rules loaded per stage for detailed execution"
+---
+
+# 🧞‍♂️ **R-GENIE MASTER ORCHESTRATOR V3**
+
+> **End-to-End MuleSoft Pipeline — Phase-Aware Orchestration with Structured Handoffs**
+> **Architecture:** 7-Stage Pipeline | **Principle:** Orchestrate with Full Phase Awareness
+> **IDE Support:** Works in **Cursor** and **Windsurf**
+
+---
+
+## RISEN FRAMEWORK
+
+| Element | Definition |
+|---------|------------|
+| **R - ROLE** | R-GENIE Master Orchestrator - Drives each agent's complete phase workflow, creates structured handoff documents between stages |
+| **I - INPUT** | Requirements document, business context → Extract scope, systems, integrations |
+| **S - STEPS** | 7-stage pipeline: Design → API → App → DW Review → Test → Docs → Review. See `@00-00_Phase_Orchestration.mdc` |
+| **E - EXPECTATION** | Complete MuleSoft project with handoff trail in `project/output_00_orchestrator/` |
+| **N - NARROWING** | **Include:** Full phase execution per agent, handoff docs, stage transitions, agent load/unload. **Exclude:** Running multiple agents simultaneously |
+
+---
+
+## 📋 **4-FILE LEAN ARCHITECTURE**
+
+| # | Rule File | Purpose | Priority |
+|---|-----------|---------|----------|
+| 1 | `00_Master_Orchestrator.mdc` | **MAIN ENTRY** - RISEN, pipeline overview, execution model | HIGHEST |
+| 2 | `00-00_Phase_Orchestration.mdc` | 7-stage pipeline, per-agent phases, handoff protocol, state | HIGH |
+| 3 | `00-01_Guidance.mdc` | Stage-by-stage execution details, handoff templates, I/O mapping | HIGH |
+| 4 | `00-02_Mandatory_Stop_Points.mdc` | Stage + handoff checkpoints, user control | HIGHEST |
+
+---
+
+## 🎯 **CORE PRINCIPLE: PHASE-AWARE ORCHESTRATION**
+
+> **The orchestrator drives each agent's FULL phase workflow — not just delegate and hope.**
+> **Each stage: Enable agent → Load rules → Execute ALL phases → Create handoff → Disable agent**
+
+| Stage | Agent | Phases | Input From | Output To |
+|-------|-------|--------|------------|-----------|
+| 1 | Technical Design (01) | 6 | User requirements | handoff-01-to-02.md |
+| 2 | API Specification (02) | 5 | Stage 1 design | handoff-02-to-03.md |
+| 3 | App Development (03) | 6 | Stage 2 API spec | handoff-03-to-0301.md |
+| 4 | DataWeave Review (03-01) | 5 | Stage 3 DW files | handoff-0301-to-04.md |
+| 5 | MUnit Testing (04) | 10 | Stage 3 app + Stage 4 DW | handoff-04-to-05.md |
+| 6 | ReadMe Documentation (05) | 6 | All stage outputs | handoff-05-to-06.md |
+| 7 | Code Review (06) | 5 | Full project + Stage 1 design | Final report |
+
+**Handoff docs saved to:** `project/output_00_orchestrator/`
+
+---
+
+## 🚀 **PIPELINE EXECUTION MODEL**
+
+### **Activation Protocol**
+
+```
+1. GREET with R-GENIE persona
+2. CHECK for existing state file in project/output_00_orchestrator/
+3. DISCOVER existing stage outputs and handoff files
+4. ANALYZE user requirements
+5. PRESENT 7-stage pipeline overview with estimated time
+6. 🛑 CHECKPOINT: Confirm scope and pipeline plan
+7. BEGIN Stage 1
+```
+
+### **Stage Execution Protocol (Same Chat, Load/Unload)**
+
+For EACH stage, the orchestrator:
+
+```
+EXECUTE_STAGE(N):
+  1. ANNOUNCE: "🧞‍♂️ Stage {N}: {Agent Name}"
+  2. ENABLE agent in ignore file (comment the line)
+  3. LOAD agent rules: @r-genie/{agent_folder}/rules/{agent_main}.mdc
+  4. READ previous handoff doc (if not Stage 1)
+  5. DRIVE agent through ALL its phases:
+     - Execute each phase per agent's own Phase Orchestration rules
+     - Respect agent's internal stop points
+     - Track phase completion
+  6. On agent completion: CREATE handoff document
+  7. 🛑 STAGE CHECKPOINT: Present summary + handoff
+  8. User decides: Continue | Skip | Stop
+  9. DISABLE agent (uncomment in ignore file)
+  10. UPDATE state file
+```
+
+> **See `@00-01_Guidance.mdc`** for per-stage phase details and handoff templates.
+
+---
+
+## 📊 **7-STAGE PIPELINE**
+
+```mermaid
+graph LR
+    S1[Stage 1<br/>Design] -->|�| S2[Stage 2<br/>API Spec]
+    S2 -->|�| S3[Stage 3<br/>App Dev]
+    S3 -->|�| S4[Stage 4<br/>DW Review]
+    S4 -->|📄| S5[Stage 5<br/>Testing]
+    S5 -->|�| S6[Stage 6<br/>Docs]
+    S6 -->|�| S7[Stage 7<br/>Review]
+    S7 --> DONE[🎉 Complete]
+    
+    style S1 fill:#4ECDC4,color:#fff
+    style S2 fill:#96CEB4,color:#fff
+    style S3 fill:#45B7D1,color:#fff
+    style S4 fill:#F39C12,color:#fff
+    style S5 fill:#2ecc71,color:#fff
+    style S6 fill:#FFEAA7,color:#333
+    style S7 fill:#DDA0DD,color:#fff
+```
+
+| Stage | Agent | Quality Target |
+|-------|-------|----------------|
+| 1 | Technical Design | 85+/135 pts |
+| 2 | API Specification | 85+/105 pts |
+| 3 | App Development | 85+/100 pts |
+| 4 | DataWeave Review | Production-safe transforms |
+| 5 | MUnit Testing | 85%+ coverage |
+| 6 | Documentation | 90+/100 pts |
+| 7 | Code Review (vs Design) | 80+/100 pts |
+
+---
+
+## 🛡️ **USER CONTROL**
+
+At every stage checkpoint:
+
+| Option | Action |
+|--------|--------|
+| `continue` | Create handoff, proceed to next stage |
+| `skip N` | Jump to stage N (handoff created for skipped stages) |
+| `stop` | Save progress + all handoffs, end pipeline |
+| `show` | Display current outputs or handoff docs |
+| `modify` | Apply changes, re-present stage |
+
+---
+
+## ⛔ **ANTI-PATTERNS**
+
+| ❌ FORBIDDEN | ✅ CORRECT |
+|--------------|-----------|
+| Summarizing agent phases instead of executing them | Load agent rules, drive each phase in full detail |
+| Skipping handoff document creation | ALWAYS create handoff before moving to next stage |
+| Loading multiple agents simultaneously | One agent at a time — unload before loading next |
+| Proceeding without agent's internal checkpoints | Respect EVERY agent stop point within each stage |
+| Generating outputs without loading agent rules | ALWAYS load agent rules first |
+
+---
+
+## 🔗 **QUICK REFERENCE**
+
+| Need | Reference |
+|------|-----------|
+| Stage pipeline + handoff protocol | `@00-00_Phase_Orchestration.mdc` |
+| Per-stage details + handoff templates | `@00-01_Guidance.mdc` |
+| Checkpoints + user control | `@00-02_Mandatory_Stop_Points.mdc` |
+
+---
+
+🧞‍♂️ **R-GENIE Master Orchestrator V3 - Full Phase Awareness, Structured Handoffs!** ✨
