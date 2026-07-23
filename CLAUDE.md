@@ -17,19 +17,21 @@ This is a **MuleSoft 4 application** that automates timesheet processing using *
 
 ### Flow Orchestration
 
-The application uses a **two-flow async pattern**:
+The application uses a **three-flow async pattern**:
 
-- **`scheduler-sharepoint-ingest-flow`** (`idp-ingest-flow.xml`) - Scheduled ingest that moves files `Inbound → Processing`, submits to IDP, and publishes tracking messages to a VM queue
+- **`scheduler-sharepoint-ingest-flow`** (`api.xml`) - Scheduled flow (cron-based) that invokes the shared sub-flow
+- **`trigger-ingest-flow`** (`api.xml`) - HTTP-triggered flow for manual/on-demand ingestion via `/trigger-ingest` endpoint
+- **`sharepoint-ingest-subflow`** (`idp-ingest-flow.xml`) - Shared sub-flow that moves files `Inbound → Processing`, submits to IDP, and publishes tracking messages to a VM queue
 - **`subscriber-vm-idp-result-flow`** (`idp-subscriber-flow.xml`) - VM consumer that polls IDP for results, handles state transitions (`SUCCEEDED`/`FAILED`/pending), and moves files to final destinations (`Output`/`Processed`/`Error`)
 
 ### SharePoint Folder Structure
 
-Files flow through 5 folders in `Shared Documents/Manual Uploads/`:
-- **Inbound** - Drop zone for raw PDFs
-- **Processing** - Active files being processed (in-flight isolation)
-- **Output** - CSV results (IDP extraction output)
-- **Processed** - Archived source files (success)
-- **Error** - Failed files (timeout, IDP failure, or processing errors)
+Files flow through 5 folders in `IDP Root Library/Manual Uploads/`:
+- **01-Inbound** - Drop zone for raw PDFs
+- **02-Processing** - Active files being processed (in-flight isolation)
+- **03-Output** - CSV results (IDP extraction output)
+- **04-Processed** - Archived source files (success)
+- **99-Error** - Failed files (timeout, IDP failure, or processing errors)
 
 ### Key Components
 
@@ -87,9 +89,16 @@ mvn clean install             # Install to local Maven repo
 ### Testing
 ```bash
 # No MUnit tests defined yet
+
+# Manual trigger for testing ingest flow:
+curl -X GET http://localhost:8081/trigger-ingest
+
 # Health checks available at:
 curl http://localhost:8081/api/v1/health-check/liveliness-probe
 curl http://localhost:8081/api/v1/health-check/readiness-probe
+
+# Hello endpoint (basic connectivity test):
+curl http://localhost:8081/api/v1/hello
 ```
 
 ### Deployment
@@ -113,15 +122,19 @@ curl http://localhost:8081/api/v1/health-check/readiness-probe
 ```yaml
 idp:
   host: "idp-rt.eu-central-1.eu1.anypoint.mulesoft.com"
+  port: "443"
   protocol: "HTTPS"
-  action.max_checks: "20"  # Poll timeout threshold
+  action:
+    id: "idp-skg-salaries-pjc"         # IDP action identifier
+    version: "1.0.0"                   # IDP action version
+    max_checks: "20"                   # Poll timeout threshold
 ```
 
-**SharePoint Paths** - All relative to `Shared Documents/Manual Uploads/`
+**SharePoint Paths** - All relative to `IDP Root Library/Manual Uploads/`
 
-**VM Queue** - Name: `idp-timesheet-queue`, Poll interval: `30000ms`
+**VM Queue** - Name: `idp-timesheet-queue`, Poll interval: `30000ms` (30 seconds)
 
-**Scheduler** - Cron: `0 0 0/1 * * ?` (hourly on the hour)
+**Scheduler** - Cron: `0 0 0/1 * * ?` (hourly on the hour), Initial state: `stopped` (dev environment - use HTTP `/trigger-ingest` for manual testing)
 
 ## Working with DataWeave
 
@@ -150,8 +163,9 @@ All DataWeave modules and transforms live in `src/main/resources/dw/`
 - **SharePoint Connector** (v3.9.0) - OAuth2 + file operations
 - **VM Connector** (v2.0.1) - Persistent queues
 - **APIkit** (v1.11.11) - RAML-driven routing
-- **Scripting Module** (v2.0.0) - Groovy for sleep/throttle logic
+- **Scripting Module** (v2.1.1) - Groovy for sleep/throttle logic
 - **Secure Properties Module** - AES-encrypted property values
+- **File Connector** (v1.5.3) - Local file operations (if needed)
 
 ### Repository Configuration
 All dependencies resolve via:
@@ -179,6 +193,13 @@ R-GENIE is designed for Cursor IDE. When working in Claude Code:
 - Agent rules and examples can inform code generation but don't execute the multi-agent orchestration
 - For specific guidance, read relevant agent files (e.g., `r-genie/03-01_Dataweave_Agent/RULES.md` for DataWeave patterns)
 
+### File Protection Rules (from `.cursor/rules/`)
+These constraints are defined in the Cursor rules and apply to all work in this repo:
+- **`r-genie/` is READ-ONLY** - Never modify files under `r-genie/` (core agent architecture). Exceptions require explicit command activation (`/add-production-learnings`, `/use-agent-tuner`, `/use-agent-builder`) with user approval.
+- **Never `git push` without explicit user confirmation** ("yes" or "confirm").
+- **Editable paths**: `project/` (input/output folders), `.cursor/commands/`, `.cursor/rules/`, root config files (`.cursorignore`, `README.md`), and the `src/` application code.
+- **Write-protected files** (`.cursorignore`, `.vscode/**`, `.cursor/*.json`, `.git/config`): the Cursor IDE sandbox blocks agent writes. Attempt once; if blocked, hand the user a copy-paste command to run in their own terminal rather than retrying alternatives.
+
 ## Common Tasks
 
 ### Adding a New Flow
@@ -190,9 +211,11 @@ R-GENIE is designed for Cursor IDE. When working in Claude Code:
 
 ### Modifying IDP Integration
 - IDP connector config: `global.xml` → `IDP___Timesheet___1_3_0_Config`
-- Submit endpoint: `idp-timesheet-130:postdocumentactionexecution`
-- Poll endpoint: `idp-timesheet-130:getdocumentactionexecution`
+- Submit endpoint: `idp-timesheet-130:postdocumentactionexecution` (multipart/form-data upload)
+- Poll endpoint: `idp-timesheet-130:getdocumentactionexecution` (returns execution status and extracted fields)
 - Action metadata controlled by `idp.action.id` and `idp.action.version` properties
+- Credentials: Uses Anypoint platform client credentials (`anypoint.clientId` and `anypoint.clientSecret`)
+- Namespace: `http://www.mulesoft.org/schema/mule/idp-timesheet-130`
 
 ### Debugging VM Queue Issues
 - Queue persistence configured in `global.xml` → `VM_Config`
@@ -202,8 +225,8 @@ R-GENIE is designed for Cursor IDE. When working in Claude Code:
 
 ### Updating SharePoint Paths
 1. Edit environment-specific properties file (e.g., `dev-properties.yaml`)
-2. All paths are **relative** to `sharepoint.site.serverRelativePath`
-3. File operations use **absolute server-relative URLs** constructed via property interpolation
+2. Paths are configured under `sharepoint.path.*` (source, processing, output, processed, error)
+3. All paths are **relative** to the `sharepoint.path.*` properties, but file operations use **absolute server-relative URLs** constructed via property interpolation with `sharepoint.site.serverRelativePath`
 4. OAuth config hardcoded in `global.xml` (client ID, tenant ID, key store)
 
 ## Code Conventions

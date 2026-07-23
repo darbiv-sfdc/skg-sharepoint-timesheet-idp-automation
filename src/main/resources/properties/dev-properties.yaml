@@ -7,10 +7,6 @@ https:
 api: 
   id: "2699159"
 
-# Salesforce Configuration
-salesforce:
-  tokenUrl: "https://login.microsoftonline.com/538f4f4e-ffdb-47b6-818d-cdb243067ad0/oauth2/v2.0/token"
-
 #IDP Configuration
 idp:
     host: "idp-rt.eu-central-1.eu1.anypoint.mulesoft.com"
@@ -27,6 +23,13 @@ sharepoint:
         url: "https://skgtechoffice.sharepoint.com/sites/MulesoftProjectSite"
         # Server-relative root of the site (prefix for absolute file paths used by file-move / file-add / file-get-content)
         serverRelativePath: "/sites/MulesoftProjectSite"
+    tokenUrl: "https://login.microsoftonline.com/538f4f4e-ffdb-47b6-818d-cdb243067ad0/oauth2/v2.0/token"
+    connection:
+        clientId: "84b7131c-fd51-4331-a02a-68574b85ffc0"
+        keyStoreAlias: "mule"
+        keyStorePath: "skg-sp-server.jks"
+        keyStoreType: "JKS"
+        scope: "https://skgtechoffice.sharepoint.com/.default"
     path:
         source: "IDP Root Library/Manual Uploads/01-Inbound"
         processing: "IDP Root Library/Manual Uploads/02-Processing"

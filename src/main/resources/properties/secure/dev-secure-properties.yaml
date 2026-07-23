@@ -2,3 +2,8 @@
 salesforce:
   clientId: "![c52S/Ur305U0KK7OW3Dyq0PglQOjNB+U9bllVK1vXgBO7grtQUllxY5s8SthSv5FyU0LseVBoQcUqKgw0j/vwy0l2cONQXQ26eunGz5+5zCcaQDlhWqzdQ==]"
   clientSecret: "![YY1yy2UCDaJn518wjXnJn5o9xhXilbf82xum6qI/D3smCcIj9oFVSyTPeRNXFe0QV6qmx2qzu3kfCpjaaX5FOttAvzzd9eO0]"
+
+# SharePoint Secure Configuration
+sharepoint:
+  connection:
+    keyStorePassword: "![PLACEHOLDER_ENCRYPT_changeit_WITH_SECURE_PROPERTIES_TOOL]"
