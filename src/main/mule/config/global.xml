@@ -66,11 +66,14 @@ http://www.mulesoft.org/schema/mule/idp-timesheet-130 http://www.mulesoft.org/sc
 
 	<!-- IMPORT COMMON ERROR HANDLING -->
 	<import doc:name="ImportCommonErrorHandling" doc:id="ff3075a0-16ff-4848-ad14-3214292bc127" file="common-error-handling.xml"  />
+
+	<!-- Secure Properties Config - MUST BE LOADED BEFORE CONNECTORS THAT USE SECURE PROPERTIES -->
 	<secure-properties:config name="Secure_Properties_Config" doc:name="Secure Properties Config" doc:id="ac76e227-f91b-48ee-8460-18a8db36bc1c" file="properties/secure/${mule.env}-secure-properties.yaml" key="${mule.secure.key}">
 	</secure-properties:config>
-	
+
+	<!-- SharePoint Connector Config -->
 	<sharepoint:sharepoint-online-config name="Sharepoint_Sharepoint_online" doc:name="Sharepoint Sharepoint online" doc:id="182c255f-54cb-4add-bfe7-4bb4dbdcc92e" >
-		<sharepoint:oauth-client-credentials-connection siteUrl="${sharepoint.site.url}" clientId="${sharepoint.connection.clientId}" tokenUrl="${sharepoint.tokenUrl}" keyStoreAlias="${sharepoint.connection.keyStoreAlias}" keyStorePath="${sharepoint.connection.keyStorePath}" keyStorePassword="${sharepoint.connection.keyStorePassword}" keyStoreType="${sharepoint.connection.keyStoreType}" scope="${sharepoint.connection.scope}"/>
+		<sharepoint:oauth-client-credentials-connection siteUrl="${sharepoint.site.url}" clientId="${sharepoint.connection.clientId}" tokenUrl="${sharepoint.tokenUrl}" keyStoreAlias="${sharepoint.connection.keyStoreAlias}" keyStorePath="${sharepoint.connection.keyStorePath}" keyStorePassword="${sharepoint.connection.keyStorePassword}" scope="${sharepoint.connection.scope}" keyStoreType="JKS"/>
 	</sharepoint:sharepoint-online-config>
 
 	<!-- IDP (MuleSoft Intelligent Document Processing) Connector Config -->

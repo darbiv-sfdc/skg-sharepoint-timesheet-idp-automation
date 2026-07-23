@@ -29,6 +29,7 @@ sharepoint:
         keyStoreAlias: "mule"
         keyStorePath: "skg-sp-server.jks"
         keyStoreType: "JKS"
+        keyStorePassword: ${secure::sharepoint.connection.keyStorePassword}
         scope: "https://skgtechoffice.sharepoint.com/.default"
     path:
         source: "IDP Root Library/Manual Uploads/01-Inbound"

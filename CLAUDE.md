@@ -36,9 +36,10 @@ Files flow through 5 folders in `IDP Root Library/Manual Uploads/`:
 ### Key Components
 
 - **IDP Connector** (`idp-timesheet-130`) - Custom connector for MuleSoft IDP action (version 1.3.0)
-- **SharePoint Connector** - OAuth2 client credentials flow, file operations via server-relative URLs
+- **SharePoint Connector** - OAuth2 client credentials flow with JKS keystore, file operations via server-relative URLs (all connection params externalized to properties)
 - **VM Queue** - Persistent queue (`idp-timesheet-queue`) for async execution tracking
 - **Groovy Scripting** - Sleep-based throttling in the poll loop (30s default via `vm.poll.sleepMillis`)
+- **Secure Properties Module** - Encrypts sensitive credentials (SharePoint keystore password) using `![...]` wrapper syntax
 
 ### Error Handling
 
@@ -130,7 +131,34 @@ idp:
     max_checks: "20"                   # Poll timeout threshold
 ```
 
-**SharePoint Paths** - All relative to `IDP Root Library/Manual Uploads/`
+**SharePoint Configuration** (`dev-properties.yaml`):
+```yaml
+sharepoint:
+  site:
+    url: "https://skgtechoffice.sharepoint.com/sites/MulesoftProjectSite"
+    serverRelativePath: "/sites/MulesoftProjectSite"
+  tokenUrl: "https://login.microsoftonline.com/.../oauth2/v2.0/token"  # MS OAuth endpoint
+  connection:
+    clientId: "<client-id>"
+    keyStoreAlias: "mule"
+    keyStorePath: "skg-sp-server.jks"
+    keyStoreType: "JKS"
+    keyStorePassword: ${secure::sharepoint.connection.keyStorePassword}  # References secure props
+    scope: "https://skgtechoffice.sharepoint.com/.default"
+  path:  # All relative to IDP Root Library/Manual Uploads/
+    source: "01-Inbound"
+    processing: "02-Processing"
+    output: "03-Output"
+    processed: "04-Processed"
+    error: "99-Error"
+```
+
+**SharePoint Secure Properties** (`secure/dev-secure-properties.yaml`):
+```yaml
+sharepoint:
+  connection:
+    keyStorePassword: "![<encrypted-value>]"  # Encrypted with mule.secure.key
+```
 
 **VM Queue** - Name: `idp-timesheet-queue`, Poll interval: `30000ms` (30 seconds)
 
@@ -141,8 +169,8 @@ idp:
 ### Location
 All DataWeave modules and transforms live in `src/main/resources/dw/`
 
-### Key Transform
-- **`idp-result-to-csv.dwl`** - Flattens nested IDP JSON response (`timeSheetData` array) into CSV rows with headers
+### Active Transforms
+- **`idp-result-to-csv.dwl`** - Flattens nested IDP JSON response (`timeSheetData` array) into CSV rows with headers (only DWL file in use)
 
 ### Best Practices
 - Use external `.dwl` files for complex transformations (keep XML readable)
@@ -223,11 +251,12 @@ These constraints are defined in the Cursor rules and apply to all work in this 
 - Monitor via Anypoint Studio debugger breakpoints in `subscriber-vm-idp-result-flow`
 - Poll throttle controlled by `vm.poll.sleepMillis` property
 
-### Updating SharePoint Paths
-1. Edit environment-specific properties file (e.g., `dev-properties.yaml`)
-2. Paths are configured under `sharepoint.path.*` (source, processing, output, processed, error)
-3. All paths are **relative** to the `sharepoint.path.*` properties, but file operations use **absolute server-relative URLs** constructed via property interpolation with `sharepoint.site.serverRelativePath`
-4. OAuth config hardcoded in `global.xml` (client ID, tenant ID, key store)
+### Updating SharePoint Configuration
+1. **Connection params**: Edit `dev-properties.yaml` under `sharepoint.connection.*` (clientId, tokenUrl, keyStore settings)
+2. **Secure credential**: Update `secure/dev-secure-properties.yaml` for `keyStorePassword` (must be encrypted with `![...]` wrapper)
+3. **Folder paths**: Edit `sharepoint.path.*` (source, processing, output, processed, error) - all relative to `IDP Root Library/Manual Uploads/`
+4. **File operations**: Use **absolute server-relative URLs** constructed via `sharepoint.site.serverRelativePath` + path
+5. **Critical**: `<secure-properties:config>` in `global.xml` **must load before** the SharePoint connector config (order matters for property resolution)
 
 ## Code Conventions
 
@@ -258,3 +287,6 @@ All MuleSoft components have unique `doc:id` attributes following pattern:
 - **Single consumer**: VM queue configured with `numberOfConsumers="1"` for ordered, single-replica processing
 - **Sleep in Groovy**: Throttling uses `sleep()` via scripting module instead of scheduler delays (VM listener doesn't support built-in delays)
 - **Flag parameter**: `flag="1"` in SharePoint file-move operations enables overwrite behavior
+- **Secure properties syntax**: Encrypted values must use `![encrypted-value]` wrapper (not just base64 string)
+- **Property loading order**: `<secure-properties:config>` must be defined before connectors that reference `${secure::*}` properties in `global.xml`
+- **No Salesforce connector**: This is a pure IDP + SharePoint integration app; any Salesforce references are leftover template artifacts (cleaned up as of 2026-07-23)
