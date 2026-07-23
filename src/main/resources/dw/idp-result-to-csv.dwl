@@ -1,6 +1,5 @@
 %dw 2.0
 output application/csv header=true
-import isEmpty from dw::core::Strings
 // Flatten a single IDP execution result into CSV rows:
 // one row per timeSheetData line-item, repeating document/header fields.
 // If timeSheetData is empty, emit a single header-only row.
