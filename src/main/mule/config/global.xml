@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<mule xmlns:sharepoint="http://www.mulesoft.org/schema/mule/sharepoint"
+<mule xmlns:idp-timesheet-140="http://www.mulesoft.org/schema/mule/idp-timesheet-140"
+	xmlns:sharepoint="http://www.mulesoft.org/schema/mule/sharepoint"
 	xmlns:apikit="http://www.mulesoft.org/schema/mule/mule-apikit"
 	xmlns:api-gateway="http://www.mulesoft.org/schema/mule/api-gateway"
 	xmlns:secure-properties="http://www.mulesoft.org/schema/mule/secure-properties"
@@ -8,8 +9,7 @@
 	xmlns:vm="http://www.mulesoft.org/schema/mule/vm"
 	xmlns:idp-timesheet-130="http://www.mulesoft.org/schema/mule/idp-timesheet-130"
 	xmlns="http://www.mulesoft.org/schema/mule/core"
-	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
-	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="
 http://www.mulesoft.org/schema/mule/mule-apikit http://www.mulesoft.org/schema/mule/mule-apikit/current/mule-apikit.xsd
 http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
 http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
@@ -17,7 +17,8 @@ http://www.mulesoft.org/schema/mule/secure-properties http://www.mulesoft.org/sc
 http://www.mulesoft.org/schema/mule/api-gateway http://www.mulesoft.org/schema/mule/api-gateway/current/mule-api-gateway.xsd
 http://www.mulesoft.org/schema/mule/sharepoint http://www.mulesoft.org/schema/mule/sharepoint/current/mule-sharepoint.xsd
 http://www.mulesoft.org/schema/mule/vm http://www.mulesoft.org/schema/mule/vm/current/mule-vm.xsd
-http://www.mulesoft.org/schema/mule/idp-timesheet-130 http://www.mulesoft.org/schema/mule/idp-timesheet-130/current/mule-idp-timesheet-130.xsd">
+http://www.mulesoft.org/schema/mule/idp-timesheet-130 http://www.mulesoft.org/schema/mule/idp-timesheet-130/current/mule-idp-timesheet-130.xsd
+http://www.mulesoft.org/schema/mule/idp-timesheet-140 http://www.mulesoft.org/schema/mule/idp-timesheet-140/current/mule-idp-timesheet-140.xsd">
 	<!-- Load Property Files -->
 	<configuration-properties
 		doc:name="ConfigurationPropertiesForCommon"
@@ -85,5 +86,6 @@ http://www.mulesoft.org/schema/mule/idp-timesheet-130 http://www.mulesoft.org/sc
 			<vm:queue queueName="${vm.queue.name}" />
 		</vm:queues>
 	</vm:config>
-	<idp-timesheet-130:config name="IDP___Timesheet___1_3_0_Config" doc:name="IDP - Timesheet - 1.3.0 Config" doc:id="1f9c8e6f-72f0-42b7-b4b1-4c777d6286be" property_host="${idp.host}" property_port="${idp.port}" property_protocol="${idp.protocol}" property_client-id="${anypoint.clientId}" property_client-secret="${anypoint.clientSecret}"/>
+	
+	<idp-timesheet-140:config name="IDP___Timesheet___1_4_0_Config" doc:name="IDP - Timesheet - 1.4.0 Config" doc:id="3c30f95b-398e-4161-bdbf-2024920b442f" property_host="${idp.host}" property_port="${idp.port}" property_protocol="${idp.protocol}" property_client-id="${anypoint.clientId}" property_client-secret="${anypoint.clientSecret}"/>
 </mule>

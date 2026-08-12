@@ -1,19 +1,20 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<mule xmlns:idp-timesheet-130="http://www.mulesoft.org/schema/mule/idp-timesheet-130"
+<mule xmlns:idp-timesheet-140="http://www.mulesoft.org/schema/mule/idp-timesheet-140"
+	xmlns:idp-timesheet-130="http://www.mulesoft.org/schema/mule/idp-timesheet-130"
 	xmlns:vm="http://www.mulesoft.org/schema/mule/vm"
 	xmlns:sharepoint="http://www.mulesoft.org/schema/mule/sharepoint"
 	xmlns:scripting="http://www.mulesoft.org/schema/mule/scripting"
 	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
 	xmlns="http://www.mulesoft.org/schema/mule/core"
 	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
-	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
 http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
 http://www.mulesoft.org/schema/mule/sharepoint http://www.mulesoft.org/schema/mule/sharepoint/current/mule-sharepoint.xsd
 http://www.mulesoft.org/schema/mule/vm http://www.mulesoft.org/schema/mule/vm/current/mule-vm.xsd
 http://www.mulesoft.org/schema/mule/scripting http://www.mulesoft.org/schema/mule/scripting/current/mule-scripting.xsd
-http://www.mulesoft.org/schema/mule/idp-timesheet-130 http://www.mulesoft.org/schema/mule/idp-timesheet-130/current/mule-idp-timesheet-130.xsd">
+http://www.mulesoft.org/schema/mule/idp-timesheet-130 http://www.mulesoft.org/schema/mule/idp-timesheet-130/current/mule-idp-timesheet-130.xsd
+http://www.mulesoft.org/schema/mule/idp-timesheet-140 http://www.mulesoft.org/schema/mule/idp-timesheet-140/current/mule-idp-timesheet-140.xsd">
 
 	<!--
 		FLOW 2 - VM Subscriber / IDP Result Poller
@@ -60,7 +61,7 @@ CustomLogMapper::logger({
 			</when>
 			<otherwise>
 				<!-- Poll IDP for the execution result -->
-				<idp-timesheet-130:getdocumentactionexecution doc:name="IDP Get Result" doc:id="b8b788e2-7c91-4d6e-b423-83ac7190154c" config-ref="IDP___Timesheet___1_3_0_Config" execution-id="#[vars.executionId]"/>
+				<idp-timesheet-140:getdocumentactionexecution doc:name="getDocumentActionExecution" doc:id="c7e3cbd3-45f7-472d-828c-b8a1ba24e833" config-ref="IDP___Timesheet___1_4_0_Config" execution-id="#[vars.executionId]"/>
 				<choice doc:name="Evaluate Status" doc:id="b2000001-000b-4002-8002-idpsubchkstatus">
 					<when expression="#[upper((payload.status default '')) == 'SUCCEEDED']">
 						<set-variable variableName="outputBaseName" value="#[((payload.documentName default vars.fileName) as String) replace /\.[^.]*$/ with '']" doc:name="outputBaseName" doc:id="b2000001-000c-4002-8002-idpsubvout" />
