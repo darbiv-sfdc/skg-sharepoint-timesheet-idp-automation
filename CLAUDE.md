@@ -46,6 +46,7 @@ Files flow through 5 folders in `IDP Root Library/Manual Uploads/`:
 - **Poison-pill deflection**: Per-file errors in the ingest flow use `on-error-continue` to prevent batch abort
 - **Timeout protection**: Poll count tracked per execution; files moved to Error after `idp.action.max_checks` (default 20)
 - **Best-effort recovery**: Failed file moves are wrapped in try/catch to avoid error handler recursion
+- **`common-error-handling` is external**: `<error-handler ref="common-error-handling" />` and the health-check flows (`health-liveness-probe`, `health-readiness-probe`) resolve from the `skg-common-error-handling` and `skg-health-check-app` Maven plugin dependencies via `<import file="common-error-handling.xml"/>` / `<import file="health-check.xml"/>` in `global.xml` — there are no local files by those names in `src/`
 
 ## Directory Structure
 
@@ -54,7 +55,7 @@ src/main/
 ├── mule/
 │   ├── api.xml                           # APIkit router + health check endpoints
 │   ├── config/global.xml                 # All connector configs + property loading
-│   ├── common/common.xml                 # Reusable error handling (imported)
+│   ├── common/common.xml                 # NOT currently imported/used — leftover template subflows (save-input/clear-input)
 │   └── implementation/
 │       ├── idp-ingest-flow.xml           # Scheduler + IDP submit flow
 │       ├── idp-subscriber-flow.xml       # VM consumer + IDP poll flow
@@ -172,7 +173,9 @@ sharepoint:
 All DataWeave modules and transforms live in `src/main/resources/dw/`
 
 ### Active Transforms
-- **`idp-result-to-csv.dwl`** - Flattens nested IDP JSON response (`timeSheetData` array) into CSV rows with headers (only DWL file in use)
+- **`idp-result-to-csv-v2.dwl`** - Currently referenced by `idp-subscriber-flow.xml`. Flattens nested IDP JSON response (`timeSheetData` array) into CSV rows with headers, and additionally splits each day's `"HHMM-HHMM"` time-range string (`monTime`..`sunTime`) into `{day}StartHH`/`{day}StartMM`/`{day}EndHH`/`{day}EndMM` columns
+- **`idp-result-to-csv.dwl`** - Original version (no HH/MM breakdown columns), kept for reference — not referenced by any flow
+- **Versioning convention**: when enhancing this transform, add a new `-vN.dwl` file and repoint the `<ee:set-payload resource="..."/>` in `idp-subscriber-flow.xml` rather than editing in place, so prior versions remain available for comparison/rollback
 
 ### Best Practices
 - Use external `.dwl` files for complex transformations (keep XML readable)
@@ -329,4 +332,5 @@ All MuleSoft components have unique `doc:id` attributes following pattern:
 - **Flag parameter**: `flag="1"` in SharePoint file-move operations enables overwrite behavior
 - **Secure properties syntax**: Encrypted values must use `![encrypted-value]` wrapper (not just base64 string)
 - **Property loading order**: `<secure-properties:config>` must be defined before connectors that reference `${secure::*}` properties in `global.xml`
+- **Committed plaintext credentials**: `src/main/resources/properties/dev-properties.yaml` currently has `anypoint.clientId`/`anypoint.clientSecret` checked in as plaintext (unlike `sharepoint.connection.keyStorePassword`, which correctly uses `${secure::*}`). Don't add further plaintext secrets there — flag it to the user rather than treating it as the pattern to follow
 - **No Salesforce connector**: This is a pure IDP + SharePoint integration app; any Salesforce references are leftover template artifacts (cleaned up as of 2026-07-23)
