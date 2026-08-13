@@ -69,7 +69,7 @@ CustomLogMapper::logger({
 						<!-- Flatten the IDP result into CSV (one row per timeSheetData line item) -->
 						<ee:transform doc:name="Flatten Result to CSV" doc:id="b2000001-000d-4002-8002-idpsubtxcsv">
 							<ee:message>
-								<ee:set-payload resource="dw/idp-result-to-csv.dwl" />
+								<ee:set-payload resource="dw/idp-result-to-csv-v2.dwl" />
 							</ee:message>
 						</ee:transform>
 
