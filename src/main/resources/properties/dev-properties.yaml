@@ -31,12 +31,15 @@ sharepoint:
         keyStoreType: "JKS"
         keyStorePassword: ${secure::sharepoint.connection.keyStorePassword}
         scope: "https://skgtechoffice.sharepoint.com/.default"
-    path:
-        source: "IDP Root Library/Manual Uploads/01-Inbound"
-        processing: "IDP Root Library/Manual Uploads/02-Processing"
-        output: "IDP Root Library/Manual Uploads/03-Output"
-        processed: "IDP Root Library/Manual Uploads/04-Processed"
-        error: "IDP Root Library/Manual Uploads/99-Error"
+    # Document libraries to process, as a JSON array string (each entry is a path relative to
+    # the site root; every library shares the same 01-Inbound.../99-Error subfolder convention)
+    libraries: '["EKN","FLEET"]'
+    folder:
+        source: "01-Inbound"
+        processing: "02-Processing"
+        output: "03-Output"
+        processed: "04-Processed"
+        error: "99-Error"
     filter:
         extension: "pdf"
 

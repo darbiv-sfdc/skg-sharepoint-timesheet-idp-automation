@@ -35,6 +35,10 @@ http://www.mulesoft.org/schema/mule/idp-timesheet-140 http://www.mulesoft.org/sc
 		<set-variable variableName="fileName" value="#[payload.fileName]" doc:name="fileName" doc:id="b2000001-0004-4002-8002-idpsubvname" />
 		<set-variable variableName="processingUrl" value="#[payload.processingUrl]" doc:name="processingUrl" doc:id="b2000001-0005-4002-8002-idpsubvproc" />
 		<set-variable variableName="pollCount" value="#[payload.pollCount default 0]" doc:name="pollCount" doc:id="b2000001-0006-4002-8002-idpsubvpoll" />
+		<set-variable variableName="documentLibrary" value="#[payload.documentLibrary]" doc:name="documentLibrary" doc:id="b2000001-0006-4002-8002-idpsubvlib0" />
+		<set-variable variableName="outputPath" value="#[payload.outputPath]" doc:name="outputPath" doc:id="b2000001-0006-4002-8002-idpsubvoutp1" />
+		<set-variable variableName="processedPath" value="#[payload.processedPath]" doc:name="processedPath" doc:id="b2000001-0006-4002-8002-idpsubvoutp2" />
+		<set-variable variableName="errorPath" value="#[payload.errorPath]" doc:name="errorPath" doc:id="b2000001-0006-4002-8002-idpsubvoutp3" />
 
 		<choice doc:name="Timeout?" doc:id="b2000001-0007-4002-8002-idpsubchktmo">
 			<when expression="#[(vars.pollCount as Number) &gt;= (p('idp.action.max_checks') as Number)]">
@@ -42,7 +46,7 @@ http://www.mulesoft.org/schema/mule/idp-timesheet-140 http://www.mulesoft.org/sc
 					message="#[%dw 2.0
 output application/json
 var status = &quot;error&quot;
-var msg = &quot;IDP Subscriber - TIMEOUT: Execution exceeded max poll attempts (&quot; ++ p('idp.action.max_checks') ++ &quot;)&quot;
+var msg = &quot;IDP Subscriber - TIMEOUT: Execution exceeded max poll attempts (&quot; ++ p('idp.action.max_checks') ++ &quot;) for file: &quot; ++ (vars.fileName default 'unknown') ++ &quot; (library: &quot; ++ (vars.documentLibrary default 'unknown') ++ &quot;)&quot;
 ---
 CustomLogMapper::logger({
 	correlationId: correlationId,
@@ -50,13 +54,13 @@ CustomLogMapper::logger({
 	mule: mule,
 	status: status,
 	message: msg,
-	(payload: {executionId: vars.executionId, fileName: vars.fileName, pollCount: vars.pollCount, maxChecks: p('idp.action.max_checks')}) if (p('log.level') == &quot;DEBUG&quot;),
+	(payload: {documentLibrary: vars.documentLibrary, executionId: vars.executionId, fileName: vars.fileName, pollCount: vars.pollCount, maxChecks: p('idp.action.max_checks')}) if (p('log.level') == &quot;DEBUG&quot;),
 	env: p('mule.env')
 })]" />
 				<sharepoint:file-move doc:name="Move to Error (Timeout)" doc:id="b2000001-0009-4002-8002-idpsubmvtmo"
 					config-ref="Sharepoint_Sharepoint_online"
 					fileServerRelativeUrl="#[vars.processingUrl]"
-					newFileServerRelativeUrl="#[p('sharepoint.site.serverRelativePath') ++ '/' ++ p('sharepoint.path.error') ++ '/' ++ vars.fileName]"
+					newFileServerRelativeUrl="#[vars.errorPath ++ '/' ++ vars.fileName]"
 					flag="1" />
 			</when>
 			<otherwise>
@@ -76,7 +80,7 @@ CustomLogMapper::logger({
 						<!-- Write the CSV to the Output folder -->
 						<sharepoint:file-add doc:name="Write CSV to Output" doc:id="b2000001-000e-4002-8002-idpsubaddcsv"
 							config-ref="Sharepoint_Sharepoint_online"
-							fileServerRelativeUrl="#[p('sharepoint.site.serverRelativePath') ++ '/' ++ p('sharepoint.path.output') ++ '/idp-results-' ++ vars.outputBaseName ++ '.csv']"
+							fileServerRelativeUrl="#[vars.outputPath ++ '/idp-results-' ++ vars.outputBaseName ++ '.csv']"
 							overwrite="true">
 							<sharepoint:file-content-stream><![CDATA[#[payload]]]></sharepoint:file-content-stream>
 						</sharepoint:file-add>
@@ -85,14 +89,14 @@ CustomLogMapper::logger({
 						<sharepoint:file-move doc:name="Move to Processed" doc:id="b2000001-000f-4002-8002-idpsubmvdone"
 							config-ref="Sharepoint_Sharepoint_online"
 							fileServerRelativeUrl="#[vars.processingUrl]"
-							newFileServerRelativeUrl="#[p('sharepoint.site.serverRelativePath') ++ '/' ++ p('sharepoint.path.processed') ++ '/' ++ vars.fileName]"
+							newFileServerRelativeUrl="#[vars.processedPath ++ '/' ++ vars.fileName]"
 							flag="1" />
 
 						<logger level="INFO" doc:name="Log Success" doc:id="b2000001-0010-4002-8002-idpsublogok"
 							message="#[%dw 2.0
 output application/json
 var status = &quot;ok&quot;
-var msg = &quot;IDP Subscriber - SUCCESS: File processed successfully and CSV written to Output folder&quot;
+var msg = &quot;IDP Subscriber - SUCCESS: File &quot; ++ vars.fileName ++ &quot; (library: &quot; ++ vars.documentLibrary ++ &quot;) processed successfully and CSV written to Output folder&quot;
 ---
 CustomLogMapper::logger({
 	correlationId: correlationId,
@@ -100,7 +104,7 @@ CustomLogMapper::logger({
 	mule: mule,
 	status: status,
 	message: msg,
-	(payload: {fileName: vars.fileName, csvFile: 'idp-results-' ++ vars.outputBaseName ++ '.csv', executionId: vars.executionId}) if (p('log.level') == &quot;DEBUG&quot;),
+	(payload: {documentLibrary: vars.documentLibrary, fileName: vars.fileName, csvFile: 'idp-results-' ++ vars.outputBaseName ++ '.csv', executionId: vars.executionId}) if (p('log.level') == &quot;DEBUG&quot;),
 	env: p('mule.env')
 })]" />
 					</when>
@@ -109,7 +113,7 @@ CustomLogMapper::logger({
 							message="#[%dw 2.0
 output application/json
 var status = &quot;error&quot;
-var msg = &quot;IDP Subscriber - FAILED: IDP reported execution status as FAILED&quot;
+var msg = &quot;IDP Subscriber - FAILED: IDP reported execution status as FAILED for file: &quot; ++ (vars.fileName default 'unknown') ++ &quot; (library: &quot; ++ (vars.documentLibrary default 'unknown') ++ &quot;)&quot;
 ---
 CustomLogMapper::logger({
 	correlationId: correlationId,
@@ -117,13 +121,13 @@ CustomLogMapper::logger({
 	mule: mule,
 	status: status,
 	message: msg,
-	(payload: {executionId: vars.executionId, fileName: vars.fileName, idpStatus: payload.status}) if (p('log.level') == &quot;DEBUG&quot;),
+	(payload: {documentLibrary: vars.documentLibrary, executionId: vars.executionId, fileName: vars.fileName, idpStatus: payload.status}) if (p('log.level') == &quot;DEBUG&quot;),
 	env: p('mule.env')
 })]" />
 						<sharepoint:file-move doc:name="Move to Error (Failed)" doc:id="b2000001-0012-4002-8002-idpsubmvfail"
 							config-ref="Sharepoint_Sharepoint_online"
 							fileServerRelativeUrl="#[vars.processingUrl]"
-							newFileServerRelativeUrl="#[p('sharepoint.site.serverRelativePath') ++ '/' ++ p('sharepoint.path.error') ++ '/' ++ vars.fileName]"
+							newFileServerRelativeUrl="#[vars.errorPath ++ '/' ++ vars.fileName]"
 							flag="1" />
 					</when>
 					<otherwise>
@@ -132,7 +136,7 @@ CustomLogMapper::logger({
 							message="#[%dw 2.0
 output application/json
 var status = &quot;ok&quot;
-var msg = &quot;IDP Subscriber - PROCESSING: Execution still in progress, requeueing for next poll cycle&quot;
+var msg = &quot;IDP Subscriber - PROCESSING: Execution still in progress for file: &quot; ++ (vars.fileName default 'unknown') ++ &quot; (library: &quot; ++ (vars.documentLibrary default 'unknown') ++ &quot;), requeueing for next poll cycle&quot;
 ---
 CustomLogMapper::logger({
 	correlationId: correlationId,
@@ -140,7 +144,7 @@ CustomLogMapper::logger({
 	mule: mule,
 	status: status,
 	message: msg,
-	(payload: {executionId: vars.executionId, fileName: vars.fileName, idpStatus: payload.status, pollCount: vars.pollCount}) if (p('log.level') == &quot;DEBUG&quot;),
+	(payload: {documentLibrary: vars.documentLibrary, executionId: vars.executionId, fileName: vars.fileName, idpStatus: payload.status, pollCount: vars.pollCount}) if (p('log.level') == &quot;DEBUG&quot;),
 	env: p('mule.env')
 })]" />
 						
@@ -156,7 +160,11 @@ output application/json
 {
 	executionId: vars.executionId,
 	fileName: vars.fileName,
+	documentLibrary: vars.documentLibrary,
 	processingUrl: vars.processingUrl,
+	outputPath: vars.outputPath,
+	processedPath: vars.processedPath,
+	errorPath: vars.errorPath,
 	pollCount: (vars.pollCount as Number) + 1
 }]]></ee:set-payload>
 							</ee:message>
@@ -174,7 +182,7 @@ output application/json
 					message="#[%dw 2.0
 output application/json
 var status = &quot;error&quot;
-var msg = &quot;IDP Subscriber - ERROR: Unexpected error in subscriber flow&quot;
+var msg = &quot;IDP Subscriber - ERROR: Unexpected error in subscriber flow for file: &quot; ++ (vars.fileName default 'unknown') ++ &quot; (library: &quot; ++ (vars.documentLibrary default 'unknown') ++ &quot;)&quot;
 ---
 CustomLogMapper::logger({
 	correlationId: correlationId,
@@ -182,14 +190,14 @@ CustomLogMapper::logger({
 	mule: mule,
 	status: status,
 	message: msg,
-	(payload: {executionId: vars.executionId, fileName: vars.fileName, errorType: error.errorType.identifier, errorDescription: error.description}) if (p('log.level') == &quot;DEBUG&quot;),
+	(payload: {documentLibrary: vars.documentLibrary, executionId: vars.executionId, fileName: vars.fileName, errorType: error.errorType.identifier, errorDescription: error.description}) if (p('log.level') == &quot;DEBUG&quot;),
 	env: p('mule.env')
 })]" />
 				<try doc:name="Best-Effort Move to Error" doc:id="b2000001-0019-4002-8002-idpsuberrtry">
 					<sharepoint:file-move doc:name="Move to Error" doc:id="b2000001-001a-4002-8002-idpsuberrmv"
 						config-ref="Sharepoint_Sharepoint_online"
 						fileServerRelativeUrl="#[vars.processingUrl]"
-						newFileServerRelativeUrl="#[p('sharepoint.site.serverRelativePath') ++ '/' ++ p('sharepoint.path.error') ++ '/' ++ vars.fileName]"
+						newFileServerRelativeUrl="#[vars.errorPath ++ '/' ++ vars.fileName]"
 						flag="1" />
 					<error-handler>
 						<on-error-continue doc:name="Ignore Move Failure" doc:id="b2000001-001b-4002-8002-idpsuberrignore" type="ANY">
@@ -197,7 +205,7 @@ CustomLogMapper::logger({
 								message="#[%dw 2.0
 output application/json
 var status = &quot;warning&quot;
-var msg = &quot;IDP Subscriber - WARNING: Could not move failed file to Error folder: &quot; ++ (vars.fileName default 'unknown')
+var msg = &quot;IDP Subscriber - WARNING: Could not move failed file to Error folder: &quot; ++ (vars.fileName default 'unknown') ++ &quot; (library: &quot; ++ (vars.documentLibrary default 'unknown') ++ &quot;)&quot;
 ---
 CustomLogMapper::logger({
 	correlationId: correlationId,
