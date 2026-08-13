@@ -35,7 +35,7 @@ Files flow through 5 folders in `IDP Root Library/Manual Uploads/`:
 
 ### Key Components
 
-- **IDP Connector** (`idp-timesheet-130`) - Custom connector for MuleSoft IDP action (version 1.3.0)
+- **IDP Connector** (`idp-timesheet-140`) - Custom connector for MuleSoft IDP action (version 1.4.0)
 - **SharePoint Connector** - OAuth2 client credentials flow with JKS keystore, file operations via server-relative URLs (all connection params externalized to properties)
 - **VM Queue** - Persistent queue (`idp-timesheet-queue`) for async execution tracking
 - **Groovy Scripting** - Sleep-based throttling in the poll loop (30s default via `vm.poll.sleepMillis`)
@@ -116,6 +116,8 @@ curl http://localhost:8081/api/v1/hello
 1. `common-properties.yaml` (shared across all environments)
 2. `${mule.env}-properties.yaml` (environment-specific)
 3. `secure/${mule.env}-secure-properties.yaml` (encrypted via secure properties module)
+
+**Note**: `*-reprocessing-properties.yaml` files exist for all environments but contain Anypoint MQ and transaction reprocessing configuration not currently used by the IDP flows. These appear to be template artifacts for future enhancements.
 
 ### Critical Properties
 
@@ -238,12 +240,12 @@ These constraints are defined in the Cursor rules and apply to all work in this 
 5. Reference error handler: `<error-handler ref="common-error-handling" />`
 
 ### Modifying IDP Integration
-- IDP connector config: `global.xml` → `IDP___Timesheet___1_3_0_Config`
-- Submit endpoint: `idp-timesheet-130:postdocumentactionexecution` (multipart/form-data upload)
-- Poll endpoint: `idp-timesheet-130:getdocumentactionexecution` (returns execution status and extracted fields)
+- IDP connector config: `global.xml` → `IDP___Timesheet___1_4_0_Config`
+- Submit endpoint: `idp-timesheet-140:postdocumentactionexecution` (multipart/form-data upload)
+- Poll endpoint: `idp-timesheet-140:getdocumentactionexecution` (returns execution status and extracted fields)
 - Action metadata controlled by `idp.action.id` and `idp.action.version` properties
 - Credentials: Uses Anypoint platform client credentials (`anypoint.clientId` and `anypoint.clientSecret`)
-- Namespace: `http://www.mulesoft.org/schema/mule/idp-timesheet-130`
+- Namespace: `http://www.mulesoft.org/schema/mule/idp-timesheet-140`
 
 ### Debugging VM Queue Issues
 - Queue persistence configured in `global.xml` → `VM_Config`

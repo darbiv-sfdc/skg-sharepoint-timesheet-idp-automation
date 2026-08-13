@@ -20,7 +20,7 @@ var headerFields = {
 var lineItems = doc.tables.timeSheetData default []
 var emptyLine = {
   projectCode: null, tradeCode: null, description: null,
-  monTime: null, tueTime: null, wedTime: null, thurTime: null,
+  monTime: null, tueTime: null, wedTime: null, thuTime: null,
   friTime: null, satTime: null, sunTime: null
 }
 ---
@@ -34,7 +34,7 @@ else
     monTime: row.monTime.value,
     tueTime: row.tueTime.value,
     wedTime: row.wedTime.value,
-    thurTime: row.thurTime.value,
+    thuTime: row.thuTime.value,
     friTime: row.friTime.value,
     satTime: row.satTime.value,
     sunTime: row.sunTime.value
