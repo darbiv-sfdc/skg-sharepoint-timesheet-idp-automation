@@ -15,18 +15,14 @@ http://www.mulesoft.org/schema/mule/idp-timesheet-130 http://www.mulesoft.org/sc
 http://www.mulesoft.org/schema/mule/idp-timesheet-140 http://www.mulesoft.org/schema/mule/idp-timesheet-140/current/mule-idp-timesheet-140.xsd">
 
 	<!--
-		SHARED SUB-FLOW - SharePoint Ingest
+		SHARED SUB-FLOW - Document Library Orchestrator
 		Invoked by both the cron scheduler (scheduler-sharepoint-ingest-flow) and the
-		on-demand HTTP trigger (trigger-ingest-flow) in api.xml. Iterates every configured
-		document library (sharepoint.libraries, sequential) and, within each, lists PDFs in
-		that library's Inbound folder. For each file:
-		  1. moves it Inbound -> Processing (isolation / idempotency)
-		  2. reads its binary content
-		  3. submits it to MuleSoft IDP (PostDocumentAction)
-		  4. publishes an async tracking message (executionId + this library's own
-		     processing/output/processed/error URLs) to the persistent VM queue, so the
-		     subscriber never needs to resolve folders by library name
-		Per-file errors are isolated so one bad file does not abort the batch (poison-pill deflection).
+		on-demand HTTP trigger (trigger-ingest-flow) in api.xml. Reads the configured list of
+		document libraries (sharepoint.libraries) and, sequentially for each one, sets
+		documentLibrary and delegates the actual scan/submit work to
+		sharepoint-ingest-single-library-subflow. Kept name-compatible with api.xml's
+		existing flow-ref - api.xml is unchanged; only what "sharepoint-ingest-subflow" does
+		under the hood has changed.
 	-->
 	<sub-flow name="sharepoint-ingest-subflow" doc:id="e578e55b-c4fb-46c8-b914-a48ddaada13f">
 
@@ -35,12 +31,33 @@ http://www.mulesoft.org/schema/mule/idp-timesheet-140 http://www.mulesoft.org/sc
 		<foreach doc:name="For Each Document Library (sequential)" doc:id="6b2d8e21-4a3c-4d7b-8e6f-2d3c4b5e6f70"
 			collection="#[vars.librariesList]" counterVariableName="libIndex">
 
-			<set-variable variableName="libraryBase" value="#[payload]" doc:name="libraryBase" doc:id="8c3e9f32-5b4d-4e8c-9f70-3e4d5c6f7081" />
+			<set-variable variableName="documentLibrary" value="#[payload]" doc:name="documentLibrary" doc:id="8c3e9f32-5b4d-4e8c-9f70-3e4d5c6f7081" />
 
-			<logger level="INFO" doc:name="Log Ingest Start" doc:id="f36a4940-cad3-458c-98e9-f09265846650" message="#[%dw 2.0
+			<flow-ref doc:name="Ingest Single Document Library" doc:id="9d4fa043-6c5e-4f9b-a081-4e5f6a7b8293" name="sharepoint-ingest-single-library-subflow" />
+
+		</foreach>
+
+	</sub-flow>
+
+	<!--
+		SHARED SUB-FLOW - Single Document Library Ingest
+		Called by sharepoint-ingest-subflow once per configured document library, with
+		vars.documentLibrary set by the caller (e.g. "EKN", "FLEET"). Lists PDFs in that
+		library's Inbound folder, and for each file:
+		  1. moves it Inbound -> Processing (isolation / idempotency)
+		  2. reads its binary content
+		  3. submits it to MuleSoft IDP (PostDocumentAction)
+		  4. publishes an async tracking message (executionId + this library's own
+		     processing/output/processed/error URLs) to the persistent VM queue, so the
+		     subscriber never needs to resolve folders by library name
+		Per-file errors are isolated so one bad file does not abort the batch (poison-pill deflection).
+	-->
+	<sub-flow name="sharepoint-ingest-single-library-subflow" doc:id="a1e5b154-7d6f-4a0c-b192-5f6a7b8c93a4">
+
+		<logger level="INFO" doc:name="Log Ingest Start" doc:id="f36a4940-cad3-458c-98e9-f09265846650" message="#[%dw 2.0
 output application/json
 var status = &quot;ok&quot;
-var msg = &quot;IDP Ingest - START - Scanning document library '&quot; ++ vars.libraryBase ++ &quot;', folder: &quot; ++ (vars.libraryBase ++ '/' ++ p('sharepoint.folder.source'))
+var msg = &quot;IDP Ingest - START - Scanning document library '&quot; ++ vars.documentLibrary ++ &quot;', folder: &quot; ++ (vars.documentLibrary ++ '/' ++ p('sharepoint.folder.source'))
 ---
 CustomLogMapper::logger({
 	correlationId: correlationId,
@@ -48,12 +65,12 @@ CustomLogMapper::logger({
 	mule: mule,
 	status: status,
 	message: msg,
-	(payload: {documentLibrary: vars.libraryBase}) if (p('log.level') == &quot;DEBUG&quot;),
+	(payload: {documentLibrary: vars.documentLibrary}) if (p('log.level') == &quot;DEBUG&quot;),
 	env: p('mule.env')
 })]" />
 
 		<sharepoint:file-query doc:name="List Inbound Files" doc:id="055cb166-720c-4237-abe2-4b9af773598a" config-ref="Sharepoint_Sharepoint_online">
-			<sharepoint:query><![CDATA[#[vars.libraryBase ++ '/' ++ p('sharepoint.folder.source') ++ '?\$select=Name,ServerRelativeUrl,Length,TimeLastModified']]]></sharepoint:query>
+			<sharepoint:query><![CDATA[#[vars.documentLibrary ++ '/' ++ p('sharepoint.folder.source') ++ '?\$select=Name,ServerRelativeUrl,Length,TimeLastModified']]]></sharepoint:query>
 		</sharepoint:file-query>
 
 		<logger level="INFO" doc:name="Log Files Found" doc:id="0657ff23-408f-4f21-88c7-397accbb3b9a" message="#[%dw 2.0
@@ -61,7 +78,7 @@ output application/json
 var fileCount = sizeOf(payload default [])
 var fileList = (payload default []) map $.Name
 var status = &quot;ok&quot;
-var msg = &quot;IDP Ingest - Files retrieved from SharePoint library '&quot; ++ vars.libraryBase ++ &quot;': &quot; ++ fileCount as String ++ &quot; files&quot;
+var msg = &quot;IDP Ingest - Files retrieved from SharePoint library '&quot; ++ vars.documentLibrary ++ &quot;': &quot; ++ fileCount as String ++ &quot; files&quot;
 ---
 CustomLogMapper::logger({
 	correlationId: correlationId,
@@ -69,7 +86,7 @@ CustomLogMapper::logger({
 	mule: mule,
 	status: status,
 	message: msg,
-	(payload: {documentLibrary: vars.libraryBase, fileCount: fileCount, files: fileList}) if (p('log.level') == &quot;DEBUG&quot;),
+	(payload: {documentLibrary: vars.documentLibrary, fileCount: fileCount, files: fileList}) if (p('log.level') == &quot;DEBUG&quot;),
 	env: p('mule.env')
 })]"/>
 		<foreach doc:name="For Each PDF (sequential)" doc:id="2bc097e8-a194-4f11-a57f-13951ca8b9fd"
@@ -77,10 +94,10 @@ CustomLogMapper::logger({
 
 			<set-variable variableName="fileName" value="#[payload.Name]" doc:name="fileName" doc:id="e69f7401-4601-4c5b-9acf-0c57fa587b53" />
 			<set-variable variableName="sourceUrl" value="#[payload.ServerRelativeUrl]" doc:name="sourceUrl" doc:id="9ed07da0-3723-4112-b592-0054b7f25202" />
-			<set-variable variableName="processingUrl" value="#[p('sharepoint.site.serverRelativePath') ++ '/' ++ vars.libraryBase ++ '/' ++ p('sharepoint.folder.processing') ++ '/' ++ vars.fileName]" doc:name="processingUrl" doc:id="d1404684-d788-4158-90c3-802a575baa0d" />
-			<set-variable variableName="outputPath" value="#[p('sharepoint.site.serverRelativePath') ++ '/' ++ vars.libraryBase ++ '/' ++ p('sharepoint.folder.output')]" doc:name="outputPath" doc:id="1d2e3f40-6c5d-4f9e-a081-4f5e6d7f8192" />
-			<set-variable variableName="processedPath" value="#[p('sharepoint.site.serverRelativePath') ++ '/' ++ vars.libraryBase ++ '/' ++ p('sharepoint.folder.processed')]" doc:name="processedPath" doc:id="2e3f4051-7d6e-4f0f-b192-5f6e7d8fa2a3" />
-			<set-variable variableName="errorPath" value="#[p('sharepoint.site.serverRelativePath') ++ '/' ++ vars.libraryBase ++ '/' ++ p('sharepoint.folder.error')]" doc:name="errorPath" doc:id="3f405162-8e7f-4051-c2a3-607f8e90b3b4" />
+			<set-variable variableName="processingUrl" value="#[p('sharepoint.site.serverRelativePath') ++ '/' ++ vars.documentLibrary ++ '/' ++ p('sharepoint.folder.processing') ++ '/' ++ vars.fileName]" doc:name="processingUrl" doc:id="d1404684-d788-4158-90c3-802a575baa0d" />
+			<set-variable variableName="outputPath" value="#[p('sharepoint.site.serverRelativePath') ++ '/' ++ vars.documentLibrary ++ '/' ++ p('sharepoint.folder.output')]" doc:name="outputPath" doc:id="1d2e3f40-6c5d-4f9e-a081-4f5e6d7f8192" />
+			<set-variable variableName="processedPath" value="#[p('sharepoint.site.serverRelativePath') ++ '/' ++ vars.documentLibrary ++ '/' ++ p('sharepoint.folder.processed')]" doc:name="processedPath" doc:id="2e3f4051-7d6e-4f0f-b192-5f6e7d8fa2a3" />
+			<set-variable variableName="errorPath" value="#[p('sharepoint.site.serverRelativePath') ++ '/' ++ vars.documentLibrary ++ '/' ++ p('sharepoint.folder.error')]" doc:name="errorPath" doc:id="3f405162-8e7f-4051-c2a3-607f8e90b3b4" />
 
 			<try doc:name="Isolate Per-File Errors" doc:id="84de60b3-c60c-48f1-bf85-0ed8bee6eb9a">
 				<!-- 1. Move Inbound -> Processing -->
@@ -127,7 +144,7 @@ output application/json
 {
 	executionId: vars.executionId,
 	fileName: vars.fileName,
-	documentLibrary: vars.libraryBase,
+	documentLibrary: vars.documentLibrary,
 	processingUrl: vars.processingUrl,
 	outputPath: vars.outputPath,
 	processedPath: vars.processedPath,
@@ -143,7 +160,7 @@ output application/json
 				<logger level="INFO" doc:name="Log Submitted" doc:id="2c45f58f-eba1-4acd-9cac-a16162bfe53f" message="#[%dw 2.0
 output application/json
 var status = &quot;ok&quot;
-var msg = &quot;IDP Ingest - File submitted to IDP successfully: &quot; ++ vars.fileName ++ &quot; (library: &quot; ++ vars.libraryBase ++ &quot;)&quot;
+var msg = &quot;IDP Ingest - File submitted to IDP successfully: &quot; ++ vars.fileName ++ &quot; (library: &quot; ++ vars.documentLibrary ++ &quot;)&quot;
 ---
 CustomLogMapper::logger({
 	correlationId: correlationId,
@@ -151,7 +168,7 @@ CustomLogMapper::logger({
 	mule: mule,
 	status: status,
 	message: msg,
-	(payload: {documentLibrary: vars.libraryBase, fileName: vars.fileName, executionId: vars.executionId, processingUrl: vars.processingUrl}) if (p('log.level') == &quot;DEBUG&quot;),
+	(payload: {documentLibrary: vars.documentLibrary, fileName: vars.fileName, executionId: vars.executionId, processingUrl: vars.processingUrl}) if (p('log.level') == &quot;DEBUG&quot;),
 	env: p('mule.env')
 })]" />
 
@@ -160,7 +177,7 @@ CustomLogMapper::logger({
 						<logger level="ERROR" doc:name="Log Ingest Failure" doc:id="4ac6afda-f370-40fa-9ead-977125ac687c" message="#[%dw 2.0
 output application/json
 var status = &quot;error&quot;
-var msg = &quot;IDP Ingest - FAILED to process file: &quot; ++ (vars.fileName default 'unknown') ++ &quot; (library: &quot; ++ (vars.libraryBase default 'unknown') ++ &quot;)&quot;
+var msg = &quot;IDP Ingest - FAILED to process file: &quot; ++ (vars.fileName default 'unknown') ++ &quot; (library: &quot; ++ (vars.documentLibrary default 'unknown') ++ &quot;)&quot;
 ---
 CustomLogMapper::logger({
 	correlationId: correlationId,
@@ -168,7 +185,7 @@ CustomLogMapper::logger({
 	mule: mule,
 	status: status,
 	message: msg,
-	(payload: {documentLibrary: vars.libraryBase, fileName: vars.fileName, errorType: error.errorType.identifier, errorDescription: error.description}) if (p('log.level') == &quot;DEBUG&quot;),
+	(payload: {documentLibrary: vars.documentLibrary, fileName: vars.fileName, errorType: error.errorType.identifier, errorDescription: error.description}) if (p('log.level') == &quot;DEBUG&quot;),
 	env: p('mule.env')
 })]" />
 						<!-- Best-effort move to Error folder; source may be in Inbound or Processing depending on where it failed -->
@@ -183,7 +200,7 @@ CustomLogMapper::logger({
 									<logger level="WARN" doc:name="Log Move-to-Error Failure" doc:id="8c6ecd08-0a06-4631-9483-e13328a1ac3b" message="#[%dw 2.0
 output application/json
 var status = &quot;warning&quot;
-var msg = &quot;IDP Ingest - WARNING: Could not move failed file to Error folder: &quot; ++ (vars.fileName default 'unknown') ++ &quot; (library: &quot; ++ (vars.libraryBase default 'unknown') ++ &quot;)&quot;
+var msg = &quot;IDP Ingest - WARNING: Could not move failed file to Error folder: &quot; ++ (vars.fileName default 'unknown') ++ &quot; (library: &quot; ++ (vars.documentLibrary default 'unknown') ++ &quot;)&quot;
 ---
 CustomLogMapper::logger({
 	correlationId: correlationId,
@@ -200,8 +217,6 @@ CustomLogMapper::logger({
 				</error-handler>
 			</try>
 		</foreach>
-		</foreach>
-
 
 	</sub-flow>
 </mule>
