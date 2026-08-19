@@ -8,7 +8,21 @@
       "Bash(mvn dependency:tree)",
       "Bash(mvn clean *)",
       "Bash(git check-ignore *)",
-      "Bash(xargs -I{} sh -c 'echo ==={}===; cat {}')"
+      "Bash(xargs -I{} sh -c 'echo ==={}===; cat {}')",
+      "Bash(xargs -I{} basename {})",
+      "Bash(javap -p com/mulesoft/connectors/sharepoint/internal/extension/SharepointOperations.class)",
+      "Bash(java -version)",
+      "Bash(javap -p com/mulesoft/connectors/sharepoint/internal/operation/SharepointOperations.class)",
+      "Bash(javap -p -c com/mulesoft/connectors/sharepoint/internal/service/OnlineSharepointService.class)",
+      "Bash(javap -p -c com/mulesoft/connectors/sharepoint/internal/service/rest/OnlineSharepointService.class)",
+      "Bash(grep -a -o \"[A-Za-z0-9_/'{}\\(\\)%.-]\\\\{4,\\\\}\" com/mulesoft/connectors/sharepoint/internal/service/rest/OnlineSharepointService.class)",
+      "Bash(echo \"exit:$?\")",
+      "Bash(javap -p com/mulesoft/connectors/sharepoint/internal/service/utils/ODataHelper.class)",
+      "Bash(javap -p com/mulesoft/connectors/sharepoint/internal/ODataHelper.class)",
+      "Bash(javap -p com/mulesoft/connectors/sharepoint/internal/utils/ODataHelper.class)",
+      "Bash(javap -p com/mulesoft/connectors/sharepoint/internal/SharepointUtils.class)",
+      "Bash(javap -p com/mulesoft/connectors/sharepoint/internal/service/rest/OnlineSharepointService.class)",
+      "Bash(javap -p com/mulesoft/connectors/sharepoint/internal/service/rest/OnpremiseSharepointService.class)"
     ]
   }
 }

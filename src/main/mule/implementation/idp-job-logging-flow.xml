@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:sharepoint="http://www.mulesoft.org/schema/mule/sharepoint"
+	xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/sharepoint http://www.mulesoft.org/schema/mule/sharepoint/current/mule-sharepoint.xsd">
+
+	<!--
+		SHARED SUB-FLOW - Job Log Writer
+		Called once per document-library run by sharepoint-ingest-single-library-subflow (always,
+		whether that run succeeded, partially failed, or failed catastrophically), with these vars
+		already set by the caller:
+		  documentLibrary, executionType (Scheduled/Manual), processedFiles (array), errorDetails (array),
+		  libraryStatus/libraryFailureReason (set only on a catastrophic library-level failure, e.g. the
+		  Inbound folder listing itself throwing - bypasses the normal per-file counts below)
+		Writes one row to the SharePoint list configured via sharepoint.jobLogList.title.
+		Reflects IDP SUBMISSION outcomes only (files moved/read/accepted by IDP) - final extraction
+		success/failure is async and only visible in subscriber-vm-idp-result-flow's own logs.
+		Best-effort: a logging failure must never fail the ingest run, so this is wrapped in its own
+		error boundary and only WARN-logged on failure.
+	-->
+	<sub-flow name="write-job-log-subflow" doc:id="c2000001-0001-4003-9003-writejoblog01">
+
+		<try doc:name="Best-Effort Write Job Log" doc:id="c2000001-0002-4003-9003-writejoblog02">
+			<sharepoint:list-item-create doc:name="Create Job Log Item" doc:id="c2000001-0003-4003-9003-writejoblog03"
+				config-ref="Sharepoint_Sharepoint_online" listId='${sharepoint.jobLogList.listId}'>
+				<sharepoint:properties><![CDATA[#[%dw 2.0
+output application/java
+var processedFiles = vars.processedFiles default []
+var errorDetails = vars.errorDetails default []
+var processedCount = sizeOf(processedFiles)
+var errorCount = sizeOf(errorDetails)
+var computedStatus = if (errorCount == 0) 'Success' else if (processedCount > 0) 'Partial Success' else 'Failed'
+var status = vars.libraryStatus default computedStatus
+var detailsText = if (vars.libraryStatus == 'Failed' and vars.libraryFailureReason != null)
+		'Library-level failure: ' ++ (vars.libraryFailureReason as String)
+	else
+		(
+			(if (processedCount > 0) ['Processed: ' ++ (processedFiles joinBy ', ')] else [])
+			++
+			(if (errorCount > 0) ['Errors: ' ++ (errorDetails joinBy '; ')] else [])
+		) joinBy '\n'
+---
+{
+	Title: vars.documentLibrary ++ '_' ++ (now() as String {format: "yyyy-MM-dd'T'HH:mm:ss"}),
+	ExecutionTime: now() as String {format: "yyyy-MM-dd'T'HH:mm:ss"},
+	SourceFolder: vars.documentLibrary as String,
+	ExecutionType: vars.executionType default 'Manual',
+	FilesProcessed: processedCount as String,
+	ErrorCount: errorCount as String,
+	Status: status,
+	Details: if (isEmpty(detailsText)) 'No files found' else detailsText
+}]]]></sharepoint:properties>
+			</sharepoint:list-item-create>
+
+			<error-handler>
+				<on-error-continue enableNotifications="true" logException="true" doc:name="Ignore Job Log Failure" doc:id="c2000001-0004-4003-9003-writejoblog04" type="ANY">
+					<logger level="WARN" doc:name="Log Job Log Write Failure" doc:id="c2000001-0005-4003-9003-writejoblog05" message="#[%dw 2.0
+output application/json
+var status = &quot;warning&quot;
+var msg = &quot;IDP Job Log - WARNING: Could not write job log entry to SharePoint list for library: &quot; ++ (vars.documentLibrary default 'unknown')
+---
+CustomLogMapper::logger({
+	correlationId: correlationId,
+	app: app,
+	mule: mule,
+	status: status,
+	message: msg,
+	(payload: {documentLibrary: vars.documentLibrary, errorType: error.errorType.identifier, errorDescription: error.description}) if (p('log.level') == &quot;DEBUG&quot;),
+	env: p('mule.env')
+})]" />
+				</on-error-continue>
+			</error-handler>
+		</try>
+
+	</sub-flow>
+</mule>

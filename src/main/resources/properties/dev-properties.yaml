@@ -42,6 +42,10 @@ sharepoint:
         error: "99-Error"
     filter:
         extension: "pdf"
+    # SharePoint list that receives one row per document-library run (see idp-job-logging-flow.xml)
+    jobLogList:
+        title: "Mule IDP Job Logs"
+        listId: "89ac4892-b04b-41be-a251-f30603af4dad"
 
 #Scheduler
 scheduler:

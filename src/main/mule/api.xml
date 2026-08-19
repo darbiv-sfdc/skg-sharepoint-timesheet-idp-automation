@@ -57,6 +57,7 @@ output application/json
 } as Object {encoding: "UTF-8", mediaType: "application/json"}]]></ee:set-payload>
 			</ee:message>
 		</ee:transform>
+		<set-variable value="Manual" doc:name="executionType" doc:id="b3f1c2d4-5e6f-4a7b-8c9d-0e1f2a3b4c5d" variableName="executionType"/>
 		<flow-ref doc:name="Flow Reference" doc:id="a5370e25-eda2-4ff6-8df6-0161cdca0816" name="sharepoint-ingest-subflow"/>
 	</flow>
     <flow name="scheduler-sharepoint-ingest-flow" initialState="${scheduler.initialState}" doc:id="f9fc3531-dce2-41de-8924-9f97074d6a66" >
@@ -78,6 +79,7 @@ output application/json
 } as Object {encoding: "UTF-8", mediaType: "application/json"}]]></ee:set-payload>
 			</ee:message>
 		</ee:transform>
+		<set-variable value="Scheduled" doc:name="executionType" doc:id="a1b2c3d4-5e6f-4a7b-8c9d-0e1f2a3b4c5e" variableName="executionType"/>
 		<flow-ref doc:name="Flow Reference" doc:id="0708eb4e-8222-4934-b9c9-ef0e8488821a" name="sharepoint-ingest-subflow" />
 	</flow>
 	<flow name="get:\hello:api-config">

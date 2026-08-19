@@ -47,6 +47,22 @@ Folder URLs are computed at runtime as `{sharepoint.site.serverRelativePath}/{li
 - **Groovy Scripting** - Sleep-based throttling in the poll loop (30s default via `vm.poll.sleepMillis`)
 - **Secure Properties Module** - Encrypts sensitive credentials (SharePoint keystore password) using `![...]` wrapper syntax
 
+### Job Logging (SharePoint list)
+
+`sharepoint-ingest-single-library-subflow` writes one row per document-library run to a SharePoint list (`sharepoint.jobLogList.title` = `"Mule IDP Job Logs"`, a display name kept only for reference/logging) via `write-job-log-subflow` in `idp-job-logging-flow.xml`, using the `sharepoint:list-item-create` operation.
+
+- **`listId` must be the list's GUID (`sharepoint.jobLogList.listId`), not its title**: the SharePoint connector's metadata-lookup GETs (fields, `ListItemEntityTypeFullName`) correctly URL-encode a title's spaces as `%20`, but the actual item-creation `POST .../lists/getbytitle('...')/Items` call encodes spaces as `+` instead - SharePoint's REST API takes that literally and 404s (`List 'Mule+IDP+Job+Logs' does not exist`) for any title containing spaces. Using the GUID (`_api/web/lists(guid'...')/Items`) sidesteps the encoding mismatch entirely. Get the GUID from the list's *List settings* page URL (`List=%7B<guid>%7D`) in the browser.
+- **Every column value must be sent as the exact EDM type the SharePoint column expects**, or the create call fails with `400 InvalidClientQueryException: Cannot convert a primitive value to the expected type 'Edm.X'`:
+  - `ExecutionTime` must be cast with `as String {format: ...}` (same as `Title`) - leaving it as a bare DataWeave `now()` passes a raw `java.time.ZonedDateTime` through `output application/java`, which the connector's Jackson mapper can't serialize (`jackson-datatype-jsr310` not registered) - fails before the HTTP call is even made.
+  - `FilesProcessed`/`ErrorCount` must be cast `as String` - these list columns are "Single line of text", not Number, so sending the raw DataWeave numbers from `sizeOf(...)` trips the `Edm.String` conversion error above, this time from SharePoint itself (after the HTTP call is made).
+- **Columns**: `Title` (`<documentLibrary>_<yyyy-MM-ddTHH:mm:ss>`), `ExecutionTime`, `SourceFolder` (documentLibrary), `ExecutionType` (`Scheduled`/`Manual`), `FilesProcessed`, `ErrorCount`, `Status` (`Success`/`Partial Success`/`Failed`), `Details` (file names / error messages)
+- **`ExecutionType`** is set once, per entry point, in `api.xml` (`trigger-ingest-flow` → `"Manual"`, `scheduler-sharepoint-ingest-flow` → `"Scheduled"`) before the `flow-ref` into `sharepoint-ingest-subflow`, and carried through the whole call chain via shared sub-flow variable scope (same mechanism as `documentLibrary`)
+- **Counts are derived from two vars reset at the top of `sharepoint-ingest-single-library-subflow` each run**: `vars.processedFiles` (array, appended on each successful per-file submission) and `vars.errorDetails` (array of `"<fileName> (<error>)"`, appended in the existing per-file `on-error-continue`) - `FilesProcessed`/`ErrorCount` are `sizeOf(...)` of these, not separate counters, so they can never drift out of sync with the arrays used to build `Details`
+- **Library-level failures** (e.g. the Inbound folder listing itself throws, before any per-file work starts) are caught by an outer `try`/`on-error-continue` (`"Isolate Library-Level Errors"`) wrapping the whole body of `sharepoint-ingest-single-library-subflow`, which sets `vars.libraryStatus='Failed'` + `vars.libraryFailureReason` - this both logs a `Failed` row for that library **and** stops that failure from propagating up into `sharepoint-ingest-subflow`'s outer `foreach`, so other libraries still get processed. `write-job-log-subflow` always runs exactly once at the end of the sub-flow, using `vars.libraryStatus` if the outer handler set it, otherwise computing status from the processed/error counts.
+- **Zero files in Inbound** still produces a row (`FilesProcessed=0`, `ErrorCount=0`, `Status=Success`, `Details="No files found"`) - this is a deliberate heartbeat, not a bug
+- **Important limitation**: this log reflects IDP **submission** outcomes only - i.e. files successfully moved/read/accepted by `postdocumentactionexecution`. It does *not* reflect final IDP extraction success/failure, which is only known later, asynchronously, per file, in `subscriber-vm-idp-result-flow` (via the persistent VM queue). Cross-reference `executionId`/`fileName` between the two flows' log lines if you need the true end-to-end outcome of a specific file.
+- The list write itself is best-effort (`try`/`on-error-continue` in `write-job-log-subflow`) - a SharePoint list outage must never fail the ingest run.
+
 ### Error Handling
 
 - **Poison-pill deflection**: Per-file errors in `sharepoint-ingest-single-library-subflow` use `on-error-continue` to prevent one bad file from aborting the batch — including files in *other* libraries still to be processed by `sharepoint-ingest-subflow`'s outer loop
@@ -65,6 +81,7 @@ src/main/
 │   └── implementation/
 │       ├── idp-ingest-flow.xml           # sharepoint-ingest-subflow (per-library orchestrator) + sharepoint-ingest-single-library-subflow (worker)
 │       ├── idp-subscriber-flow.xml       # VM consumer + IDP poll flow
+│       ├── idp-job-logging-flow.xml      # write-job-log-subflow - writes one row per library-run to the SharePoint job-log list
 │       └── skg-sharepoint-example.xml    # Example/template flow
 └── resources/
     ├── properties/
@@ -166,6 +183,12 @@ sharepoint:
     error: "99-Error"
   filter:
     extension: "pdf"
+  # SharePoint list receiving one row per document-library run (see "Job Logging" above)
+  # title is a display name only (kept for reference/logging) - the flow writes using listId (GUID),
+  # since the title-based lookup mis-encodes spaces on the item-create call (see "Job Logging" above)
+  jobLogList:
+    title: "Mule IDP Job Logs"
+    listId: "89ac4892-b04b-41be-a251-f30603af4dad"
 ```
 
 **SharePoint Secure Properties** (`secure/dev-secure-properties.yaml`):
@@ -336,6 +359,7 @@ CustomLogMapper::logger({
 - Execution tracking: `executionId`, `fileName`, `documentLibrary`, `processingUrl`, `pollCount`
 - File operations: `sourceUrl`, `processingUrl`, `outputPath`, `processedPath`, `errorPath`, `outputBaseName`
 - Correlation: `correlationId` (set from header `x-correlation-id` or auto-generated)
+- Job logging: `executionType` (`Scheduled`/`Manual`, set once in `api.xml`), `processedFiles`/`errorDetails` (arrays reset per library run in `sharepoint-ingest-single-library-subflow`), `libraryStatus`/`libraryFailureReason` (set only on a library-level catastrophic failure)
 
 ### Error Messages
 - Include context: operation, file name, document library, execution ID

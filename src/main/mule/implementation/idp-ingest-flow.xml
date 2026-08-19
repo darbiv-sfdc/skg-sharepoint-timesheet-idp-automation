@@ -54,6 +54,13 @@ http://www.mulesoft.org/schema/mule/idp-timesheet-140 http://www.mulesoft.org/sc
 	-->
 	<sub-flow name="sharepoint-ingest-single-library-subflow" doc:id="a1e5b154-7d6f-4a0c-b192-5f6a7b8c93a4">
 
+		<!-- Reset per-library job-log tracking state (this sub-flow is invoked once per configured library, per run) -->
+		<set-variable variableName="processedFiles" value="#[[]]" doc:name="Reset processedFiles" doc:id="d5e1f203-8a4b-4c9d-9e6f-1a2b3c4d5e01" />
+		<set-variable variableName="errorDetails" value="#[[]]" doc:name="Reset errorDetails" doc:id="d5e1f203-8a4b-4c9d-9e6f-1a2b3c4d5e02" />
+		<set-variable variableName="libraryStatus" value="#[null]" doc:name="Reset libraryStatus" doc:id="d5e1f203-8a4b-4c9d-9e6f-1a2b3c4d5e03" />
+		<set-variable variableName="libraryFailureReason" value="#[null]" doc:name="Reset libraryFailureReason" doc:id="d5e1f203-8a4b-4c9d-9e6f-1a2b3c4d5e04" />
+
+		<try doc:name="Isolate Library-Level Errors" doc:id="d5e1f203-8a4b-4c9d-9e6f-1a2b3c4d5e05">
 		<logger level="INFO" doc:name="Log Ingest Start" doc:id="f36a4940-cad3-458c-98e9-f09265846650" message="#[%dw 2.0
 output application/json
 var status = &quot;ok&quot;
@@ -172,8 +179,11 @@ CustomLogMapper::logger({
 	env: p('mule.env')
 })]" />
 
+				<set-variable variableName="processedFiles" value="#[(vars.processedFiles default []) ++ [vars.fileName]]" doc:name="Track Processed File" doc:id="d5e1f203-8a4b-4c9d-9e6f-1a2b3c4d5e11" />
+
 				<error-handler>
 					<on-error-continue enableNotifications="true" logException="true" doc:name="Deflect Failed File" doc:id="14f7dc87-b25e-4a06-beb5-a6571603185d" type="ANY">
+						<set-variable variableName="errorDetails" value="#[(vars.errorDetails default []) ++ [(vars.fileName default 'unknown') ++ ' (' ++ (error.description default 'unknown error') ++ ')']]" doc:name="Track Error Detail" doc:id="d5e1f203-8a4b-4c9d-9e6f-1a2b3c4d5e12" />
 						<logger level="ERROR" doc:name="Log Ingest Failure" doc:id="4ac6afda-f370-40fa-9ead-977125ac687c" message="#[%dw 2.0
 output application/json
 var status = &quot;error&quot;
@@ -217,6 +227,32 @@ CustomLogMapper::logger({
 				</error-handler>
 			</try>
 		</foreach>
+
+			<error-handler>
+				<on-error-continue enableNotifications="true" logException="true" doc:name="Deflect Library-Level Failure" doc:id="d5e1f203-8a4b-4c9d-9e6f-1a2b3c4d5e06" type="ANY">
+					<logger level="ERROR" doc:name="Log Library-Level Failure" doc:id="d5e1f203-8a4b-4c9d-9e6f-1a2b3c4d5e07" message="#[%dw 2.0
+output application/json
+var status = &quot;error&quot;
+var msg = &quot;IDP Ingest - FAILED: Library-level error before/during file listing for library: &quot; ++ (vars.documentLibrary default 'unknown') ++ &quot; - other libraries will still be processed&quot;
+---
+CustomLogMapper::logger({
+	correlationId: correlationId,
+	app: app,
+	mule: mule,
+	status: status,
+	message: msg,
+	(payload: {documentLibrary: vars.documentLibrary, errorType: error.errorType.identifier, errorDescription: error.description}) if (p('log.level') == &quot;DEBUG&quot;),
+	env: p('mule.env')
+})]" />
+					<set-variable variableName="libraryStatus" value="#['Failed']" doc:name="Set libraryStatus" doc:id="d5e1f203-8a4b-4c9d-9e6f-1a2b3c4d5e08" />
+					<set-variable variableName="libraryFailureReason" value="#[error.description]" doc:name="Set libraryFailureReason" doc:id="d5e1f203-8a4b-4c9d-9e6f-1a2b3c4d5e09" />
+				</on-error-continue>
+			</error-handler>
+		</try>
+
+		<!-- Always write one job-log row for this library's run, whether it completed normally (status derived
+		     from processedFiles/errorDetails counts) or failed catastrophically above (libraryStatus='Failed') -->
+		<flow-ref doc:name="Write Job Log" doc:id="d5e1f203-8a4b-4c9d-9e6f-1a2b3c4d5e10" name="write-job-log-subflow" />
 
 	</sub-flow>
 </mule>
