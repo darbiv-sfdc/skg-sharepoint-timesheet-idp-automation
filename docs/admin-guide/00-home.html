@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head><title>Timesheet Automation - Administrator Guide</title></head>
+<body>
+
+<h1>Timesheet Automation &ndash; Administrator Guide</h1>
+
+<p>This guide explains how the Timesheet Automation application works, how to operate it day to day, and how to
+extend it when the organization needs a new document library. It is written for administrators who manage the
+SharePoint site and document libraries used by the application &ndash; no coding knowledge is required to follow it.</p>
+
+<p>The application automatically picks up timesheet PDF files uploaded to SharePoint, sends them to an
+Intelligent Document Processing (IDP) service for data extraction, and writes the results back into SharePoint
+&ndash; without anyone having to manually open or process each PDF.</p>
+
+<h2>Guide Contents</h2>
+
+<table>
+<tr><th>#</th><th>Page</th><th>What it covers</th></tr>
+<tr><td>1</td><td><a href="#">What the Application Does</a></td><td>The end-to-end flow, in plain language</td></tr>
+<tr><td>2</td><td><a href="#">Document Library &amp; Folder Structure</a></td><td>The five folders every library uses, and what each one means</td></tr>
+<tr><td>3</td><td><a href="#">Classifying Timesheet PDFs</a></td><td>The PDF Type, Site, and Week No. columns &ndash; what they're for and how to use them</td></tr>
+<tr><td>4</td><td><a href="#">Triggering the Ingest</a></td><td>How and when files actually get picked up and processed</td></tr>
+<tr><td>5</td><td><a href="#">Job Logs</a></td><td>Reading the "Mule IDP Job Logs" list to see what happened on each run</td></tr>
+<tr><td>6</td><td><a href="#">Adding or Removing a Document Library</a></td><td>Step-by-step runbook for onboarding a new business unit/site</td></tr>
+<tr><td>7</td><td><a href="#">Configuration Reference</a></td><td>Where settings live and who can change them</td></tr>
+<tr><td>8</td><td><a href="#">Permissions &amp; Access</a></td><td>What access the automation needs, and what access people need</td></tr>
+<tr><td>9</td><td><a href="#">Troubleshooting &amp; FAQ</a></td><td>Common questions and what to do when something looks wrong</td></tr>
+</table>
+
+<p><em>Note to whoever is publishing this guide: replace the links above with the real SharePoint page URLs once
+each page has been created as its own Site Page.</em></p>
+
+<h2>Who this guide is for</h2>
+
+<p>This guide is aimed at the people who manage the SharePoint libraries the application watches &ndash; typically
+site administrators or team leads responsible for uploading timesheets and reviewing results. A few tasks
+(changing configuration files, redeploying the application) require a developer or platform engineer; those are
+called out clearly wherever they come up.</p>
+
+</body>
+</html>

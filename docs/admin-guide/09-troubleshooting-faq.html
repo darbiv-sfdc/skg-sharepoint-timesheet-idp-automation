@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head><title>Troubleshooting &amp; FAQ</title></head>
+<body>
+
+<p><a href="#">&laquo; Back to Guide Home</a></p>
+
+<h1>Troubleshooting &amp; FAQ</h1>
+
+<h2>"I uploaded a PDF, but it doesn't seem to have been picked up"</h2>
+<ul>
+<li>Check the file is actually a <strong>.pdf</strong> and was uploaded directly into <strong>01-Inbound</strong> (not a subfolder).</li>
+<li>Check <a href="#">Job Logs</a> for a recent run on that library &ndash; if the most recent run happened before you
+uploaded, it just hasn't run again yet. Trigger a manual run, or wait for the next scheduled one (see
+<a href="#">Triggering the Ingest</a>).</li>
+<li>Check whether the file is now sitting in <strong>02-Processing</strong>, <strong>04-Processed</strong>, or <strong>99-Error</strong> &ndash; it may
+already have been picked up and moved.</li>
+</ul>
+
+<h2>"A file is stuck in 02-Processing"</h2>
+<p>This usually means a run was interrupted partway through. Check the <a href="#">Job Logs</a> entry for that
+library and time &ndash; if the <strong>Status</strong> is <strong>Failed</strong>, see the <strong>Details</strong> column for the reason. If it stays
+stuck after the next run, contact your development team rather than moving the file yourself.</p>
+
+<h2>"A file ended up in 99-Error"</h2>
+<p>This means the file either failed data extraction or timed out waiting for a result. Review the file to
+check it's a valid, readable timesheet PDF. Once you've addressed the issue (or if you believe it was a
+temporary problem), move the file back into <strong>01-Inbound</strong> and it will be picked up and retried on the next
+run.</p>
+
+<h2>"The Job Logs list shows Status: Failed"</h2>
+<p>This means the run for that library couldn't even start (e.g. a temporary SharePoint connectivity issue) &ndash;
+no files were processed at all, not even ones that would otherwise have succeeded. Check the <strong>Details</strong>
+column for the reason. If it happens repeatedly, contact your development/platform team.</p>
+
+<h2>"The Job Logs list shows Status: Partial Success"</h2>
+<p>Some files in that run succeeded and at least one failed. Check <strong>Details</strong> for which file(s) failed and
+why; the failed file(s) will be in <strong>99-Error</strong>. The successful ones are unaffected and will already be in
+<strong>03-Output</strong>/<strong>04-Processed</strong>.</p>
+
+<h2>"Does the application use my PDF Type / Site / Week No. values?"</h2>
+<p>No. Those columns are purely for your own organization and filtering of the document library &ndash; the
+application doesn't read them and processes files regardless of whether they're filled in. See
+<a href="#">Classifying Timesheet PDFs</a>.</p>
+
+<h2>"How often does it run automatically?"</h2>
+<p>This depends on your environment's configuration and may not be the same everywhere. Check with your
+development/platform team, or judge it from the timestamps in the <a href="#">Job Logs</a> list.</p>
+
+<h2>"I dropped a non-PDF file in 01-Inbound by mistake"</h2>
+<p>It's simply ignored &ndash; only files ending in <strong>.pdf</strong> are picked up. You can safely remove it.</p>
+
+<h2>"A row in Job Logs shows FilesProcessed = 0 and Details: No files found &ndash; is that a bug?"</h2>
+<p>No &ndash; this is expected and just confirms the run happened while that library's <strong>01-Inbound</strong> was empty.</p>
+
+</body>
+</html>

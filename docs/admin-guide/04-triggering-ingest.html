@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head><title>Triggering the Ingest</title></head>
+<body>
+
+<p><a href="#">&laquo; Back to Guide Home</a></p>
+
+<h1>Triggering the Ingest</h1>
+
+<p>There are two ways files get picked up from <strong>01-Inbound</strong> and processed: an automatic schedule, and a
+manual trigger. Both run the exact same process across every configured document library &ndash; the only
+difference is what starts it.</p>
+
+<h2>Automatic (scheduled) runs</h2>
+
+<p>The application can run on a recurring schedule (by default, hourly) without anyone doing anything. On each
+scheduled run, it works through every configured document library in turn, checking each one's <strong>01-Inbound</strong>
+folder for new PDFs.</p>
+
+<p>Whether the schedule is currently turned on, and exactly how often it runs, is an environment-specific
+setting controlled by the platform/development team. If you're not sure whether the schedule is active in your
+environment, ask them, or use the <a href="#">Job Logs</a> list &ndash; every run, scheduled or manual, adds an entry
+there, so you can see from the timestamps whether scheduled runs are happening.</p>
+
+<h2>Manual trigger</h2>
+
+<p>The application also exposes a manual trigger that runs the same process on demand, without waiting for the
+next scheduled run. This is useful when:</p>
+
+<ul>
+<li>You've just uploaded files and don't want to wait for the next scheduled run</li>
+<li>You're testing that everything is configured correctly after a change</li>
+<li>The scheduled run is turned off in your environment (e.g. during initial setup)</li>
+</ul>
+
+<p>Triggering it requires calling a specific URL for your environment (ask your development/platform team for
+the exact address, as this differs between environments). Calling it starts a full run across every configured
+library, exactly like a scheduled run would.</p>
+
+<h2>How to tell a run actually happened</h2>
+
+<p>After triggering &ndash; manually or on schedule &ndash; check the <a href="#">Job Logs</a> list. A new row will appear for
+each document library, with a timestamp, so you can confirm the run took place and see the outcome at a glance.</p>
+
+</body>
+</html>

@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head><title>Adding or Removing a Document Library</title></head>
+<body>
+
+<p><a href="#">&laquo; Back to Guide Home</a></p>
+
+<h1>Adding or Removing a Document Library</h1>
+
+<p>When a new business unit or site needs to start using the application, a new document library needs to be
+set up in SharePoint and then registered with the application. This is a joint task &ndash; some steps are yours,
+and one step needs your development/platform team.</p>
+
+<h2>Step-by-step</h2>
+
+<ol>
+<li><strong>Create the document library.</strong> In SharePoint, create a new document library named after the new
+business unit or site (e.g. matching the style of existing libraries like <strong>EKN</strong> or <strong>FLEET</strong>).</li>
+<li><strong>Create the five standard folders inside it</strong>, using the exact same names as every other library:
+<strong>01-Inbound</strong>, <strong>02-Processing</strong>, <strong>03-Output</strong>, <strong>04-Processed</strong>, <strong>99-Error</strong>. See
+<a href="#">Document Library &amp; Folder Structure</a> for what each one is for. The names must match exactly &ndash; the
+application looks for these folders by name.</li>
+<li><strong>(Recommended)</strong> Add the same classification columns used elsewhere &ndash; <strong>PDF Type</strong>, <strong>Site</strong>,
+<strong>Week No.</strong> &ndash; if you want the new library to be filterable the same way. See
+<a href="#">Classifying Timesheet PDFs</a>.</li>
+<li><strong>Grant the application's service account access</strong> to the new library (see
+<a href="#">Permissions &amp; Access</a>).</li>
+<li><strong>Ask your development/platform team to register the new library.</strong> This is a configuration change
+(adding the library's name to a settings file) that requires a deployment &ndash; it is not something that can be
+done from SharePoint alone. Give them the exact library name you used in step 1.</li>
+</ol>
+
+<p>Once your development team confirms the change is deployed, the new library will be picked up automatically
+on the next scheduled or manually triggered run &ndash; no further action needed on your side.</p>
+
+<h2>Removing a library</h2>
+
+<p>Removing a library from active use is the reverse of step 5 above &ndash; ask your development team to remove it
+from the same settings file and redeploy. The document library itself and its historical files in SharePoint are
+not deleted by this; it simply stops being scanned for new files.</p>
+
+</body>
+</html>

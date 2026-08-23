@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head><title>Permissions &amp; Access</title></head>
+<body>
+
+<p><a href="#">&laquo; Back to Guide Home</a></p>
+
+<h1>Permissions &amp; Access</h1>
+
+<p>Two different kinds of access are relevant to this application: the access the application itself needs to
+work with SharePoint, and the access people need to use and manage it.</p>
+
+<h2>What the application needs</h2>
+
+<p>The application connects to SharePoint using its own dedicated service account/app identity &ndash; it does not
+use any individual person's login. For every document library it manages, this identity needs enough permission
+to:</p>
+
+<ul>
+<li>List and read files in <strong>01-Inbound</strong></li>
+<li>Move files between all five folders (Inbound &rarr; Processing &rarr; Output/Processed/Error)</li>
+<li>Create new files (the extracted CSV) in <strong>03-Output</strong></li>
+</ul>
+
+<p>In practical SharePoint terms, this means <strong>Edit/Contribute</strong> access on each document library the
+application manages. It also needs <strong>Contribute</strong> access on the <strong>Mule IDP Job Logs</strong> list, since it creates
+a new item there on every run.</p>
+
+<p>When onboarding a new library (see <a href="#">Adding or Removing a Document Library</a>), granting this same
+access to the application's identity on the new library is one of the required setup steps.</p>
+
+<h2>What people need</h2>
+
+<table>
+<tr><th>Task</th><th>Suggested access level</th></tr>
+<tr><td>Uploading timesheets, filling in classification columns, reviewing Output/Processed/Error</td>
+<td>Standard library <strong>Read/Contribute</strong> access, same as any other SharePoint library</td></tr>
+<tr><td>Viewing the Job Logs list</td><td><strong>Read</strong> access to the list</td></tr>
+<tr><td>Triggering a manual run</td><td>Restricted to administrators/developers &ndash; this calls an internal
+application endpoint, not a SharePoint permission</td></tr>
+<tr><td>Changing configuration (libraries, schedule, timeouts, etc.)</td><td>Restricted to the development/platform
+team &ndash; requires a deployment, not a SharePoint permission</td></tr>
+</table>
+
+<p>As a general rule: anyone who works with timesheets day to day only needs ordinary access to the document
+libraries and the Job Logs list. Anything that changes how the application behaves should go through your
+development/platform team.</p>
+
+</body>
+</html>

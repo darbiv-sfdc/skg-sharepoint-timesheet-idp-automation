@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html>
+<head><title>UAT Plan - Test Scenarios</title></head>
+<body>
+
+<p><a href="#">&laquo; Back to Overview &amp; Guidance</a></p>
+
+<h1>Timesheet Automation &ndash; UAT Plan: Test Scenarios</h1>
+
+<p>Run these test cases in order &ndash; later ones build on files created by earlier ones. Record your result for
+each one in the results tracker. <strong>Required</strong> test cases must all pass for this UAT to be accepted;
+<strong>Optional</strong> ones should be attempted and recorded but don't block acceptance on their own.</p>
+
+<h2>TC-01 &ndash; Trigger the Ingest On Demand (Required)</h2>
+<p><strong>Purpose:</strong> Confirm a run can be started on demand and covers every configured document library.</p>
+<p><strong>Preconditions:</strong> All Inbound folders are empty (or you're fine with whatever is already there being
+processed).</p>
+<p><strong>Steps:</strong></p>
+<ol>
+<li>Trigger a run manually using the method described on the Overview page.</li>
+<li>Wait 2-3 minutes.</li>
+<li>Open the <strong>Mule IDP Job Logs</strong> list.</li>
+</ol>
+<p><strong>Expected result / success criteria:</strong> A new row appears for <em>every</em> document library in scope,
+each with a current timestamp. If an Inbound folder was empty, its row shows <strong>FilesProcessed = 0</strong> and
+<strong>Details = "No files found"</strong> &ndash; that's correct, not a failure.</p>
+
+<table border="1" cellpadding="6" cellspacing="0">
+<tr><th>Result (Pass/Fail)</th><th>Tester</th><th>Date</th><th>Notes</th></tr>
+<tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>
+</table>
+
+<h2>TC-02 &ndash; Upload &amp; Classify a Timesheet (Required)</h2>
+<p><strong>Purpose:</strong> Confirm a normal file upload and classification works as expected.</p>
+<p><strong>Preconditions:</strong> A valid sample timesheet PDF.</p>
+<p><strong>Steps:</strong></p>
+<ol>
+<li>Upload the PDF into a library's <strong>01-Inbound</strong> folder.</li>
+<li>Set the <strong>PDF Type</strong>, <strong>Site</strong>, and <strong>Week No.</strong> columns on the file to any values.</li>
+<li>Trigger a run (or wait for the schedule, if enabled).</li>
+<li>Wait 5-10 minutes.</li>
+</ol>
+<p><strong>Expected result / success criteria:</strong> The file is no longer in <strong>01-Inbound</strong>. A new row appears in
+Job Logs for that library with <strong>Status = Success</strong> and <strong>FilesProcessed = 1</strong>.</p>
+
+<table border="1" cellpadding="6" cellspacing="0">
+<tr><th>Result (Pass/Fail)</th><th>Tester</th><th>Date</th><th>Notes</th></tr>
+<tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>
+</table>
+
+<h2>TC-03 &ndash; Verify the Extraction Output (Required)</h2>
+<p><strong>Purpose:</strong> Confirm the extracted data is correct, not just present.</p>
+<p><strong>Preconditions:</strong> TC-02 completed successfully.</p>
+<p><strong>Steps:</strong></p>
+<ol>
+<li>Open <strong>03-Output</strong> in the same library.</li>
+<li>Open the CSV file corresponding to the file from TC-02.</li>
+<li>Compare a few fields (e.g. employee name, daily hours) against the original PDF.</li>
+</ol>
+<p><strong>Expected result / success criteria:</strong> A CSV file is present and its contents match the source PDF for
+the fields you checked.</p>
+
+<table border="1" cellpadding="6" cellspacing="0">
+<tr><th>Result (Pass/Fail)</th><th>Tester</th><th>Date</th><th>Notes</th></tr>
+<tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>
+</table>
+
+<h2>TC-04 &ndash; Verify the Archived File &amp; Retained Classification (Required)</h2>
+<p><strong>Purpose:</strong> Confirm the original file is archived correctly and its classification survives processing.</p>
+<p><strong>Preconditions:</strong> TC-02 completed successfully.</p>
+<p><strong>Steps:</strong></p>
+<ol>
+<li>Open <strong>04-Processed</strong> in the same library.</li>
+<li>Locate the file from TC-02.</li>
+<li>Check its <strong>PDF Type</strong>, <strong>Site</strong>, and <strong>Week No.</strong> values.</li>
+</ol>
+<p><strong>Expected result / success criteria:</strong> The original PDF is present, unchanged, in <strong>04-Processed</strong>, and
+still shows the same classification values you set in TC-02.</p>
+
+<table border="1" cellpadding="6" cellspacing="0">
+<tr><th>Result (Pass/Fail)</th><th>Tester</th><th>Date</th><th>Notes</th></tr>
+<tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>
+</table>
+
+<h2>TC-05 &ndash; Multiple Files in One Batch (Required)</h2>
+<p><strong>Purpose:</strong> Confirm several files in one run are all handled correctly.</p>
+<p><strong>Steps:</strong></p>
+<ol>
+<li>Upload 3 valid timesheet PDFs into one library's <strong>01-Inbound</strong> at the same time.</li>
+<li>Trigger a run and wait 5-10 minutes.</li>
+</ol>
+<p><strong>Expected result / success criteria:</strong> All 3 files end up in <strong>04-Processed</strong> with matching CSVs in
+<strong>03-Output</strong>. Job Logs shows one row for this run with <strong>FilesProcessed = 3</strong>.</p>
+
+<table border="1" cellpadding="6" cellspacing="0">
+<tr><th>Result (Pass/Fail)</th><th>Tester</th><th>Date</th><th>Notes</th></tr>
+<tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>
+</table>
+
+<h2>TC-06 &ndash; Multiple Libraries Processed Independently (Required)</h2>
+<p><strong>Purpose:</strong> Confirm one library's files never end up in another library's folders.</p>
+<p><strong>Steps:</strong></p>
+<ol>
+<li>Upload one valid PDF into <strong>Library A</strong>'s Inbound, and a different one into <strong>Library B</strong>'s Inbound.</li>
+<li>Trigger a run and wait 5-10 minutes.</li>
+</ol>
+<p><strong>Expected result / success criteria:</strong> Library A's file (and only that file) appears in Library A's
+Output/Processed; Library B's file (and only that file) appears in Library B's Output/Processed. Job Logs shows
+one row per library.</p>
+
+<table border="1" cellpadding="6" cellspacing="0">
+<tr><th>Result (Pass/Fail)</th><th>Tester</th><th>Date</th><th>Notes</th></tr>
+<tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>
+</table>
+
+<h2>TC-07 &ndash; Non-PDF File Is Ignored (Required)</h2>
+<p><strong>Purpose:</strong> Confirm non-PDF files are safely ignored rather than causing an error.</p>
+<p><strong>Steps:</strong></p>
+<ol>
+<li>Upload a non-PDF file (e.g. a .txt or .docx file) into a library's <strong>01-Inbound</strong>.</li>
+<li>Trigger a run and wait a few minutes.</li>
+</ol>
+<p><strong>Expected result / success criteria:</strong> The file remains untouched in <strong>01-Inbound</strong>. It is not counted
+in that run's <strong>FilesProcessed</strong> or <strong>ErrorCount</strong>, and no error is logged because of it.</p>
+
+<table border="1" cellpadding="6" cellspacing="0">
+<tr><th>Result (Pass/Fail)</th><th>Tester</th><th>Date</th><th>Notes</th></tr>
+<tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>
+</table>
+
+<h2>TC-08 &ndash; Invalid/Unreadable PDF Routed to Error (Required)</h2>
+<p><strong>Purpose:</strong> Confirm a file the system can't process is safely routed for review instead of getting stuck
+or silently lost.</p>
+<p><strong>Steps:</strong></p>
+<ol>
+<li>Upload your deliberately invalid/corrupt PDF into a library's <strong>01-Inbound</strong>.</li>
+<li>Trigger a run and wait 5-10 minutes.</li>
+</ol>
+<p><strong>Expected result / success criteria:</strong> The file ends up in <strong>99-Error</strong> (not left in Inbound or
+Processing). The Job Logs row for that run shows <strong>Status = Partial Success</strong> or <strong>Failed</strong>, with the
+<strong>Details</strong> column mentioning the file name.</p>
+
+<table border="1" cellpadding="6" cellspacing="0">
+<tr><th>Result (Pass/Fail)</th><th>Tester</th><th>Date</th><th>Notes</th></tr>
+<tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>
+</table>
+
+<h2>TC-09 &ndash; Recovering a File from the Error Folder (Required)</h2>
+<p><strong>Purpose:</strong> Confirm a file can be corrected and resubmitted after failing.</p>
+<p><strong>Preconditions:</strong> A file currently in <strong>99-Error</strong> (from TC-08, or a real one, replaced with a valid PDF
+if the original was intentionally broken).</p>
+<p><strong>Steps:</strong></p>
+<ol>
+<li>Move the file from <strong>99-Error</strong> back into <strong>01-Inbound</strong>.</li>
+<li>Trigger a run and wait 5-10 minutes.</li>
+</ol>
+<p><strong>Expected result / success criteria:</strong> The file is picked up again as a new file on this run (it does not
+need any special action beyond being placed back in Inbound), and follows the normal success or error path
+based on whether it's now valid.</p>
+
+<table border="1" cellpadding="6" cellspacing="0">
+<tr><th>Result (Pass/Fail)</th><th>Tester</th><th>Date</th><th>Notes</th></tr>
+<tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>
+</table>
+
+<h2>TC-10 &ndash; Consecutive Triggers Don't Duplicate Processing (Optional)</h2>
+<p><strong>Purpose:</strong> Confirm triggering twice in quick succession doesn't process the same file twice.</p>
+<p><strong>Steps:</strong></p>
+<ol>
+<li>Upload one valid PDF into <strong>01-Inbound</strong>.</li>
+<li>Trigger a run, then trigger it again immediately (within a few seconds), without waiting for the first to
+finish.</li>
+<li>Wait 5-10 minutes.</li>
+</ol>
+<p><strong>Expected result / success criteria:</strong> Only one CSV and one archived copy of the file appear &ndash; not two.
+The second run's Job Logs row shows the file was already gone from Inbound (<strong>FilesProcessed = 0</strong>, "No
+files found") rather than processing it again.</p>
+
+<table border="1" cellpadding="6" cellspacing="0">
+<tr><th>Result (Pass/Fail)</th><th>Tester</th><th>Date</th><th>Notes</th></tr>
+<tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>
+</table>
+
+<h2>TC-11 &ndash; Scheduled Run Picks Up Files Automatically (Optional)</h2>
+<p>The automatic schedule runs every hour in this environment.</p>
+<p><strong>Purpose:</strong> Confirm files get processed without anyone manually triggering a run.</p>
+<p><strong>Steps:</strong></p>
+<ol>
+<li>Note the current time, then upload a valid PDF into <strong>01-Inbound</strong>.</li>
+<li><strong>Do not</strong> trigger a run manually.</li>
+<li>Wait up to an hour, then check the Job Logs list for a new row with <strong>ExecutionType = Scheduled</strong> and a
+timestamp after your upload.</li>
+</ol>
+<p><strong>Expected result / success criteria:</strong> The file is picked up and processed automatically, the same as a
+manually triggered run would, with no action needed from the tester beyond uploading.</p>
+
+<table border="1" cellpadding="6" cellspacing="0">
+<tr><th>Result (Pass/Fail)</th><th>Tester</th><th>Date</th><th>Notes</th></tr>
+<tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>
+</table>
+
+<h2>Sign-off</h2>
+
+<table border="1" cellpadding="6" cellspacing="0">
+<tr><td><strong>Tester name</strong></td><td>&nbsp;</td></tr>
+<tr><td><strong>Date completed</strong></td><td>&nbsp;</td></tr>
+<tr><td><strong>Overall result</strong></td><td>&nbsp;</td></tr>
+<tr><td><strong>Open issues (if any)</strong></td><td>&nbsp;</td></tr>
+<tr><td><strong>Signature</strong></td><td>&nbsp;</td></tr>
+</table>
+
+</body>
+</html>

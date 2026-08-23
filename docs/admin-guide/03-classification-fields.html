@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head><title>Classifying Timesheet PDFs</title></head>
+<body>
+
+<p><a href="#">&laquo; Back to Guide Home</a></p>
+
+<h1>Classifying Timesheet PDFs</h1>
+
+<p>Each document library has three extra columns that can be filled in on a file after it's uploaded. These are
+for your own organization and filtering &ndash; they help you and reviewers find and group timesheets when browsing
+the library, especially the archive.</p>
+
+<h2>The columns</h2>
+
+<table>
+<tr><th>Column</th><th>Type</th><th>Purpose</th></tr>
+<tr>
+  <td><strong>PDF Type</strong></td>
+  <td>Choice (Salary / Wages)</td>
+  <td>Identifies whether the timesheet relates to salaried or waged staff</td>
+</tr>
+<tr>
+  <td><strong>Site</strong></td>
+  <td>Choice (e.g. Plumbing, Office Staff, TI Division, etc.)</td>
+  <td>Identifies which company site or division the timesheet belongs to</td>
+</tr>
+<tr>
+  <td><strong>Week No.</strong></td>
+  <td>Text</td>
+  <td>The week number the timesheet covers</td>
+</tr>
+</table>
+
+<h2>How and when to use them</h2>
+
+<ul>
+<li>These fields are <strong>optional</strong>, not mandatory &ndash; a file will still be picked up and processed whether or not
+they're filled in.</li>
+<li>They are expected to be filled in <strong>after</strong> uploading the PDF to <strong>01-Inbound</strong>, whenever is convenient.</li>
+<li>The values you set travel with the file: once a PDF is processed and moved to <strong>04-Processed</strong>, the same
+<strong>PDF Type</strong>, <strong>Site</strong>, and <strong>Week No.</strong> values are still there. This is what makes the archive folder easy to
+filter and review later &ndash; for example, to find every waged timesheet from a given site for a given week.</li>
+</ul>
+
+<h2>Important: these columns are for you, not for the application</h2>
+
+<p>The automation does not read these columns at all. It picks up a file based purely on its being a PDF in
+<strong>01-Inbound</strong> &ndash; it doesn't check, use, or depend on <strong>PDF Type</strong>, <strong>Site</strong>, or <strong>Week No.</strong> in any way. You can
+fill them in before, during, or after processing, in any order, and it will have no effect on whether or how the
+file is processed. They exist purely to make the document library easier for people to browse and filter.</p>
+
+</body>
+</html>

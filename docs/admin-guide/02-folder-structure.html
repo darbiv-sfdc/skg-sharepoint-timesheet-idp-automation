@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head><title>Document Library &amp; Folder Structure</title></head>
+<body>
+
+<p><a href="#">&laquo; Back to Guide Home</a></p>
+
+<h1>Document Library &amp; Folder Structure</h1>
+
+<p>Every document library the application watches (for example <strong>EKN</strong>, <strong>FLEET</strong>) is set up with the exact
+same five subfolders. This consistency is what lets the application manage any number of libraries without
+special-casing any one of them.</p>
+
+<h2>The five folders</h2>
+
+<table>
+<tr><th>Folder</th><th>Purpose</th><th>Who puts files there</th></tr>
+<tr>
+  <td><strong>01-Inbound</strong></td>
+  <td>Drop zone for new, unprocessed timesheet PDFs</td>
+  <td>You (or whoever uploads timesheets)</td>
+</tr>
+<tr>
+  <td><strong>02-Processing</strong></td>
+  <td>Files currently being worked on by the application. A file only stays here for the
+  duration of one processing run.</td>
+  <td>The application, automatically</td>
+</tr>
+<tr>
+  <td><strong>03-Output</strong></td>
+  <td>The extracted data, as a CSV file, for every successfully processed PDF</td>
+  <td>The application, automatically</td>
+</tr>
+<tr>
+  <td><strong>04-Processed</strong></td>
+  <td>Archive of original PDFs that were successfully processed</td>
+  <td>The application, automatically</td>
+</tr>
+<tr>
+  <td><strong>99-Error</strong></td>
+  <td>PDFs that could not be processed &ndash; extraction failed, or the request timed out</td>
+  <td>The application, automatically</td>
+</tr>
+</table>
+
+<h2>What's safe to do manually</h2>
+
+<ul>
+<li><strong>Safe:</strong> uploading new PDFs to <strong>01-Inbound</strong>.</li>
+<li><strong>Safe:</strong> reading, downloading, or filtering files in <strong>03-Output</strong> and <strong>04-Processed</strong> &ndash; these are
+your results and archive, and the application never touches them again once they're written.</li>
+<li><strong>Safe:</strong> reviewing files in <strong>99-Error</strong>, and moving a corrected file back into <strong>01-Inbound</strong> to
+have it reprocessed on the next run (see <a href="#">Troubleshooting &amp; FAQ</a>).</li>
+<li><strong>Avoid:</strong> manually moving or deleting files inside <strong>02-Processing</strong>. The application uses this folder
+to know which files are currently in flight; interfering with it while a run is in progress can cause a file to
+be skipped or duplicated.</li>
+</ul>
+
+<h2>One library per business unit or site</h2>
+
+<p>Each document library represents one business unit (e.g. a company site or division). All of a library's
+files, output, and archive stay within that same library &ndash; the application never writes one library's results
+into another's folders. If your organization needs to add a new business unit, see
+<a href="#">Adding or Removing a Document Library</a>.</p>
+
+</body>
+</html>

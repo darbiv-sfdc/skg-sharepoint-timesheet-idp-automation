@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html>
+<head><title>Timesheet Automation - Administrator Guide</title></head>
+<body>
+
+<h1>Timesheet Automation &ndash; Administrator Guide</h1>
+
+<p>This guide explains how the Timesheet Automation application works, how to operate it day to day, and how to
+extend it when the organization needs a new document library. It is written for administrators who manage the
+SharePoint site and document libraries used by the application &ndash; no coding knowledge is required to follow it.</p>
+
+<p>The application automatically picks up timesheet PDF files uploaded to SharePoint, sends them to an
+Intelligent Document Processing (IDP) service for data extraction, and writes the results back into SharePoint
+&ndash; without anyone having to manually open or process each PDF.</p>
+
+<h2>Who this guide is for</h2>
+
+<p>This guide is aimed at the people who manage the SharePoint libraries the application watches &ndash; typically
+site administrators or team leads responsible for uploading timesheets and reviewing results. A few tasks
+(changing configuration files, redeploying the application) require a developer or platform engineer; those are
+called out clearly wherever they come up.</p>
+
+<hr/>
+
+<h2>What the Application Does</h2>
+
+<p>The application watches one or more SharePoint document libraries for timesheet PDFs, sends each one to an
+IDP (Intelligent Document Processing) service to extract the timesheet data, and writes the results back into
+SharePoint automatically. Nobody needs to open, read, or manually key in data from these PDFs.</p>
+
+<h3>The end-to-end flow</h3>
+
+<ol>
+<li><strong>Upload.</strong> Someone uploads one or more timesheet PDFs into a library's <strong>01-Inbound</strong> folder.</li>
+<li><strong>Pickup.</strong> The application scans <strong>01-Inbound</strong> &ndash; either automatically on a schedule, or when
+manually triggered (see <a href="#triggering-the-ingest">Triggering the Ingest</a>).</li>
+<li><strong>Isolation.</strong> Each file found is immediately moved to <strong>02-Processing</strong>, so it can't be picked up
+twice if the application runs again before it's finished.</li>
+<li><strong>Submission.</strong> The file is sent to the IDP service for data extraction. This happens for every file, one
+at a time, per library.</li>
+<li><strong>Extraction (in the background).</strong> IDP processes the document asynchronously &ndash; this can take anywhere
+from seconds to a couple of minutes per file. The application checks back periodically until it's done.</li>
+<li><strong>Result.</strong>
+  <ul>
+    <li>If extraction <strong>succeeds</strong>: the extracted data is written as a CSV to <strong>03-Output</strong>, and the original
+    PDF is moved to <strong>04-Processed</strong> (the archive).</li>
+    <li>If extraction <strong>fails</strong>, or IDP doesn't respond within the allowed time, the original PDF is moved to
+    <strong>99-Error</strong> for someone to review.</li>
+  </ul>
+</li>
+</ol>
+
+<h3>Multiple libraries, one process</h3>
+
+<p>The application isn't limited to one document library. Each business unit or site (for example <strong>EKN</strong> or
+<strong>FLEET</strong>) has its own document library, and every library follows the exact same five-folder pattern. On
+each run, the application works through every configured library in turn, so files from one library are never
+mixed up with another's &ndash; each library's output always lands back in that same library.</p>
+
+<p>See <a href="#document-library-folder-structure">Document Library &amp; Folder Structure</a> for details on the folders, and
+<a href="#adding-or-removing-a-document-library">Adding or Removing a Document Library</a> if your organization needs to onboard a new site.</p>
+
+<h3>What this means for you as an administrator</h3>
+
+<ul>
+<li>You don't need to do anything after uploading a file to <strong>01-Inbound</strong> &ndash; the application takes it from there.</li>
+<li>You can check <strong>03-Output</strong> and <strong>04-Processed</strong> at any time to see what's already been completed.</li>
+<li>If something ends up in <strong>99-Error</strong>, it means it needs a look &ndash; see <a href="#troubleshooting-faq">Troubleshooting &amp; FAQ</a>.</li>
+<li>The <a href="#job-logs">Job Logs</a> list gives you a run-by-run summary without having to open any folder.</li>
+</ul>
+
+<hr/>
+
+<h2 id="document-library-folder-structure">Document Library &amp; Folder Structure</h2>
+
+<p>Every document library the application watches (for example <strong>EKN</strong>, <strong>FLEET</strong>) is set up with the exact
+same five subfolders. This consistency is what lets the application manage any number of libraries without
+special-casing any one of them.</p>
+
+<h3>The five folders</h3>
+
+<table border="1" cellpadding="6" cellspacing="0">
+<tr><th>Folder</th><th>Purpose</th><th>Who puts files there</th></tr>
+<tr>
+  <td><strong>01-Inbound</strong></td>
+  <td>Drop zone for new, unprocessed timesheet PDFs</td>
+  <td>You (or whoever uploads timesheets)</td>
+</tr>
+<tr>
+  <td><strong>02-Processing</strong></td>
+  <td>Files currently being worked on by the application. A file only stays here for the
+  duration of one processing run.</td>
+  <td>The application, automatically</td>
+</tr>
+<tr>
+  <td><strong>03-Output</strong></td>
+  <td>The extracted data, as a CSV file, for every successfully processed PDF</td>
+  <td>The application, automatically</td>
+</tr>
+<tr>
+  <td><strong>04-Processed</strong></td>
+  <td>Archive of original PDFs that were successfully processed</td>
+  <td>The application, automatically</td>
+</tr>
+<tr>
+  <td><strong>99-Error</strong></td>
+  <td>PDFs that could not be processed &ndash; extraction failed, or the request timed out</td>
+  <td>The application, automatically</td>
+</tr>
+</table>
+
+<h3>What's safe to do manually</h3>
+
+<ul>
+<li><strong>Safe:</strong> uploading new PDFs to <strong>01-Inbound</strong>.</li>
+<li><strong>Safe:</strong> reading, downloading, or filtering files in <strong>03-Output</strong> and <strong>04-Processed</strong> &ndash; these are
+your results and archive, and the application never touches them again once they're written.</li>
+<li><strong>Safe:</strong> reviewing files in <strong>99-Error</strong>, and moving a corrected file back into <strong>01-Inbound</strong> to
+have it reprocessed on the next run (see <a href="#troubleshooting-faq">Troubleshooting &amp; FAQ</a>).</li>
+<li><strong>Avoid:</strong> manually moving or deleting files inside <strong>02-Processing</strong>. The application uses this folder
+to know which files are currently in flight; interfering with it while a run is in progress can cause a file to
+be skipped or duplicated.</li>
+</ul>
+
+<h3>One library per business unit or site</h3>
+
+<p>Each document library represents one business unit (e.g. a company site or division). All of a library's
+files, output, and archive stay within that same library &ndash; the application never writes one library's results
+into another's folders. If your organization needs to add a new business unit, see
+<a href="#adding-or-removing-a-document-library">Adding or Removing a Document Library</a>.</p>
+
+<hr/>
+
+<h2 id="classifying-timesheet-pdfs">Classifying Timesheet PDFs</h2>
+
+<p>Each document library has three extra columns that can be filled in on a file after it's uploaded. These are
+for your own organization and filtering &ndash; they help you and reviewers find and group timesheets when browsing
+the library, especially the archive.</p>
+
+<h3>The columns</h3>
+
+<table border="1" cellpadding="6" cellspacing="0">
+<tr><th>Column</th><th>Type</th><th>Purpose</th></tr>
+<tr>
+  <td><strong>PDF Type</strong></td>
+  <td>Choice (Salary / Wages)</td>
+  <td>Identifies whether the timesheet relates to salaried or waged staff</td>
+</tr>
+<tr>
+  <td><strong>Site</strong></td>
+  <td>Choice (e.g. Plumbing, Office Staff, TI Division, etc.)</td>
+  <td>Identifies which company site or division the timesheet belongs to</td>
+</tr>
+<tr>
+  <td><strong>Week No.</strong></td>
+  <td>Text</td>
+  <td>The week number the timesheet covers</td>
+</tr>
+</table>
+
+<h3>How and when to use them</h3>
+
+<ul>
+<li>These fields are <strong>optional</strong>, not mandatory &ndash; a file will still be picked up and processed whether or not
+they're filled in.</li>
+<li>They are expected to be filled in <strong>after</strong> uploading the PDF to <strong>01-Inbound</strong>, whenever is convenient.</li>
+<li>The values you set travel with the file: once a PDF is processed and moved to <strong>04-Processed</strong>, the same
+<strong>PDF Type</strong>, <strong>Site</strong>, and <strong>Week No.</strong> values are still there. This is what makes the archive folder easy to
+filter and review later &ndash; for example, to find every waged timesheet from a given site for a given week.</li>
+</ul>
+
+<h3>Important: these columns are for you, not for the application</h3>
+
+<p>The automation does not read these columns at all. It picks up a file based purely on its being a PDF in
+<strong>01-Inbound</strong> &ndash; it doesn't check, use, or depend on <strong>PDF Type</strong>, <strong>Site</strong>, or <strong>Week No.</strong> in any way. You can
+fill them in before, during, or after processing, in any order, and it will have no effect on whether or how the
+file is processed. They exist purely to make the document library easier for people to browse and filter.</p>
+
+<hr/>
+
+<h2 id="triggering-the-ingest">Triggering the Ingest</h2>
+
+<p>There are two ways files get picked up from <strong>01-Inbound</strong> and processed: an automatic schedule, and a
+manual trigger. Both run the exact same process across every configured document library &ndash; the only
+difference is what starts it.</p>
+
+<h3>Automatic (scheduled) runs</h3>
+
+<p>The application can run on a recurring schedule (by default, hourly) without anyone doing anything. On each
+scheduled run, it works through every configured document library in turn, checking each one's <strong>01-Inbound</strong>
+folder for new PDFs.</p>
+
+<p>Whether the schedule is currently turned on, and exactly how often it runs, is an environment-specific
+setting controlled by the platform/development team. If you're not sure whether the schedule is active in your
+environment, ask them, or use the <a href="#job-logs">Job Logs</a> list &ndash; every run, scheduled or manual, adds an entry
+there, so you can see from the timestamps whether scheduled runs are happening.</p>
+
+<h3>Manual trigger</h3>
+
+<p>The application also exposes a manual trigger that runs the same process on demand, without waiting for the
+next scheduled run. This is useful when:</p>
+
+<ul>
+<li>You've just uploaded files and don't want to wait for the next scheduled run</li>
+<li>You're testing that everything is configured correctly after a change</li>
+<li>The scheduled run is turned off in your environment (e.g. during initial setup)</li>
+</ul>
+
+<p>Triggering it requires calling a specific URL for your environment (ask your development/platform team for
+the exact address, as this differs between environments). Calling it starts a full run across every configured
+library, exactly like a scheduled run would.</p>
+
+<h3>How to tell a run actually happened</h3>
+
+<p>After triggering &ndash; manually or on schedule &ndash; check the <a href="#job-logs">Job Logs</a> list. A new row will appear for
+each document library, with a timestamp, so you can confirm the run took place and see the outcome at a glance.</p>
+
+<hr/>
+
+<h2 id="job-logs">Job Logs</h2>
+
+<p>Every time the application runs &ndash; scheduled or manually triggered &ndash; it writes one row per document library
+to a SharePoint list called <strong>Mule IDP Job Logs</strong>. This is the fastest way to see what happened on a run
+without opening any folder.</p>
+
+<h3>Columns</h3>
+
+<table border="1" cellpadding="6" cellspacing="0">
+<tr><th>Column</th><th>Meaning</th></tr>
+<tr><td><strong>Title</strong></td><td>Library name and run timestamp, e.g. <em>EKN_2026-08-19T14:37:13</em></td></tr>
+<tr><td><strong>ExecutionTime</strong></td><td>When this run for this library happened</td></tr>
+<tr><td><strong>SourceFolder</strong></td><td>Which document library this row is about (e.g. EKN, FLEET)</td></tr>
+<tr><td><strong>ExecutionType</strong></td><td><em>Scheduled</em> or <em>Manual</em> &ndash; how the run was started</td></tr>
+<tr><td><strong>FilesProcessed</strong></td><td>How many files were successfully submitted for processing</td></tr>
+<tr><td><strong>ErrorCount</strong></td><td>How many files failed during submission</td></tr>
+<tr><td><strong>Status</strong></td><td><em>Success</em>, <em>Partial Success</em>, or <em>Failed</em> &ndash; see below</td></tr>
+<tr><td><strong>Details</strong></td><td>File names that were processed, and/or error messages for any that failed</td></tr>
+</table>
+
+<h3>Making sense of Status</h3>
+
+<ul>
+<li><strong>Success</strong> &ndash; every file found in that library's <strong>01-Inbound</strong> was submitted without error. This
+includes the case where there were <strong>no files at all</strong> &ndash; you'll see <em>FilesProcessed = 0</em> and
+<em>Details = "No files found"</em>. That's expected, not a problem &ndash; it just confirms the run happened and the
+folder was empty.</li>
+<li><strong>Partial Success</strong> &ndash; some files were submitted successfully, but at least one failed. Check the
+<strong>Details</strong> column for which file(s) failed and why; the failed file(s) will be in <strong>99-Error</strong>.</li>
+<li><strong>Failed</strong> &ndash; the run for that library couldn't even get started (for example, SharePoint was temporarily
+unreachable). No files were processed at all in this case. Check <strong>Details</strong> for the reason, and try again
+later or contact your development team if it keeps happening.</li>
+</ul>
+
+<h3>Important limitation</h3>
+
+<p>A row in this list only tells you that a file was <strong>successfully handed off</strong> to the IDP service for data
+extraction &ndash; it does not yet tell you whether the extraction itself ultimately succeeded. That result shows up
+later, per file, as the file lands in either <strong>03-Output</strong>/<strong>04-Processed</strong> (success) or <strong>99-Error</strong>
+(failure) &ndash; see <a href="#document-library-folder-structure">Document Library &amp; Folder Structure</a>. In short: use the Job Logs list to confirm a
+run happened and see a quick summary, and use the folders to see the true final outcome for a specific file.</p>
+
+<hr/>
+
+<h2 id="adding-or-removing-a-document-library">Adding or Removing a Document Library</h2>
+
+<p>When a new business unit or site needs to start using the application, a new document library needs to be
+set up in SharePoint and then registered with the application. This is a joint task &ndash; some steps are yours,
+and one step needs your development/platform team.</p>
+
+<h3>Step-by-step</h3>
+
+<ol>
+<li><strong>Create the document library.</strong> In SharePoint, create a new document library named after the new
+business unit or site (e.g. matching the style of existing libraries like <strong>EKN</strong> or <strong>FLEET</strong>).</li>
+<li><strong>Create the five standard folders inside it</strong>, using the exact same names as every other library:
+<strong>01-Inbound</strong>, <strong>02-Processing</strong>, <strong>03-Output</strong>, <strong>04-Processed</strong>, <strong>99-Error</strong>. See
+<a href="#document-library-folder-structure">Document Library &amp; Folder Structure</a> for what each one is for. The names must match exactly &ndash; the
+application looks for these folders by name.</li>
+<li><strong>(Recommended)</strong> Add the same classification columns used elsewhere &ndash; <strong>PDF Type</strong>, <strong>Site</strong>,
+<strong>Week No.</strong> &ndash; if you want the new library to be filterable the same way. See
+<a href="#classifying-timesheet-pdfs">Classifying Timesheet PDFs</a>.</li>
+<li><strong>Grant the application's service account access</strong> to the new library (see
+<a href="#permissions-access">Permissions &amp; Access</a>).</li>
+<li><strong>Ask your development/platform team to register the new library.</strong> This is a configuration change
+(adding the library's name to a settings file) that requires a deployment &ndash; it is not something that can be
+done from SharePoint alone. Give them the exact library name you used in step 1.</li>
+</ol>
+
+<p>Once your development team confirms the change is deployed, the new library will be picked up automatically
+on the next scheduled or manually triggered run &ndash; no further action needed on your side.</p>
+
+<h3>Removing a library</h3>
+
+<p>Removing a library from active use is the reverse of step 5 above &ndash; ask your development team to remove it
+from the same settings file and redeploy. The document library itself and its historical files in SharePoint are
+not deleted by this; it simply stops being scanned for new files.</p>
+
+<hr/>
+
+<h2 id="configuration-reference">Configuration Reference</h2>
+
+<p>The application's behavior is controlled by a set of settings that live in configuration files deployed
+alongside it &ndash; not in SharePoint. This page is a reference for what those settings control, so you know what to
+ask for when something needs to change. Changing any of them requires your development/platform team and a
+redeployment; none of this is self-service from SharePoint.</p>
+
+<h3>Settings you may need to reference or ask about</h3>
+
+<table border="1" cellpadding="6" cellspacing="0">
+<tr><th>Setting</th><th>Controls</th></tr>
+<tr><td>List of document libraries</td><td>Which libraries the application scans on every run (see
+<a href="#adding-or-removing-a-document-library">Adding or Removing a Document Library</a>)</td></tr>
+<tr><td>Folder names</td><td>The names of the five standard folders (Inbound, Processing, Output, Processed,
+Error) &ndash; these are shared by every library</td></tr>
+<tr><td>File type filter</td><td>Which file extension is picked up from Inbound (currently PDF)</td></tr>
+<tr><td>Job Logs list</td><td>Which SharePoint list receives the run-by-run log rows (see <a href="#job-logs">Job Logs</a>)</td></tr>
+<tr><td>Schedule</td><td>Whether automatic runs are turned on, and how often they happen</td></tr>
+<tr><td>IDP processing timeout</td><td>How many times the application checks back on a file before giving up and
+moving it to the Error folder</td></tr>
+</table>
+
+<h3>Environments</h3>
+
+<p>The application can be deployed to more than one environment (for example, development, test, and
+production). Settings can differ between environments &ndash; for example, the schedule might be turned off in a
+test environment but on in production. If you're unsure what's active in the environment you're working with,
+ask your development/platform team rather than assuming it matches another environment.</p>
+
+<h3>Credentials</h3>
+
+<p>The application authenticates to SharePoint and to the IDP service using credentials that are stored securely
+alongside the other settings, not visible in SharePoint itself. You should never need to handle these directly;
+if access needs to be rotated or an integration stops authenticating, that's a task for your development/platform
+team.</p>
+
+<hr/>
+
+<h2 id="permissions-access">Permissions &amp; Access</h2>
+
+<p>Two different kinds of access are relevant to this application: the access the application itself needs to
+work with SharePoint, and the access people need to use and manage it.</p>
+
+<h3>What the application needs</h3>
+
+<p>The application connects to SharePoint using its own dedicated service account/app identity &ndash; it does not
+use any individual person's login. For every document library it manages, this identity needs enough permission
+to:</p>
+
+<ul>
+<li>List and read files in <strong>01-Inbound</strong></li>
+<li>Move files between all five folders (Inbound &rarr; Processing &rarr; Output/Processed/Error)</li>
+<li>Create new files (the extracted CSV) in <strong>03-Output</strong></li>
+</ul>
+
+<p>In practical SharePoint terms, this means <strong>Edit/Contribute</strong> access on each document library the
+application manages. It also needs <strong>Contribute</strong> access on the <strong>Mule IDP Job Logs</strong> list, since it creates
+a new item there on every run.</p>
+
+<p>When onboarding a new library (see <a href="#adding-or-removing-a-document-library">Adding or Removing a Document Library</a>), granting this same
+access to the application's identity on the new library is one of the required setup steps.</p>
+
+<h3>What people need</h3>
+
+<table border="1" cellpadding="6" cellspacing="0">
+<tr><th>Task</th><th>Suggested access level</th></tr>
+<tr><td>Uploading timesheets, filling in classification columns, reviewing Output/Processed/Error</td>
+<td>Standard library <strong>Read/Contribute</strong> access, same as any other SharePoint library</td></tr>
+<tr><td>Viewing the Job Logs list</td><td><strong>Read</strong> access to the list</td></tr>
+<tr><td>Triggering a manual run</td><td>Restricted to administrators/developers &ndash; this calls an internal
+application endpoint, not a SharePoint permission</td></tr>
+<tr><td>Changing configuration (libraries, schedule, timeouts, etc.)</td><td>Restricted to the development/platform
+team &ndash; requires a deployment, not a SharePoint permission</td></tr>
+</table>
+
+<p>As a general rule: anyone who works with timesheets day to day only needs ordinary access to the document
+libraries and the Job Logs list. Anything that changes how the application behaves should go through your
+development/platform team.</p>
+
+<hr/>
+
+<h2 id="troubleshooting-faq">Troubleshooting &amp; FAQ</h2>
+
+<h3>"I uploaded a PDF, but it doesn't seem to have been picked up"</h3>
+<ul>
+<li>Check the file is actually a <strong>.pdf</strong> and was uploaded directly into <strong>01-Inbound</strong> (not a subfolder).</li>
+<li>Check <a href="#job-logs">Job Logs</a> for a recent run on that library &ndash; if the most recent run happened before you
+uploaded, it just hasn't run again yet. Trigger a manual run, or wait for the next scheduled one (see
+<a href="#triggering-the-ingest">Triggering the Ingest</a>).</li>
+<li>Check whether the file is now sitting in <strong>02-Processing</strong>, <strong>04-Processed</strong>, or <strong>99-Error</strong> &ndash; it may
+already have been picked up and moved.</li>
+</ul>
+
+<h3>"A file is stuck in 02-Processing"</h3>
+<p>This usually means a run was interrupted partway through. Check the <a href="#job-logs">Job Logs</a> entry for that
+library and time &ndash; if the <strong>Status</strong> is <strong>Failed</strong>, see the <strong>Details</strong> column for the reason. If it stays
+stuck after the next run, contact your development team rather than moving the file yourself.</p>
+
+<h3>"A file ended up in 99-Error"</h3>
+<p>This means the file either failed data extraction or timed out waiting for a result. Review the file to
+check it's a valid, readable timesheet PDF. Once you've addressed the issue (or if you believe it was a
+temporary problem), move the file back into <strong>01-Inbound</strong> and it will be picked up and retried on the next
+run.</p>
+
+<h3>"The Job Logs list shows Status: Failed"</h3>
+<p>This means the run for that library couldn't even start (e.g. a temporary SharePoint connectivity issue) &ndash;
+no files were processed at all, not even ones that would otherwise have succeeded. Check the <strong>Details</strong>
+column for the reason. If it happens repeatedly, contact your development/platform team.</p>
+
+<h3>"The Job Logs list shows Status: Partial Success"</h3>
+<p>Some files in that run succeeded and at least one failed. Check <strong>Details</strong> for which file(s) failed and
+why; the failed file(s) will be in <strong>99-Error</strong>. The successful ones are unaffected and will already be in
+<strong>03-Output</strong>/<strong>04-Processed</strong>.</p>
+
+<h3>"Does the application use my PDF Type / Site / Week No. values?"</h3>
+<p>No. Those columns are purely for your own organization and filtering of the document library &ndash; the
+application doesn't read them and processes files regardless of whether they're filled in. See
+<a href="#classifying-timesheet-pdfs">Classifying Timesheet PDFs</a>.</p>
+
+<h3>"How often does it run automatically?"</h3>
+<p>This depends on your environment's configuration and may not be the same everywhere. Check with your
+development/platform team, or judge it from the timestamps in the <a href="#job-logs">Job Logs</a> list.</p>
+
+<h3>"I dropped a non-PDF file in 01-Inbound by mistake"</h3>
+<p>It's simply ignored &ndash; only files ending in <strong>.pdf</strong> are picked up. You can safely remove it.</p>
+
+<h3>"A row in Job Logs shows FilesProcessed = 0 and Details: No files found &ndash; is that a bug?"</h3>
+<p>No &ndash; this is expected and just confirms the run happened while that library's <strong>01-Inbound</strong> was empty.</p>
+
+</body>
+</html>

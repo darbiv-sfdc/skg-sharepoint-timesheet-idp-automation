@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head><title>What the Application Does</title></head>
+<body>
+
+<p><a href="#">&laquo; Back to Guide Home</a></p>
+
+<h1>What the Application Does</h1>
+
+<p>The application watches one or more SharePoint document libraries for timesheet PDFs, sends each one to an
+IDP (Intelligent Document Processing) service to extract the timesheet data, and writes the results back into
+SharePoint automatically. Nobody needs to open, read, or manually key in data from these PDFs.</p>
+
+<h2>The end-to-end flow</h2>
+
+<ol>
+<li><strong>Upload.</strong> Someone uploads one or more timesheet PDFs into a library's <strong>01-Inbound</strong> folder.</li>
+<li><strong>Pickup.</strong> The application scans <strong>01-Inbound</strong> &ndash; either automatically on a schedule, or when
+manually triggered (see <a href="#">Triggering the Ingest</a>).</li>
+<li><strong>Isolation.</strong> Each file found is immediately moved to <strong>02-Processing</strong>, so it can't be picked up
+twice if the application runs again before it's finished.</li>
+<li><strong>Submission.</strong> The file is sent to the IDP service for data extraction. This happens for every file, one
+at a time, per library.</li>
+<li><strong>Extraction (in the background).</strong> IDP processes the document asynchronously &ndash; this can take anywhere
+from seconds to a couple of minutes per file. The application checks back periodically until it's done.</li>
+<li><strong>Result.</strong>
+  <ul>
+    <li>If extraction <strong>succeeds</strong>: the extracted data is written as a CSV to <strong>03-Output</strong>, and the original
+    PDF is moved to <strong>04-Processed</strong> (the archive).</li>
+    <li>If extraction <strong>fails</strong>, or IDP doesn't respond within the allowed time, the original PDF is moved to
+    <strong>99-Error</strong> for someone to review.</li>
+  </ul>
+</li>
+</ol>
+
+<h2>Multiple libraries, one process</h2>
+
+<p>The application isn't limited to one document library. Each business unit or site (for example <strong>EKN</strong> or
+<strong>FLEET</strong>) has its own document library, and every library follows the exact same five-folder pattern. On
+each run, the application works through every configured library in turn, so files from one library are never
+mixed up with another's &ndash; each library's output always lands back in that same library.</p>
+
+<p>See <a href="#">Document Library &amp; Folder Structure</a> for details on the folders, and
+<a href="#">Adding or Removing a Document Library</a> if your organization needs to onboard a new site.</p>
+
+<h2>What this means for you as an administrator</h2>
+
+<ul>
+<li>You don't need to do anything after uploading a file to <strong>01-Inbound</strong> &ndash; the application takes it from there.</li>
+<li>You can check <strong>03-Output</strong> and <strong>04-Processed</strong> at any time to see what's already been completed.</li>
+<li>If something ends up in <strong>99-Error</strong>, it means it needs a look &ndash; see <a href="#">Troubleshooting &amp; FAQ</a>.</li>
+<li>The <a href="#">Job Logs</a> list gives you a run-by-run summary without having to open any folder.</li>
+</ul>
+
+</body>
+</html>

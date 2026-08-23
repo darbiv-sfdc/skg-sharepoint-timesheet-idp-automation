@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head><title>Configuration Reference</title></head>
+<body>
+
+<p><a href="#">&laquo; Back to Guide Home</a></p>
+
+<h1>Configuration Reference</h1>
+
+<p>The application's behavior is controlled by a set of settings that live in configuration files deployed
+alongside it &ndash; not in SharePoint. This page is a reference for what those settings control, so you know what to
+ask for when something needs to change. Changing any of them requires your development/platform team and a
+redeployment; none of this is self-service from SharePoint.</p>
+
+<h2>Settings you may need to reference or ask about</h2>
+
+<table>
+<tr><th>Setting</th><th>Controls</th></tr>
+<tr><td>List of document libraries</td><td>Which libraries the application scans on every run (see
+<a href="#">Adding or Removing a Document Library</a>)</td></tr>
+<tr><td>Folder names</td><td>The names of the five standard folders (Inbound, Processing, Output, Processed,
+Error) &ndash; these are shared by every library</td></tr>
+<tr><td>File type filter</td><td>Which file extension is picked up from Inbound (currently PDF)</td></tr>
+<tr><td>Job Logs list</td><td>Which SharePoint list receives the run-by-run log rows (see <a href="#">Job Logs</a>)</td></tr>
+<tr><td>Schedule</td><td>Whether automatic runs are turned on, and how often they happen</td></tr>
+<tr><td>IDP processing timeout</td><td>How many times the application checks back on a file before giving up and
+moving it to the Error folder</td></tr>
+</table>
+
+<h2>Environments</h2>
+
+<p>The application can be deployed to more than one environment (for example, development, test, and
+production). Settings can differ between environments &ndash; for example, the schedule might be turned off in a
+test environment but on in production. If you're unsure what's active in the environment you're working with,
+ask your development/platform team rather than assuming it matches another environment.</p>
+
+<h2>Credentials</h2>
+
+<p>The application authenticates to SharePoint and to the IDP service using credentials that are stored securely
+alongside the other settings, not visible in SharePoint itself. You should never need to handle these directly;
+if access needs to be rotated or an integration stops authenticating, that's a task for your development/platform
+team.</p>
+
+</body>
+</html>
