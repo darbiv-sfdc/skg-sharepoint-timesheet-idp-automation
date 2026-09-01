@@ -33,6 +33,9 @@ var processedCount = sizeOf(processedFiles)
 var errorCount = sizeOf(errorDetails)
 var computedStatus = if (errorCount == 0) 'Success' else if (processedCount > 0) 'Partial Success' else 'Failed'
 var status = vars.libraryStatus default computedStatus
+// Single evaluation, shared by Title and ExecutionTime below, shifted to the configured business
+// timezone (app.timezone, default UTC) with an explicit offset so the value is unambiguous
+var executionTime = (now() >> (p('app.timezone') default 'UTC')) as String {format: "yyyy-MM-dd'T'HH:mm:ssXXX"}
 var detailsText = if (vars.libraryStatus == 'Failed' and vars.libraryFailureReason != null)
 		'Library-level failure: ' ++ (vars.libraryFailureReason as String)
 	else
@@ -43,8 +46,8 @@ var detailsText = if (vars.libraryStatus == 'Failed' and vars.libraryFailureReas
 		) joinBy '\n'
 ---
 {
-	Title: vars.documentLibrary ++ '_' ++ (now() as String {format: "yyyy-MM-dd'T'HH:mm:ss"}),
-	ExecutionTime: now() as String {format: "yyyy-MM-dd'T'HH:mm:ss"},
+	Title: vars.documentLibrary ++ '_' ++ executionTime,
+	ExecutionTime: executionTime,
 	SourceFolder: vars.documentLibrary as String,
 	ExecutionType: vars.executionType default 'Manual',
 	FilesProcessed: processedCount as String,

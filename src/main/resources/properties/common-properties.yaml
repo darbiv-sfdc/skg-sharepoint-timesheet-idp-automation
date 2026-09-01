@@ -3,6 +3,9 @@ app:
   specification:
     artifactId: ${app.specification.artifactId}
     version: ${app.specification.version}
+  #IANA zone for job-log timestamps (ExecutionTime/Title in the SharePoint job-log list) - falls
+  #back to UTC in code if unset. SKG is based in South Africa.
+  timezone: "Africa/Johannesburg"
 
 application:
   layer: "System BO"
