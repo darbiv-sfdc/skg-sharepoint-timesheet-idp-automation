@@ -42,6 +42,12 @@ sharepoint:
         error: "99-Error"
     filter:
         extension: "pdf"
+    # SharePoint INTERNAL column names to copy from the source PDF's list item onto the Output
+    # CSV's list item (see idp-subscriber-flow.xml) - spaces in a display name are encoded as
+    # _x0020_ in the internal name; confirm via List settings > click the column > check the URL's
+    # Field= value, or by DEBUG-logging vars.sourceMetadata.listItemAllFields on an existing file.
+    classification:
+        fields: '["PDF_x0020_Type","Site","WeekNo"]'
     # SharePoint list that receives one row per document-library run (see idp-job-logging-flow.xml)
     jobLogList:
         title: "Mule IDP Job Logs"

@@ -72,7 +72,9 @@ Inbound shows `FilesProcessed = 0`, `Details = "No files found"` — that's corr
 
 **Steps:**
 1. Upload the PDF into a library's `01-Inbound`.
-2. Set `PDF Type`, `Site`, `Week No.` on the file.
+2. Set `PDF Type`, `Site`, `Week No.` on the file. Use **Grid View** (View options ▸ switch to a grid/quick-edit
+   view, or click a cell directly in the library listing) to set and double-check these values quickly across
+   several files, instead of opening each file's details pane one at a time.
 3. Trigger a run (or wait for schedule).
 4. Wait 5-10 minutes.
 
@@ -88,11 +90,16 @@ Inbound shows `FilesProcessed = 0`, `Details = "No files found"` — that's corr
 **Preconditions:** TC-02 completed successfully.
 
 **Steps:**
-1. Open `03-Output` in the same library.
+1. Open `03-Output` in the same library. Switch to **Grid View** so `PDF Type`/`Site`/`WeekNo` are visible as
+   columns without opening the file.
 2. Open the CSV corresponding to the TC-02 file.
 3. Compare a few fields (employee name, daily hours) against the original PDF.
+4. In Grid View, compare the CSV's `PDF Type`, `Site`, `WeekNo` column values against the values set on the
+   source PDF in TC-02.
 
-**Expected result:** CSV present; contents match the source PDF for the fields checked.
+**Expected result:** CSV present; contents match the source PDF for the fields checked. The CSV's `PDF Type`,
+`Site`, and `WeekNo` columns carry the same classification values that were set on the source PDF in TC-02 —
+they are not blank.
 
 | Result (Pass/Fail) | Tester | Date | Notes |
 |---|---|---|---|

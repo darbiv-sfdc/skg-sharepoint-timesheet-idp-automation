@@ -64,6 +64,15 @@ Folder URLs are computed at runtime as `{sharepoint.site.serverRelativePath}/{li
 - **Important limitation**: this log reflects IDP **submission** outcomes only - i.e. files successfully moved/read/accepted by `postdocumentactionexecution`. It does *not* reflect final IDP extraction success/failure, which is only known later, asynchronously, per file, in `subscriber-vm-idp-result-flow` (via the persistent VM queue). Cross-reference `executionId`/`fileName` between the two flows' log lines if you need the true end-to-end outcome of a specific file.
 - The list write itself is best-effort (`try`/`on-error-continue` in `write-job-log-subflow`) - a SharePoint list outage must never fail the ingest run.
 
+### Classification Metadata Carry-Through (source PDF → Output CSV)
+
+The source PDF's SharePoint classification columns (e.g. `PDF Type`, `Site`, `WeekNo`) are **not** part of the IDP extraction result and are never included in the VM tracking message - so `subscriber-vm-idp-result-flow` (`idp-subscriber-flow.xml`, SUCCEEDED branch) reads them directly from the source file's own list item and copies them onto the newly-written CSV, entirely independent of the ingest flow:
+
+- **Read**: `sharepoint:get-metadata` on `vars.processingUrl` (the source file hasn't moved to Processed yet at this point), `target="sourceMetadata"` so it doesn't clobber the IDP-result `payload` the CSV transform still needs. Columns live under `vars.sourceMetadata.listItemAllFields`, keyed by **SharePoint internal field name** (spaces encoded as `_x0020_`, e.g. `PDF_x0020_Type`), not the display name.
+- **Which fields to copy**: `sharepoint.classification.fields` (JSON array of internal names, `dev-properties.yaml`) - a config change, not a flow change, if a classification column is added/renamed. Confirm internal names via a library's *List settings* → click the column → check the URL's `Field=` value, or by DEBUG-logging `vars.sourceMetadata.listItemAllFields` once against a real file.
+- **Write**: after `sharepoint:file-add` writes the CSV, `sharepoint:file-update-metadata` (same `fileServerRelativeUrl`, a `<sharepoint:update-properties>` map) stamps only the fields that were actually present on the source (`vars.classificationProps`, built by filtering `sharepoint.classification.fields` against `listItemAllFields` and casting each value `as String` - same EDM-type lesson as Job Logging, and correct for Choice-type columns; a Managed Metadata column would need different handling since its value is a complex object, not a plain string).
+- **Best-effort, both directions**: a metadata read or write failure only logs a WARN - it never blocks the CSV write or the subsequent `Move to Processed`, same pattern as `write-job-log-subflow`.
+
 ### Error Handling
 
 - **Poison-pill deflection**: Per-file errors in `sharepoint-ingest-single-library-subflow` use `on-error-continue` to prevent one bad file from aborting the batch — including files in *other* libraries still to be processed by `sharepoint-ingest-subflow`'s outer loop
@@ -191,6 +200,10 @@ sharepoint:
     error: "99-Error"
   filter:
     extension: "pdf"
+  # Internal SharePoint field names to copy from the source PDF onto the Output CSV (see
+  # "Classification Metadata Carry-Through" above) - a config change, not a flow change
+  classification:
+    fields: '["PDF_x0020_Type","Site","WeekNo"]'
   # SharePoint list receiving one row per document-library run (see "Job Logging" above)
   # title is a display name only (kept for reference/logging) - the flow writes using listId (GUID),
   # since the title-based lookup mis-encodes spaces on the item-create call (see "Job Logging" above)
