@@ -70,6 +70,18 @@ CustomLogMapper::logger({
 					<when expression="#[upper((payload.status default '')) == 'SUCCEEDED']">
 						<set-variable variableName="outputBaseName" value="#[((payload.documentName default vars.fileName) as String) replace /\.[^.]*$/ with '']" doc:name="outputBaseName" doc:id="b2000001-000c-4002-8002-idpsubvout" />
 
+						<!-- IDP can report SUCCEEDED for a corrupt/non-timesheet PDF while extracting nothing
+						     useful - a result is only treated as complete if BOTH employeeID has a non-blank
+						     value AND at least one timesheet row was extracted. Validate at the ARRAY level only:
+						     individual day-cell values (e.g. monTime/satTime) are routinely null on otherwise-valid
+						     rows, so per-cell checks would wrongly reject good timesheets. -->
+						<set-variable variableName="resultComplete" doc:name="resultComplete" value="#[
+	(sizeOf(trim((payload.fields.employeeID.value default '') as String)) &gt; 0)
+	and (sizeOf(payload.tables.timeSheetData default []) &gt; 0)]" doc:id="b2000001-0029-4002-8002-idpsubvcomplete" />
+
+						<choice doc:name="Result Complete?" doc:id="b2000001-002a-4002-8002-idpsubchkcomplete">
+							<when expression="#[vars.resultComplete]">
+
 						<!-- Best-effort: read the source PDF's classification columns (e.g. PDF Type/Site/WeekNo)
 						     from its list item, so they can be copied onto the Output CSV below. A read failure
 						     must never block the CSV write - target keeps this off the IDP-result payload. -->
@@ -177,6 +189,36 @@ CustomLogMapper::logger({
 	(payload: {documentLibrary: vars.documentLibrary, fileName: vars.fileName, csvFile: 'idp-results-' ++ vars.outputBaseName ++ '.csv', executionId: vars.executionId}) if (p('log.level') == &quot;DEBUG&quot;),
 	env: p('mule.env')
 })]" />
+							</when>
+							<otherwise>
+								<!-- SUCCEEDED but incomplete (likely a corrupt/non-timesheet PDF) - route to Error,
+								     write no CSV to Output, and log a distinct ERROR (not the generic FAILED one below,
+								     since IDP itself did not report failure). -->
+								<logger level="ERROR" doc:name="Log Validation Failure" doc:id="b2000001-002b-4002-8002-idpsublogincomplete"
+									message="#[%dw 2.0
+output application/json
+var status = &quot;error&quot;
+var noEmp = isEmpty(trim((payload.fields.employeeID.value default '') as String))
+var noRows = isEmpty(payload.tables.timeSheetData default [])
+var reason = ((if (noEmp) ['missing employeeID'] else []) ++ (if (noRows) ['no timesheet rows extracted'] else [])) joinBy ' and '
+var msg = &quot;IDP Subscriber - VALIDATION FAILED: &quot; ++ reason ++ &quot; - routing to Error as likely corrupt/non-timesheet PDF: &quot; ++ (vars.fileName default 'unknown') ++ &quot; (library: &quot; ++ (vars.documentLibrary default 'unknown') ++ &quot;)&quot;
+---
+CustomLogMapper::logger({
+	correlationId: correlationId,
+	app: app,
+	mule: mule,
+	status: status,
+	message: msg,
+	(payload: {documentLibrary: vars.documentLibrary, executionId: vars.executionId, fileName: vars.fileName, employeeIDPresent: !noEmp, timesheetRowCount: sizeOf(payload.tables.timeSheetData default [])}) if (p('log.level') == &quot;DEBUG&quot;),
+	env: p('mule.env')
+})]" />
+								<sharepoint:file-move doc:name="Move to Error (Incomplete Result)" doc:id="b2000001-002c-4002-8002-idpsubmvincomplete"
+									config-ref="Sharepoint_Sharepoint_online"
+									fileServerRelativeUrl="#[vars.processingUrl]"
+									newFileServerRelativeUrl="#[vars.errorPath ++ '/' ++ vars.fileName]"
+									flag="1" />
+							</otherwise>
+						</choice>
 					</when>
 					<when expression="#[upper((payload.status default '')) == 'FAILED']">
 						<logger level="ERROR" doc:name="Log IDP Failed" doc:id="b2000001-0011-4002-8002-idpsublogfail"

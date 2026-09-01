@@ -178,6 +178,28 @@ silently lost.
 |---|---|---|---|
 | | | | |
 
+### TC-08b — Corrupt PDF That IDP "Successfully" Extracts Nothing From (Required)
+**Purpose:** Confirm a PDF that IDP *accepts and processes without erroring*, but extracts no usable data
+from (e.g. a corrupted, blank, or non-timesheet PDF that IDP still returns `SUCCEEDED` for), is still
+routed to Error - not treated as a real success just because IDP didn't report a failure.
+**Preconditions:** A PDF known to trigger this behavior (corrupted/blank/scanned-garbage timesheet).
+
+**Steps:**
+1. Upload the file into a library's `01-Inbound`.
+2. Trigger a run; wait 5-10 minutes for the async poll to complete.
+3. Check `03-Output`, `04-Processed`, and `99-Error` for that file/library.
+
+**Expected result:** File ends up in `99-Error` - **no** CSV is created in `03-Output` and the file is
+**not** archived to `04-Processed`. Note: the **Mule IDP Job Logs** list only reflects IDP *submission*
+outcomes (it's written at ingest time, before extraction finishes) - it will show this file counted as
+successfully submitted, which is correct and expected, not a failure of this test. The true outcome is the
+file's final folder location; check the application log for a `VALIDATION FAILED` entry naming the file if
+you need the reason (missing employee ID and/or no timesheet rows extracted).
+
+| Result (Pass/Fail) | Tester | Date | Notes |
+|---|---|---|---|
+| | | | |
+
 ### TC-09 — Recovering a File from the Error Folder (Required)
 **Purpose:** Confirm a file can be corrected and resubmitted after failing.
 **Preconditions:** A file currently in `99-Error` (from TC-08, replaced with a valid PDF if the original was
