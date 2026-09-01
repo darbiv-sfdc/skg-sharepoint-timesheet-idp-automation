@@ -7,10 +7,10 @@
 # Use /enable-XX or /disable-XX commands to manage
 
 /r-genie/00_Master_Orchestrator_System/
-/r-genie/01_Technical_Design_Agent/
+#/r-genie/01_Technical_Design_Agent/
 /r-genie/02_API_Specification_Agent/
-#/r-genie/03_App_Development_Agent/
-#/r-genie/03-01_Dataweave_Agent/
+/r-genie/03_App_Development_Agent/
+/r-genie/03-01_Dataweave_Agent/
 /r-genie/04_Munit_Agent/
 /r-genie/05_ReadMe_Agent/
 /r-genie/06_Code_Review_Agent/

@@ -1,76 +1,127 @@
 {
-  "projectName": "SKG IDP Document Automation",
-  "applicationName": "idp-document-automation-template",
-  "documentFile": "skg-idp-document-automation-technical-design.md",
-  "currentPhase": 5,
+  "projectName": "SKG SharePoint Timesheet IDP Automation",
+  "applicationName": "skg-sharepoint-timesheet-idp-automation",
+  "documentFile": "skg-sharepoint-timesheet-idp-automation-technical-design.md",
+  "documentMode": "as-built (reverse-engineered from src/)",
+  "sourceOfTruth": "src/main/mule/**, src/main/resources/**, pom.xml",
+  "constraint": "READ-ONLY on the Mule application - documentation only, no code changes",
+  "currentPhase": 0,
   "phases": {
     "phase0": {
       "status": "COMPLETED",
       "checkpoints": {
         "templatesRead": true,
+        "templateGuideRead": true,
         "examplesRead": true,
+        "exampleSelected": "01_batch_file_integration_design.md",
+        "applicationScanned": true,
         "skeletonCreated": true,
-        "requirementsDetected": true
+        "outputTargetConfirmed": "new file (as-built), existing forward-design docs untouched",
+        "supplementaryScope": "all 4 enabled sections"
       }
     },
     "phase1": {
       "status": "COMPLETED",
       "checkpoints": {
-        "requirementsIdentified": true,
+        "requirementsIdentified": 17,
+        "nonFunctionalRequirements": 15,
         "userApproved": true,
         "overviewSectionWritten": true,
-        "volume": "50 pdf/day, ~200KB",
-        "sharepointAuth": "oauth-client-credentials certificate (JKS)",
-        "idpIntegration": "IDP Connector",
-        "schedulerFrequency": "hourly"
+        "volume": "~50 pdf/day, ~200KB - marked ASSUMPTION, carried forward, unvalidated",
+        "topology": "CloudHub 2.0 Private Space, strictly 1 replica, 0.1-0.2 vCore",
+        "perDocumentTimeout": "10 min (derived: max_checks 20 x sleepMillis 30000)",
+        "deltaHandling": "inline warning notes inside template sections",
+        "inlineGapsRecorded": ["zero MUnit coverage", "empty test/preprod/prod property files"]
       }
     },
     "phase2": {
       "status": "COMPLETED",
       "checkpoints": {
-        "architectureApproved": "single-app scheduler + persistent VM queue subscriber",
+        "documentationApproachApproved": "pure as-built, no forward-looking evolution notes",
+        "architecturePattern": "single self-contained application, no API-led layering",
+        "processingStrategy": "scheduled batch ingest + persistent VM queue + async poll loop",
         "connectorSummaryWritten": true,
+        "connectorOperationsTabulated": true,
         "connectorPatternDiagram": true,
-        "flowTables": 2,
-        "sequenceDiagrams": 2
+        "flowTables": 11,
+        "sequenceDiagrams": 2,
+        "flowsDocumented": "8 flows + 3 sub-flows",
+        "inlineGapsRecorded": [
+          "idp.action.id/version inert - action baked into connector asset",
+          "idp-timesheet-130 namespace declared but unused",
+          "api.id / https.port / http.private.port unused",
+          "common.xml and skg-sharepoint-example.xml orphaned",
+          "trigger-ingest is synchronous - caller waits for full sweep",
+          "Groovy sleep blocks the sole VM consumer",
+          "job log list must be addressed by GUID not title",
+          "audit rows reflect submission only, not extraction outcome"
+        ]
       }
     },
     "phase3": {
       "status": "COMPLETED",
       "checkpoints": {
         "dataSampleConfirmed": true,
-        "mappingRule": "flatten one row per timeSheetData line-item, header repeated",
-        "csvFilename": "idp-results-{documentName}.csv",
-        "emptyLineItems": "emit one header-only row",
+        "sampleAuthoritativeForStructure": true,
+        "thursdayKeyResolution": "live IDP emits thuTime; sample's thurTime is stale; transforms correct; recorded as resolved historical discrepancy",
+        "outputContract": "49 columns (21 base + 28 day-split)",
         "fieldMappingWritten": true,
+        "jobLogMappingWritten": true,
+        "validationFinding": "no data validation exists; extension filter is the only input gate",
         "errorHandlingWritten": true,
-        "errorHandlingDiagram": true
+        "errorHandlingDiagram": true,
+        "retryFinding": "no retry or reconnection strategy configured anywhere; poll loop is the only retry-shaped mechanism",
+        "newGapsFound": [
+          "empty timeSheetData emits incompatible 4-column schema with a message column",
+          "ingest entry-point flows have no error handler at all",
+          "files orphaned in 02-Processing are invisible to every automated path",
+          "IDP confidence scores not captured"
+        ]
       }
     },
     "phase4": {
       "status": "COMPLETED",
       "checkpoints": {
         "essentialDiagramsVerified": 3,
+        "diagramPlacementContextual": true,
         "coreSectionsVerified": 5,
-        "statusBannerUpdated": true
+        "noForbiddenSections": true,
+        "noDataWeaveCodeInMappings": true,
+        "noHtmlBreaksInTables": true,
+        "mermaidFencesBalanced": true,
+        "noPlaceholdersRemaining": true,
+        "statusBannerUpdated": true,
+        "documentLines": 1021
       }
     },
-    "phase5": {
-      "status": "COMPLETED",
-      "checkpoints": {
-        "supplementarySections": ["Security Considerations", "Performance & Monitoring", "Configuration Files", "Additional Diagrams"],
-        "deploymentGuideOmitted": true,
-        "configFilesGenerated": ["config/idp-automation-properties.yaml", "config/idp-automation-secure-properties.yaml"]
-      }
-    }
+    "phase5": { "status": "PENDING", "checkpoints": {} }
   },
+  "scannedSources": [
+    "pom.xml",
+    "src/main/mule/api.xml",
+    "src/main/mule/config/global.xml",
+    "src/main/mule/implementation/idp-ingest-flow.xml",
+    "src/main/mule/implementation/idp-subscriber-flow.xml",
+    "src/main/mule/implementation/idp-job-logging-flow.xml",
+    "src/main/resources/dw/idp-result-to-csv-v2.dwl",
+    "src/main/resources/properties/common-properties.yaml",
+    "src/main/resources/properties/dev-properties.yaml"
+  ],
   "inputFiles": [
-    "project/input_01_design/SKG - Solution Design Document_ Self-Contained IDP Automation Utility.md"
+    "project/input_01_design/SKG - Solution Design Document_ Self-Contained IDP Automation Utility.md",
+    "project/input_01_design/idp-results-26823909-aabf-4f2a-a203-9c10a9ecf20f.json",
+    "project/input_01_design/idp-results-26823909-aabf-4f2a-a203-9c10a9ecf20f.csv"
   ],
   "outputFiles": [
-    "project/output_01_design/skg-idp-document-automation-technical-design.md",
-    "project/output_01_design/config/idp-automation-properties.yaml",
-    "project/output_01_design/config/idp-automation-secure-properties.yaml"
+    "project/output_01_design/skg-sharepoint-timesheet-idp-automation-technical-design.md"
   ],
-  "lastUpdated": "2026-07-09"
+  "priorRun": {
+    "note": "Forward (pre-implementation) design for application idp-document-automation-template",
+    "statePreservedAs": ".design-workflow-state-forward-design-v1.json",
+    "documents": [
+      "skg-idp-document-automation-technical-design.md",
+      "skg-idp-document-automation-technical-design_ver2.md"
+    ]
+  },
+  "lastUpdated": "2026-08-25"
 }
