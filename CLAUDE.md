@@ -92,6 +92,13 @@ src/main/
     ├── dw/
     │   └── idp-result-to-csv-v2.dwl       # DataWeave transform for IDP JSON → CSV flattening
     └── api/                              # RAML specification (pulled from Exchange)
+
+docs/                                     # Generated, human-facing documentation (not app code)
+├── admin-guide/                          # HTML admin guide (folder structure, job logs, adding a library, troubleshooting, etc.)
+└── uat/                                  # UAT test plan (uat-test-plan.md) + scenario pages, incl. SharePoint site/library URLs and the manual trigger endpoint
+
+project/                                  # R-GENIE workspace: input_XX_*/output_XX_* per pipeline stage (design, api, dataweave, app, munit, readme, review)
+                                           # — per workspace-organization.mdc, new R-GENIE work must go here, never inside r-genie/{subsystem}/
 ```
 
 ## Development Commands
