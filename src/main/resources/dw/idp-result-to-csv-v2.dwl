@@ -25,7 +25,7 @@ fun parseTime(timeStr) =
     }
   }
 ---
-if (sizeOf(timesheetData) == 0)
+if (isEmpty(timesheetData))
   [{
     id: payload.id,
     documentName: payload.documentName,

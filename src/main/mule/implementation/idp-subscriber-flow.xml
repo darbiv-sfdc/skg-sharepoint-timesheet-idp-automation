@@ -76,49 +76,11 @@ CustomLogMapper::logger({
 						     individual day-cell values (e.g. monTime/satTime) are routinely null on otherwise-valid
 						     rows, so per-cell checks would wrongly reject good timesheets. -->
 						<set-variable variableName="resultComplete" doc:name="resultComplete" value="#[
-	(sizeOf(trim((payload.fields.employeeID.value default '') as String)) &gt; 0)
-	and (sizeOf(payload.tables.timeSheetData default []) &gt; 0)]" doc:id="b2000001-0029-4002-8002-idpsubvcomplete" />
+	(!isEmpty(trim((payload.fields.employeeID.value default '') as String)))
+	and (!isEmpty(payload.tables.timeSheetData default []))]" doc:id="b2000001-0029-4002-8002-idpsubvcomplete" />
 
 						<choice doc:name="Result Complete?" doc:id="b2000001-002a-4002-8002-idpsubchkcomplete">
 							<when expression="#[vars.resultComplete]">
-
-						<!-- Best-effort: read the source PDF's classification columns (e.g. PDF Type/Site/WeekNo)
-						     from its list item, so they can be copied onto the Output CSV below. A read failure
-						     must never block the CSV write - target keeps this off the IDP-result payload. -->
-						<try doc:name="Best-Effort Read Source Classification" doc:id="b2000001-0020-4002-8002-idpsubgetmeta">
-							<sharepoint:get-metadata doc:name="Get Source File Metadata" doc:id="b2000001-0021-4002-8002-idpsubgetmeta2"
-								config-ref="Sharepoint_Sharepoint_online"
-								fileServerRelativeUrl="#[vars.processingUrl]"
-								target="sourceMetadata" />
-							<error-handler>
-								<on-error-continue enableNotifications="true" logException="true" doc:name="Ignore Metadata Read Failure" doc:id="b2000001-0022-4002-8002-idpsubgetmetaerr" type="ANY">
-									<logger level="WARN" doc:name="Log Classification Read Failure" doc:id="b2000001-0023-4002-8002-idpsublogmetaerr"
-										message="#[%dw 2.0
-output application/json
-var status = &quot;warning&quot;
-var msg = &quot;IDP Subscriber - WARNING: Could not read source classification metadata for file: &quot; ++ (vars.fileName default 'unknown') ++ &quot; (library: &quot; ++ (vars.documentLibrary default 'unknown') ++ &quot;) - Output CSV will be written without classification columns&quot;
----
-CustomLogMapper::logger({
-	correlationId: correlationId,
-	app: app,
-	mule: mule,
-	status: status,
-	message: msg,
-	env: p('mule.env')
-})]" />
-								</on-error-continue>
-							</error-handler>
-						</try>
-
-						<!-- Classification values to copy onto the CSV's list item, keyed by SharePoint internal
-						     field name (sharepoint.classification.fields). Empty if the read above failed, or
-						     if the source file simply had no value set for a given column. -->
-						<set-variable variableName="classificationProps" doc:name="classificationProps" value="#[%dw 2.0
-output application/java
-var src = (vars.sourceMetadata.listItemAllFields default {})
-var wanted = read(p('sharepoint.classification.fields'), 'application/json')
----
-{ (wanted filter ((f) -> src[f] != null) map ((f) -> { (f): src[f] as String })) }]" />
 
 						<!-- Flatten the IDP result into CSV (one row per timeSheetData line item) -->
 						<ee:transform doc:name="Flatten Result to CSV" doc:id="b2000001-000d-4002-8002-idpsubtxcsv">
@@ -127,45 +89,21 @@ var wanted = read(p('sharepoint.classification.fields'), 'application/json')
 							</ee:message>
 						</ee:transform>
 
+						<set-variable variableName="outputCsvPath" doc:name="outputCsvPath"
+							value="#[vars.outputPath ++ '/idp-results-' ++ vars.outputBaseName ++ '.csv']" doc:id="b2000001-0030-4002-8002-idpsubvcsvpath" />
+
 						<!-- Write the CSV to the Output folder -->
 						<sharepoint:file-add doc:name="Write CSV to Output" doc:id="b2000001-000e-4002-8002-idpsubaddcsv"
 							config-ref="Sharepoint_Sharepoint_online"
-							fileServerRelativeUrl="#[vars.outputPath ++ '/idp-results-' ++ vars.outputBaseName ++ '.csv']"
+							fileServerRelativeUrl="#[vars.outputCsvPath]"
 							overwrite="true">
 							<sharepoint:file-content-stream><![CDATA[#[payload]]]></sharepoint:file-content-stream>
 						</sharepoint:file-add>
 
-						<!-- Best-effort: stamp the classification columns read above onto the CSV's list item.
-						     The CSV is already written at this point regardless of outcome here. -->
-						<choice doc:name="Has Classification To Copy?" doc:id="b2000001-0024-4002-8002-idpsubchkcls">
-							<when expression="#[!isEmpty(vars.classificationProps)]">
-								<try doc:name="Best-Effort Stamp CSV Classification" doc:id="b2000001-0025-4002-8002-idpsubsetmeta">
-									<sharepoint:file-update-metadata doc:name="Update CSV Metadata" doc:id="b2000001-0026-4002-8002-idpsubsetmeta2"
-										config-ref="Sharepoint_Sharepoint_online"
-										fileServerRelativeUrl="#[vars.outputPath ++ '/idp-results-' ++ vars.outputBaseName ++ '.csv']">
-										<sharepoint:update-properties>#[vars.classificationProps]</sharepoint:update-properties>
-									</sharepoint:file-update-metadata>
-									<error-handler>
-										<on-error-continue enableNotifications="true" logException="true" doc:name="Ignore Metadata Write Failure" doc:id="b2000001-0027-4002-8002-idpsubsetmetaerr" type="ANY">
-											<logger level="WARN" doc:name="Log Classification Write Failure" doc:id="b2000001-0028-4002-8002-idpsublogsetmetaerr"
-												message="#[%dw 2.0
-output application/json
-var status = &quot;warning&quot;
-var msg = &quot;IDP Subscriber - WARNING: Could not copy classification columns onto Output CSV for file: &quot; ++ (vars.fileName default 'unknown') ++ &quot; (library: &quot; ++ (vars.documentLibrary default 'unknown') ++ &quot;)&quot;
----
-CustomLogMapper::logger({
-	correlationId: correlationId,
-	app: app,
-	mule: mule,
-	status: status,
-	message: msg,
-	env: p('mule.env')
-})]" />
-										</on-error-continue>
-									</error-handler>
-								</try>
-							</when>
-						</choice>
+						<!-- Classification columns (PDF Type/Site/WeekNo) are copied from the source PDF onto
+						     the Output CSV in a dedicated sub-flow - see idp-classification-flow.xml. Entirely
+						     best-effort: never blocks the CSV write above or the move to Processed below. -->
+						<flow-ref doc:name="Copy Classification Metadata" doc:id="b2000001-0031-4002-8002-idpsubcopycls" name="copy-classification-metadata-subflow" />
 
 						<!-- Archive the source file Processing -> Processed -->
 						<sharepoint:file-move doc:name="Move to Processed" doc:id="b2000001-000f-4002-8002-idpsubmvdone"

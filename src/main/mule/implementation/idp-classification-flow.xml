@@ -1,0 +1,220 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:sharepoint="http://www.mulesoft.org/schema/mule/sharepoint"
+	xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/sharepoint http://www.mulesoft.org/schema/mule/sharepoint/current/mule-sharepoint.xsd">
+
+	<!--
+		SHARED SUB-FLOW - Classification Metadata Copier
+		Called once per successfully-processed file by subscriber-vm-idp-result-flow, right after
+		the Output CSV is written and before the source file is archived to Processed, with these
+		vars already set by the caller: processingUrl (source PDF, still in 02-Processing at this
+		point), outputCsvPath (the CSV just written to 03-Output), fileName, documentLibrary.
+
+		Copies the source PDF's classification columns (e.g. PDF Type/Site/WeekNo, configured via
+		sharepoint.classification.fields) onto the CSV's own list item, via:
+		  1. sharepoint:list-item-query - queries the document library (used directly as
+		     LIST_ID_OR_NAME by name, e.g. "EKN") filtered by FileRef, selecting only the wanted
+		     columns. This replaces an earlier attempt using sharepoint:get-metadata, whose
+		     listItemAllFields property only ever returned an unexpanded OData deferred stub
+		     ({"__deferred": {...}}) - confirmed against a live run - and so could never return
+		     actual field values.
+		  2. sharepoint:file-update-metadata - stamps the matched values onto the CSV (path-based,
+		     no list-item id needed).
+
+		Entirely best-effort end to end: the whole body is wrapped in one outer try/on-error-continue
+		in addition to the per-step try/catches below, so nothing in here - including a future bug
+		in one of these very loggers - can ever propagate up and cause the caller to misroute a
+		file to Error. (A previous version of this logic did exactly that: an unescaped apostrophe
+		in a WARN logger's message text crashed the flow for every file. Every log message text
+		below has been checked for apostrophes/contractions for that reason.)
+	-->
+	<sub-flow name="copy-classification-metadata-subflow" doc:id="b2000001-0032-4002-8002-idpclscopyflow">
+
+		<try doc:name="Best-Effort Copy Classification (Outer Guard)" doc:id="b2000001-0033-4002-8002-idpclsoutertry">
+
+			<!-- Build the OData query once, in its own step, per SharePoint connector best practice -
+			     complex/escaped query strings are more reliable built in DataWeave than typed directly
+			     into the operation. The document library name (e.g. "EKN") is used directly as the
+			     LIST_ID_OR_NAME - list-item-query is a read-only GET, so the title/GUID encoding pitfall
+			     documented for the job-log list's item-CREATE call does not apply here. FileRef is the
+			     file's own full server-relative path (identical to vars.processingUrl), so filtering on
+			     it directly finds exactly this file's list item without needing to split directory from
+			     filename. The single-quote doubling escapes a literal apostrophe in a file name at the
+			     OData layer - the \$ escaping mirrors the proven convention already used for file-query
+			     in sharepoint-ingest-single-library-subflow (idp-ingest-flow.xml). -->
+			<set-variable variableName="classificationSourceQuery" doc:name="classificationSourceQuery" value="#[%dw 2.0
+output application/java
+fun odataEscape(s) = s replace &quot;'&quot; with &quot;''&quot;
+var fields = read(p('sharepoint.classification.fields'), 'application/json')
+var selectClause = (fields ++ ['Id']) joinBy ','
+var filterClause = &quot;FileRef eq '&quot; ++ odataEscape(vars.processingUrl) ++ &quot;'&quot;
+---
+vars.documentLibrary ++ '?\$select=' ++ selectClause ++ '&amp;\$filter=' ++ filterClause]" doc:id="b2000001-0034-4002-8002-idpclsvquery" />
+
+			<!-- Query the source file's list item for the wanted columns. target keeps the IDP-result
+			     payload untouched (it was already consumed by the CSV transform before this sub-flow
+			     is called). -->
+			<try doc:name="Best-Effort Query Source Classification" doc:id="b2000001-0035-4002-8002-idpclsquerytry">
+				<sharepoint:list-item-query doc:name="Query Source List Item" doc:id="b2000001-0036-4002-8002-idpclsquery2"
+					config-ref="Sharepoint_Sharepoint_online" target="sourceListItems">
+					<sharepoint:query><![CDATA[#[vars.classificationSourceQuery]]]></sharepoint:query>
+				</sharepoint:list-item-query>
+				<error-handler>
+					<on-error-continue enableNotifications="true" logException="true" doc:name="Ignore Query Failure" doc:id="b2000001-0037-4002-8002-idpclsqueryerr" type="ANY">
+						<logger level="WARN" doc:name="Log Classification Query Failure" doc:id="b2000001-0038-4002-8002-idpcllogqueryerr"
+							message="#[%dw 2.0
+output application/json
+var status = &quot;warning&quot;
+var msg = &quot;IDP Subscriber - WARNING: Could not query source classification metadata for file: &quot; ++ (vars.fileName default 'unknown') ++ &quot; (library: &quot; ++ (vars.documentLibrary default 'unknown') ++ &quot;)&quot;
+---
+CustomLogMapper::logger({
+	correlationId: correlationId,
+	app: app,
+	mule: mule,
+	status: status,
+	message: msg,
+	(payload: {errorType: error.errorType.identifier, errorDescription: error.description}) if (p('log.level') == &quot;DEBUG&quot;),
+	env: p('mule.env')
+})]" />
+					</on-error-continue>
+				</error-handler>
+			</try>
+
+			<!-- Classification values to copy onto the CSV, keyed by SharePoint internal field name
+			     (sharepoint.classification.fields). Defensive against 0/1/many matched items - only
+			     the first is used, and any missing/absent field is simply omitted, never errors. -->
+			<set-variable variableName="classificationProps" doc:name="classificationProps" value="#[%dw 2.0
+output application/java
+var items = vars.sourceListItems default []
+var item = items[0] default {}
+var wanted = read(p('sharepoint.classification.fields'), 'application/json')
+---
+{ (wanted filter ((f) -> item[f] != null) map ((f) -> { (f): item[f] as String })) }]" doc:id="b2000001-0039-4002-8002-idpclsvprops" />
+
+			<!-- DIAGNOSTIC: always report what the query found, so a still-wrong field-name guess (or
+			     a library-name/FileRef mismatch) can be confirmed from the logs, not guessed again.
+			     Must be level="INFO" - AsyncRoot in log4j2.xml is level="INFO", so a level="DEBUG"
+			     logger element is filtered by Log4j2 itself and would never appear, regardless of the
+			     log.level property (that property only gates the optional payload field below). -->
+			<logger level="INFO" doc:name="Log Classification Query Result" doc:id="b2000001-003a-4002-8002-idpcllogqueryok"
+				message="#[%dw 2.0
+output application/json
+var status = &quot;ok&quot;
+var items = vars.sourceListItems default []
+var item = items[0] default {}
+var msg = &quot;IDP Subscriber - DEBUG: Classification query executed for file: &quot; ++ (vars.fileName default 'unknown') ++ &quot; (library: &quot; ++ (vars.documentLibrary default 'unknown') ++ &quot;)&quot;
+---
+CustomLogMapper::logger({
+	correlationId: correlationId,
+	app: app,
+	mule: mule,
+	status: status,
+	message: msg,
+	(payload: {
+		query: vars.classificationSourceQuery,
+		itemsFound: sizeOf(items),
+		availableKeysOnMatchedItem: keysOf(item),
+		matchedFields: keysOf(vars.classificationProps default {})
+	}) if (p('log.level') == &quot;DEBUG&quot;),
+	env: p('mule.env')
+})]" />
+
+			<!-- HARDENING: two distinct WARNs, since they point at different fixes. -->
+			<choice doc:name="Query Returned Nothing?" doc:id="b2000001-003b-4002-8002-idpclschknoitem">
+				<when expression="#[isEmpty(vars.sourceListItems default [])]">
+					<logger level="WARN" doc:name="Log No List Item Found" doc:id="b2000001-003c-4002-8002-idpcllognoitem"
+						message="#[%dw 2.0
+output application/json
+var status = &quot;warning&quot;
+var msg = &quot;IDP Subscriber - WARNING: Classification lookup returned no matching list item for file: &quot; ++ (vars.fileName default 'unknown') ++ &quot; (library: &quot; ++ (vars.documentLibrary default 'unknown') ++ &quot;) - check the FileRef filter and library name&quot;
+---
+CustomLogMapper::logger({
+	correlationId: correlationId,
+	app: app,
+	mule: mule,
+	status: status,
+	message: msg,
+	env: p('mule.env')
+})]" />
+				</when>
+				<otherwise>
+					<choice doc:name="Item Found But Nothing Matched?" doc:id="b2000001-003d-4002-8002-idpclschknomatch">
+						<when expression="#[isEmpty(vars.classificationProps)]">
+							<logger level="WARN" doc:name="Log No Classification Fields Matched" doc:id="b2000001-003e-4002-8002-idpcllognomatch"
+								message="#[%dw 2.0
+output application/json
+var status = &quot;warning&quot;
+var wanted = read(p('sharepoint.classification.fields'), 'application/json')
+var msg = &quot;IDP Subscriber - WARNING: Classification lookup found a list item but none of the configured fields (&quot; ++ (wanted joinBy ', ') ++ &quot;) matched any key on it - Output CSV will have no classification columns copied. File: &quot; ++ (vars.fileName default 'unknown') ++ &quot; (library: &quot; ++ (vars.documentLibrary default 'unknown') ++ &quot;)&quot;
+---
+CustomLogMapper::logger({
+	correlationId: correlationId,
+	app: app,
+	mule: mule,
+	status: status,
+	message: msg,
+	env: p('mule.env')
+})]" />
+						</when>
+					</choice>
+				</otherwise>
+			</choice>
+
+			<!-- Stamp the matched values onto the CSV's list item. The CSV is already written at this
+			     point regardless of outcome here. -->
+			<choice doc:name="Has Classification To Copy?" doc:id="b2000001-003f-4002-8002-idpclschkcopy">
+				<when expression="#[!isEmpty(vars.classificationProps)]">
+					<try doc:name="Best-Effort Stamp CSV Classification" doc:id="b2000001-0040-4002-8002-idpclssettry">
+						<sharepoint:file-update-metadata doc:name="Update CSV Metadata" doc:id="b2000001-0041-4002-8002-idpclssettry2"
+							config-ref="Sharepoint_Sharepoint_online"
+							fileServerRelativeUrl="#[vars.outputCsvPath]">
+							<sharepoint:update-properties>#[vars.classificationProps]</sharepoint:update-properties>
+						</sharepoint:file-update-metadata>
+						<error-handler>
+							<on-error-continue enableNotifications="true" logException="true" doc:name="Ignore Metadata Write Failure" doc:id="b2000001-0042-4002-8002-idpclssettryerr" type="ANY">
+								<logger level="WARN" doc:name="Log Classification Write Failure" doc:id="b2000001-0043-4002-8002-idpcllogsettryerr"
+									message="#[%dw 2.0
+output application/json
+var status = &quot;warning&quot;
+var msg = &quot;IDP Subscriber - WARNING: Could not copy classification columns onto Output CSV for file: &quot; ++ (vars.fileName default 'unknown') ++ &quot; (library: &quot; ++ (vars.documentLibrary default 'unknown') ++ &quot;)&quot;
+---
+CustomLogMapper::logger({
+	correlationId: correlationId,
+	app: app,
+	mule: mule,
+	status: status,
+	message: msg,
+	env: p('mule.env')
+})]" />
+							</on-error-continue>
+						</error-handler>
+					</try>
+				</when>
+			</choice>
+
+			<error-handler>
+				<on-error-continue enableNotifications="true" logException="true" doc:name="Ignore Unexpected Classification Failure" doc:id="b2000001-0044-4002-8002-idpclsoutererr" type="ANY">
+					<logger level="WARN" doc:name="Log Unexpected Classification Failure" doc:id="b2000001-0045-4002-8002-idpcllogoutererr"
+						message="#[%dw 2.0
+output application/json
+var status = &quot;warning&quot;
+var msg = &quot;IDP Subscriber - WARNING: Unexpected error while copying classification metadata for file: &quot; ++ (vars.fileName default 'unknown') ++ &quot; (library: &quot; ++ (vars.documentLibrary default 'unknown') ++ &quot;) - Output CSV will proceed without classification columns&quot;
+---
+CustomLogMapper::logger({
+	correlationId: correlationId,
+	app: app,
+	mule: mule,
+	status: status,
+	message: msg,
+	(payload: {errorType: error.errorType.identifier, errorDescription: error.description}) if (p('log.level') == &quot;DEBUG&quot;),
+	env: p('mule.env')
+})]" />
+				</on-error-continue>
+			</error-handler>
+		</try>
+
+	</sub-flow>
+</mule>
