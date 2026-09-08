@@ -66,12 +66,14 @@ Folder URLs are computed at runtime as `{sharepoint.site.serverRelativePath}/{li
 
 ### Classification Metadata Carry-Through (source PDF → Output CSV)
 
-The source PDF's SharePoint classification columns (e.g. `PDF Type`, `Site`, `WeekNo`) are **not** part of the IDP extraction result and are never included in the VM tracking message - so `subscriber-vm-idp-result-flow` (`idp-subscriber-flow.xml`, SUCCEEDED branch) reads them directly from the source file's own list item and copies them onto the newly-written CSV, entirely independent of the ingest flow:
+The source PDF's SharePoint classification columns (e.g. `PDF Type`, `Site`, `WeekNo`) are **not** part of the IDP extraction result and are never included in the VM tracking message - so `subscriber-vm-idp-result-flow` (`idp-subscriber-flow.xml`, SUCCEEDED branch) copies them from the source file's own list item onto the newly-written CSV, entirely independent of the ingest flow, via a dedicated sub-flow: `copy-classification-metadata-subflow` in `idp-classification-flow.xml`, invoked with a single `<flow-ref>` right after the CSV `file-add`.
 
-- **Read**: `sharepoint:get-metadata` on `vars.processingUrl` (the source file hasn't moved to Processed yet at this point), `target="sourceMetadata"` so it doesn't clobber the IDP-result `payload` the CSV transform still needs. Columns live under `vars.sourceMetadata.listItemAllFields`, keyed by **SharePoint internal field name** (spaces encoded as `_x0020_`, e.g. `PDF_x0020_Type`), not the display name.
-- **Which fields to copy**: `sharepoint.classification.fields` (JSON array of internal names, `dev-properties.yaml`) - a config change, not a flow change, if a classification column is added/renamed. Confirm internal names via a library's *List settings* → click the column → check the URL's `Field=` value, or by DEBUG-logging `vars.sourceMetadata.listItemAllFields` once against a real file.
-- **Write**: after `sharepoint:file-add` writes the CSV, `sharepoint:file-update-metadata` (same `fileServerRelativeUrl`, a `<sharepoint:update-properties>` map) stamps only the fields that were actually present on the source (`vars.classificationProps`, built by filtering `sharepoint.classification.fields` against `listItemAllFields` and casting each value `as String` - same EDM-type lesson as Job Logging, and correct for Choice-type columns; a Managed Metadata column would need different handling since its value is a complex object, not a plain string).
-- **Best-effort, both directions**: a metadata read or write failure only logs a WARN - it never blocks the CSV write or the subsequent `Move to Processed`, same pattern as `write-job-log-subflow`.
+- **Read**: `sharepoint:get-metadata` cannot be used here - its `listItemAllFields` property only ever returns an unexpanded OData deferred stub (`{"__deferred": {...}}`), never actual field values (confirmed against a live run). Instead, the sub-flow builds an OData query in its own `set-variable` step and calls `sharepoint:list-item-query`, using the document library's plain name (e.g. `"EKN"`, from `vars.documentLibrary`) directly as `LIST_ID_OR_NAME` and filtering by `FileRef eq '<vars.processingUrl>'` (the file's own full server-relative path) with `$select` limited to the wanted columns - this mirrors the OData-query style already used by `file-query` in `sharepoint-ingest-single-library-subflow` (`idp-ingest-flow.xml`), including the same `\$select`/`\$filter` escaping convention. A literal apostrophe in a file name is escaped at the OData layer (`'` doubled to `''`) before being embedded in the filter clause.
+- **Which fields to copy**: `sharepoint.classification.fields` (JSON array of **internal** field names, `dev-properties.yaml`) - a config change, not a flow change, if a classification column is added/renamed. Internal names do not reliably follow the `_x0020_`-for-spaces convention (e.g. the "PDF Type" column's actual internal name is `PDFType`, no encoding at all) - confirm via `GET .../_api/web/lists/getbytitle('<library>')/fields?$select=Title,InternalName&$filter=Hidden%20eq%20false` (returns every column's display Title next to its real InternalName in one response) rather than guessing, and cross-check against the sub-flow's own diagnostic logger (next bullet) once deployed.
+- **Diagnostics baked in, not bolted on**: the sub-flow always logs (INFO, with the raw query/`itemsFound`/`availableKeysOnMatchedItem`/`matchedFields` in the DEBUG payload) what the query actually found, plus two *distinct* WARNs - zero items found (query/library-name problem) vs. an item found but no configured field matched it (field-name problem) - so a misconfiguration is diagnosable from the log alone, not by guessing again.
+- **Write**: unchanged mechanism - after `sharepoint:file-add` writes the CSV (to `vars.outputCsvPath`), `sharepoint:file-update-metadata` (same path, a `<sharepoint:update-properties>` map) stamps only the fields that were actually present on the source (`vars.classificationProps`, built by filtering `sharepoint.classification.fields` against the matched list item and casting each value `as String` - same EDM-type lesson as Job Logging, and correct for Choice-type columns; a Managed Metadata column would need different handling since its value is a complex object, not a plain string).
+- **Best-effort at every layer, by design**: the query, the write, and the *entire sub-flow body* are each wrapped in their own `try`/`on-error-continue` (the outer one is a deliberate safety net - an earlier version had a logger throw an uncaught exception that misrouted files to Error purely because of a log-message bug, not any real failure). A metadata read or write failure only logs a WARN - it never blocks the CSV write or the subsequent `Move to Processed`.
+- **Log message text must avoid stray apostrophes**: Mule's `<logger message="#[...]">` attribute is parsed by a naive template scanner (`DefaultExpressionManager.parseLogTemplate`) that requires an *even total count* of raw `'` characters anywhere in the expression text, regardless of DataWeave's own string-quoting rules - an odd count (e.g. a lone possessive apostrophe like "file's") throws `IllegalArgumentException: Error while parsing template` at runtime, not at build time. This is specific to the `logger` component; other attributes (`set-variable` `value`, `<sharepoint:query>`) don't go through this path and can contain literal apostrophes freely (needed here for OData escaping).
 
 ### Error Handling
 
@@ -93,6 +95,7 @@ src/main/
 │       ├── idp-ingest-flow.xml           # sharepoint-ingest-subflow (per-library orchestrator) + sharepoint-ingest-single-library-subflow (worker)
 │       ├── idp-subscriber-flow.xml       # VM consumer + IDP poll flow
 │       ├── idp-job-logging-flow.xml      # write-job-log-subflow - writes one row per library-run to the SharePoint job-log list
+│       ├── idp-classification-flow.xml   # copy-classification-metadata-subflow - copies source PDF classification columns onto the Output CSV
 │       └── skg-sharepoint-example.xml    # Example/template flow
 └── resources/
     ├── properties/
@@ -202,9 +205,11 @@ sharepoint:
   filter:
     extension: "pdf"
   # Internal SharePoint field names to copy from the source PDF onto the Output CSV (see
-  # "Classification Metadata Carry-Through" above) - a config change, not a flow change
+  # "Classification Metadata Carry-Through" above) - a config change, not a flow change.
+  # Internal names don't reliably follow the _x0020_-for-spaces convention (confirm via the
+  # library's fields REST endpoint, not by guessing - see "Classification Metadata Carry-Through")
   classification:
-    fields: '["PDF_x0020_Type","Site","WeekNo"]'
+    fields: '["PDFType","Site","WeekNo"]'
   # SharePoint list receiving one row per document-library run (see "Job Logging" above)
   # title is a display name only (kept for reference/logging) - the flow writes using listId (GUID),
   # since the title-based lookup mis-encodes spaces on the item-create call (see "Job Logging" above)
@@ -390,7 +395,7 @@ CustomLogMapper::logger({
 
 ### Document IDs
 `doc:id` conventions are **not fully consistent** across the codebase:
-- `idp-subscriber-flow.xml` consistently follows `b2000001-<seq>-4002-8002-<mnemonic-suffix>`
+- `idp-subscriber-flow.xml` and `idp-classification-flow.xml` consistently follow `b2000001-<seq>-4002-8002-<mnemonic-suffix>` (the latter continues the same sequence, since its sub-flow is invoked from the former)
 - `idp-ingest-flow.xml` mixes plain random UUIDs (original elements) with newer structured-looking IDs added during the multi-library refactor — there's no single enforced pattern there. When adding elements to the ingest flow, either style is acceptable as long as the ID is unique within the file.
 
 ## Important Notes
