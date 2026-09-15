@@ -38,6 +38,14 @@ http://www.mulesoft.org/schema/mule/idp-timesheet-140 http://www.mulesoft.org/sc
 	<!-- APIkit Configuration -->
 	<apikit:config name="api-config" api="resource::dfb7e975-c094-4e2b-8895-a7742dcadd1d:skg-idp-automation-template-papi:1.0.0:raml:zip:skg-idp-automation-template-papi.raml" outboundHeadersMapName="outboundHeaders" httpStatusVarName="httpStatus" />
 
+	<!-- API Manager Autodiscovery for the standalone /trigger-ingest endpoint - this flow has its own raw
+	     HTTP listener (not routed through apikit:router / the /api/v1/* RAML contract), so it's registered
+	     as its own separate "Basic Endpoint" API instance in API Manager rather than as a resource on the
+	     main API. Binds a Client ID Enforcement policy to just this flow without touching the RAML or the
+	     /trigger-ingest path. Requires registering that API instance per environment in API Manager and
+	     setting api.triggerIngestId accordingly - see api.triggerIngestId in {env}-properties.yaml. -->
+	<api-gateway:autodiscovery apiId="${api.triggerIngestId}" flowRef="trigger-ingest-flow" ignoreBasePath="true" />
+
 	<!-- HTTP Request Configs for Health Checks -->
 	<http:request-config
 		name="HttpHealthCheckRequestConfig"
@@ -83,7 +91,7 @@ http://www.mulesoft.org/schema/mule/idp-timesheet-140 http://www.mulesoft.org/sc
 	<!-- VM Persistent Queue Config (async IDP execution tracking) -->
 	<vm:config name="VM_Config" doc:name="VM Config" doc:id="b1e2c3d4-0001-4a00-9a00-idpvmqueue001">
 		<vm:queues>
-			<vm:queue queueName="${vm.queue.name}" />
+			<vm:queue queueName="${vm.queue.name}" queueType="PERSISTENT" />
 		</vm:queues>
 	</vm:config>
 	

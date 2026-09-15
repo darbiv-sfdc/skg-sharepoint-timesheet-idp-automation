@@ -20,7 +20,7 @@ This is a **MuleSoft 4 application** that automates timesheet processing using *
 The application uses a **layered async pattern** with two entry points, a per-library orchestrator, a single-library worker, and an async consumer:
 
 - **`scheduler-sharepoint-ingest-flow`** (`api.xml`) - Scheduled flow (cron-based) that invokes `sharepoint-ingest-subflow`
-- **`trigger-ingest-flow`** (`api.xml`) - HTTP-triggered flow for manual/on-demand ingestion via `/trigger-ingest`, also invokes `sharepoint-ingest-subflow`
+- **`trigger-ingest-flow`** (`api.xml`) - HTTP-triggered flow for manual/on-demand ingestion via `/trigger-ingest`, also invokes `sharepoint-ingest-subflow`. This flow has its own raw `<http:listener>` and is **not** routed through `apikit:router` — it isn't a resource on the `/api/v1/*` RAML contract at all, which is why it's protected by its own separate API Manager registration rather than a policy on the main API (see Important Notes)
 - **`sharepoint-ingest-subflow`** (`idp-ingest-flow.xml`) - Thin orchestrator invoked by both entry points above. Reads the configured document library list (`sharepoint.libraries`), and sequentially, for each one, sets `documentLibrary` and delegates to `sharepoint-ingest-single-library-subflow` via `<flow-ref>` (Mule sub-flows have no formal parameters — setting a variable immediately before the `flow-ref` is the standard way to pass a value into the next sub-flow, since it shares the caller's variable scope)
 - **`sharepoint-ingest-single-library-subflow`** (`idp-ingest-flow.xml`) - Does the actual per-library work: lists PDFs in that library's Inbound folder, moves each `Inbound → Processing`, submits to IDP, and publishes a self-describing tracking message (including that library's own output/processed/error URLs) to the VM queue
 - **`subscriber-vm-idp-result-flow`** (`idp-subscriber-flow.xml`) - VM consumer that polls IDP for results, handles state transitions (`SUCCEEDED`/`FAILED`/pending), and moves files to final destinations (`Output`/`Processed`/`Error`) **using the folder URLs carried in the message**, not a global lookup — this is what prevents one library's output from ever landing in another's folders
@@ -102,7 +102,7 @@ src/main/
 └── resources/
     ├── properties/
     │   ├── common-properties.yaml        # Environment-independent properties
-    │   ├── {env}-properties.yaml         # Per-environment config — only dev-properties.yaml is currently populated; test/prod are empty and preprod only sets HTTP/HTTPS ports
+    │   ├── {env}-properties.yaml         # Per-environment config — dev/uat/prod are populated; test is empty and preprod only sets HTTP/HTTPS ports (no `mule.env=test`/`preprod` deployment exists yet)
     │   └── secure/
     │       └── {env}-secure-properties.yaml  # Encrypted credentials
     ├── dw/
@@ -220,7 +220,7 @@ sharepoint:
     keyStorePassword: "![<encrypted-value>]"  # Encrypted with mule.secure.key
 ```
 
-**VM Queue** - Name: `idp-timesheet-queue`, Poll interval: `30000ms` (30 seconds), `numberOfConsumers="1"` — intentionally kept at 1 for now even though tracking messages are self-describing per library (see Important Notes)
+**VM Queue** - Name: `idp-timesheet-queue`, `queueType="PERSISTENT"` (`global.xml`'s `<vm:queue>` — without this the queue defaults to in-memory/TRANSIENT and every in-flight tracking message would be dropped on a CloudHub worker restart, contradicting the "persistent VM queue" description used throughout this doc), Poll interval: `30000ms` (30 seconds), `numberOfConsumers="1"` — intentionally kept at 1 for now even though tracking messages are self-describing per library (see Important Notes)
 
 **Scheduler** - Cron: `0 0 0/1 * * ?` (hourly on the hour), Initial state: `stopped` (dev environment - use HTTP `/trigger-ingest` for manual testing)
 
@@ -300,6 +300,15 @@ All dependencies resolve via:
 4. **File operations**: Use **absolute server-relative URLs** constructed via `sharepoint.site.serverRelativePath` + library name + folder leaf
 5. **Critical**: `<secure-properties:config>` in `global.xml` **must load before** the SharePoint connector config (order matters for property resolution)
 
+### Protecting `/trigger-ingest` (API Manager Autodiscovery)
+`global.xml` has `<api-gateway:autodiscovery apiId="${api.triggerIngestId}" flowRef="trigger-ingest-flow" ignoreBasePath="true" />`, bound directly to `trigger-ingest-flow` rather than to the main `apikit:router` flow — this endpoint has its own raw `<http:listener>` and is not a resource on the `/api/v1/*` RAML contract, so it needs its **own, separate** API Manager registration:
+1. In API Manager, for each environment, register a **"Basic Endpoint"** API instance (no RAML/OAS contract needed) pointing at this app's `/trigger-ingest` path.
+2. Apply whatever policy you want enforced (e.g. Client ID Enforcement) to that instance.
+3. Set `api.triggerIngestId` in that environment's `{env}-properties.yaml` to the resulting numeric instance ID, replacing the `<REGISTER_IN_API_MANAGER_AND_REPLACE>` placeholder.
+- **This placeholder will fail app startup** (autodiscovery bootstrap error) if left in place on deploy/restart — the API instance must exist in API Manager *before* the app starts with a real `api.triggerIngestId`. This applies to every environment (dev/uat/prod alike), since the autodiscovery element in `global.xml` is unconditional, not prod-only.
+- Whoever/whatever needs to call `/trigger-ingest` manually will need client credentials issued against that API instance (if a Client ID Enforcement policy is applied) - typically sent as `client_id`/`client_secret` query params or `X-ANYPOINT-CLIENT-ID`/`X-ANYPOINT-CLIENT-SECRET` headers per MuleSoft's policy convention.
+- The main `/api/v1/*` API (`api.id` property) has no autodiscovery wired up at all currently - it's a separate, still-open item, not addressed by this change.
+
 ## Code Conventions
 
 ### Logging
@@ -364,6 +373,7 @@ CustomLogMapper::logger({
 
 ## Important Notes
 
+- **`/trigger-ingest` autodiscovery placeholder**: `api.triggerIngestId` in every `{env}-properties.yaml` is currently `<REGISTER_IN_API_MANAGER_AND_REPLACE>` — the app **will fail to start** on the next deploy/restart of any environment until that environment's API instance is registered in API Manager and this placeholder is replaced with the real instance ID (see "Protecting `/trigger-ingest`" under Common Tasks)
 - **Server-relative URLs**: SharePoint connector requires absolute paths from site root (e.g., `/sites/MulesoftProjectSite/EKN/01-Inbound/...`)
 - **File isolation**: Moving files to Processing before IDP submission prevents duplicate processing on scheduler retries
 - **Multi-library correctness over serialization, not ordering**: `sharepoint-ingest-subflow` sweeps configured libraries sequentially, but the guarantee against mixing library outputs comes from each VM message carrying its own `documentLibrary`/`outputPath`/`processedPath`/`errorPath` — not from message ordering. This is what makes it safe to raise `numberOfConsumers` above 1 later for throughput without introducing a mixing risk.
@@ -374,7 +384,7 @@ CustomLogMapper::logger({
 - **Property loading order**: `<secure-properties:config>` must be defined before connectors that reference `${secure::*}` properties in `global.xml`
 - **Committed plaintext credentials**: `src/main/resources/properties/dev-properties.yaml` currently has `anypoint.clientId`/`anypoint.clientSecret` checked in as plaintext (unlike `sharepoint.connection.keyStorePassword`, which correctly uses `${secure::*}`). Don't add further plaintext secrets there — flag it to the user rather than treating it as the pattern to follow
 - **No Salesforce connector**: This is a pure IDP + SharePoint integration app; any Salesforce references are leftover template artifacts (cleaned up as of 2026-07-23)
-- **Only `dev-properties.yaml` is populated**: `test-` and `prod-properties.yaml` are empty, and `preprod-properties.yaml` only sets HTTP/HTTPS ports — deploying to those environments today would fail on missing SharePoint/IDP/VM properties
+- **`dev-`, `uat-`, and `prod-properties.yaml` are populated**; `test-properties.yaml` is empty and `preprod-properties.yaml` only sets HTTP/HTTPS ports — deploying with `mule.env=test` or `mule.env=preprod` today would fail on missing SharePoint/IDP/VM properties. `uat`/`prod` share the same SharePoint site/library/job-log-list/classification config as `dev` (same tenant, same Azure AD app + keystore) — only `scheduler.initialState` (`started` for prod, `stopped` elsewhere), `log.level` (`INFO` for prod, `DEBUG` for dev/uat), and `anypoint.clientId`/`clientSecret` (distinct Anypoint connected-app credentials per environment) differ. The secure `sharepoint.connection.keyStorePassword` ciphertext is copied verbatim across `dev`/`uat`/`prod` secure-properties files — this only decrypts correctly if all three environments' CloudHub deployments are given the same `mule.secure.key` runtime property; verify on first `uat`/`prod` deploy
 
 ## Non-Application Directories (Reference Only)
 

@@ -23,7 +23,9 @@
       "Bash(javap -p com/mulesoft/connectors/sharepoint/internal/SharepointUtils.class)",
       "Bash(javap -p com/mulesoft/connectors/sharepoint/internal/service/rest/OnlineSharepointService.class)",
       "Bash(javap -p com/mulesoft/connectors/sharepoint/internal/service/rest/OnpremiseSharepointService.class)",
-      "Bash(fd -H '^\\\\.cursorrules$|^copilot-instructions\\\\.md$' .)"
+      "Bash(fd -H '^\\\\.cursorrules$|^copilot-instructions\\\\.md$' .)",
+      "Bash(rg -n \"private\" src/main/mule/*.xml src/main/mule/**/*.xml)",
+      "Read(//Users/darbiv/.m2/**)"
     ]
   }
 }

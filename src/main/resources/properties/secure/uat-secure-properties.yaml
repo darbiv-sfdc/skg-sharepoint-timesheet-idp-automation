@@ -1,6 +1,6 @@
 # SharePoint Secure Configuration
-# NOTE: same ciphertext as dev-secure-properties.yaml, since prod uses the same SharePoint site /
-# Azure AD app / JKS keystore. This only decrypts correctly if the prod CloudHub deployment's
+# NOTE: same ciphertext as dev-secure-properties.yaml, since uat uses the same SharePoint site /
+# Azure AD app / JKS keystore. This only decrypts correctly if the uat CloudHub deployment's
 # mule.secure.key runtime property matches the key dev was encrypted with - verify on first deploy.
 sharepoint:
   connection:

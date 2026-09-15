@@ -63,7 +63,7 @@ sharepoint:
 #Scheduler
 scheduler:
     cron: "0 0 0/1 * * ?"
-    initialState: "started"   # prod: hourly cron scheduler active
+    initialState: "stopped"   # uat: HTTP /trigger-ingest only; cron scheduler disabled
 
 #VM Persistent Queue
 vm:
@@ -74,8 +74,8 @@ vm:
 
 
 anypoint:
-    clientId: "07d0850838c740578ee780351b5a2729"
-    clientSecret: "ab6C33B1400a4d5Da661e78483d1504d"
+    clientId: "46f07a87e37543c7aec4c389ebb998ea"
+    clientSecret: "4912Cf2b64814c15BA9F5ACBEFe69653"
 
 log:
-  level: "INFO"
+  level: "DEBUG"

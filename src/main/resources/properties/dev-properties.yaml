@@ -4,8 +4,14 @@ http:
     port: "8091"
 https:
   port: "8082"
-api: 
+api:
   id: "2699159"
+  # API Manager instance ID for the standalone /trigger-ingest endpoint (see api-gateway:autodiscovery
+  # in global.xml) - a separate "Basic Endpoint" API registration per environment, not a resource on
+  # the main /api/v1/* RAML API. REPLACE with the real instance ID after registering it in API Manager
+  # for this environment - until then, this placeholder will make the app FAIL TO START (autodiscovery
+  # bootstrap error) on next deploy/restart.
+  triggerIngestId: "<REGISTER_IN_API_MANAGER_AND_REPLACE>"
 
 #IDP Configuration
 idp:
