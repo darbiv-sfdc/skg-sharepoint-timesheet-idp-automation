@@ -22,7 +22,8 @@
       "Bash(javap -p com/mulesoft/connectors/sharepoint/internal/utils/ODataHelper.class)",
       "Bash(javap -p com/mulesoft/connectors/sharepoint/internal/SharepointUtils.class)",
       "Bash(javap -p com/mulesoft/connectors/sharepoint/internal/service/rest/OnlineSharepointService.class)",
-      "Bash(javap -p com/mulesoft/connectors/sharepoint/internal/service/rest/OnpremiseSharepointService.class)"
+      "Bash(javap -p com/mulesoft/connectors/sharepoint/internal/service/rest/OnpremiseSharepointService.class)",
+      "Bash(fd -H '^\\\\.cursorrules$|^copilot-instructions\\\\.md$' .)"
     ]
   }
 }

@@ -85,6 +85,8 @@ The source PDF's SharePoint classification columns (e.g. `PDF Type`, `Site`, `We
 
 ## Directory Structure
 
+The root of this repo **is** the Mule application — everything the app needs to build and run lives under `src/`. The other top-level folders (`r-genie/`, `project/`, `docs/`, `exchange-docs/`) are tooling and reference material that ship alongside the app but are never packaged or deployed; see [Non-Application Directories](#non-application-directories-reference-only) at the bottom of this file.
+
 ```
 src/main/
 ├── mule/
@@ -106,13 +108,6 @@ src/main/
     ├── dw/
     │   └── idp-result-to-csv-v2.dwl       # DataWeave transform for IDP JSON → CSV flattening
     └── api/                              # RAML specification (pulled from Exchange)
-
-docs/                                     # Generated, human-facing documentation (not app code)
-├── admin-guide/                          # HTML admin guide (folder structure, job logs, adding a library, troubleshooting, etc.)
-└── uat/                                  # UAT test plan (uat-test-plan.md) + scenario pages, incl. SharePoint site/library URLs and the manual trigger endpoint
-
-project/                                  # R-GENIE workspace: input_XX_*/output_XX_* per pipeline stage (design, api, dataweave, app, munit, readme, review)
-                                           # — per workspace-organization.mdc, new R-GENIE work must go here, never inside r-genie/{subsystem}/
 ```
 
 ## Development Commands
@@ -268,38 +263,6 @@ All dependencies resolve via:
 - **Anypoint Exchange**: `https://maven.eu1.anypoint.mulesoft.com/api/v3/maven`
 - **MuleSoft Releases**: `https://repository.mulesoft.org/nexus/repository/releases/`
 
-## R-GENIE Integration
-
-This project includes **R-GENIE** (Rapid Generation Engineering for Intelligent Environments) - a Cursor-based AI agent framework for MuleSoft development located in `./r-genie/`.
-
-### Available Agents
-- `00_Master_Orchestrator_System` - Coordinates all 5 development stages
-- `01_Technical_Design_Agent` - Architecture and design decisions
-- `02_API_Specification_Agent` - RAML/OAS generation
-- `03_App_Development_Agent` - Flow implementation
-- `03-01_Dataweave_Agent` - DataWeave transformation specialist
-- `04_Munit_Agent` - Unit test generation
-- `05_ReadMe_Agent` - Documentation generation
-- `06_Code_Review_Agent` - Code quality analysis
-- `07_Error_Analysis_Agent` - Error diagnosis and fixes
-
-### Using R-GENIE with Claude Code
-R-GENIE is designed for Cursor IDE. When working in Claude Code:
-- Treat R-GENIE agent markdown files as **reference documentation** for MuleSoft patterns
-- Agent rules and examples can inform code generation but don't execute the multi-agent orchestration
-- For specific guidance, read the relevant agent's rules directory, e.g. `r-genie/03-01_Dataweave_Agent/rules/` (individual `.mdc` files: `03-01_Dataweave.mdc`, `03-01-01_Guidance.mdc`, `03-01-02_Mandatory_Stop_Points.mdc`, `03-01-00_Phase_Orchestration.mdc`, plus `INDEX.md`) — there is no single `RULES.md` per agent
-
-### File Protection Rules (from `.cursor/rules/`)
-These constraints are defined in five Cursor rule files (`alwaysApply: true`) and apply to all work in this repo:
-- **`r-genie/` is READ-ONLY** (`r-genie-protection.mdc`) - Never modify files under `r-genie/` (core agent architecture). Exceptions require explicit command activation (`/add-production-learnings`, `/use-agent-tuner`, `/use-agent-builder`) with user approval.
-- **Never `git push` without explicit user confirmation** ("yes" or "confirm") — same rule file.
-- **Editable paths per the rule text**: `project/`, `.cursor/commands/` and `.cursor/rules/`, and root config files (`.cursorignore`, `README.md`). The rule does not explicitly call out `src/` — application development there is simply outside R-GENIE's protection scope, not something the rule affirmatively grants.
-- **Write-protected files** (`cursorignore-execute-or-ask.mdc`): `.cursorignore`, `.vscode/**`, `.cursor/*.json`, `.git/config` — the Cursor IDE sandbox blocks agent writes. Attempt once; if blocked, hand the user a copy-paste command to run in their own terminal rather than retrying alternatives.
-- **`workspace-organization.mdc`**: R-GENIE user work must go in system-specific `project/input_XX_*` / `project/output_XX_*` folders, never inside an `r-genie/{subsystem}/` folder.
-- **`current-date-time-context.mdc`** / **`r-genie-persona.mdc`**: fetch current date/time before answering "latest info" queries; defines the R-GENIE assistant persona. Minor, but present.
-
-Note: despite `README.md` being listed as an editable root file, no root `README.md` currently exists in this repo.
-
 ## Common Tasks
 
 ### Adding a New Flow
@@ -318,6 +281,7 @@ Note: despite `README.md` being listed as an editable root file, no root `README
 - Namespace: `http://www.mulesoft.org/schema/mule/idp-timesheet-140`
 
 ### Adding or Removing a Document Library
+- **Terminology**: the customer-facing docs (`docs/onboarding-new-company-guide.md`, `docs/support-add-company-cloudhub-guide.md`) call this a "company" or "customer" — that's the same thing as a "document library" in code/config terms, just business-friendly phrasing for a non-technical audience.
 - Edit the `sharepoint.libraries` JSON array string in `dev-properties.yaml` (e.g. `'["EKN","FLEET","NEWLIB"]'`) — no flow changes required, since `sharepoint-ingest-subflow` parses this list at runtime
 - Ensure the new library has the same 5 subfolders in SharePoint (`01-Inbound` … `99-Error`, leaf names from `sharepoint.folder.*`)
 - `sharepoint-ingest-subflow` processes libraries **sequentially** (not in parallel) — this is deliberate, to keep SharePoint/IDP submission load predictable
@@ -411,3 +375,24 @@ CustomLogMapper::logger({
 - **Committed plaintext credentials**: `src/main/resources/properties/dev-properties.yaml` currently has `anypoint.clientId`/`anypoint.clientSecret` checked in as plaintext (unlike `sharepoint.connection.keyStorePassword`, which correctly uses `${secure::*}`). Don't add further plaintext secrets there — flag it to the user rather than treating it as the pattern to follow
 - **No Salesforce connector**: This is a pure IDP + SharePoint integration app; any Salesforce references are leftover template artifacts (cleaned up as of 2026-07-23)
 - **Only `dev-properties.yaml` is populated**: `test-` and `prod-properties.yaml` are empty, and `preprod-properties.yaml` only sets HTTP/HTTPS ports — deploying to those environments today would fail on missing SharePoint/IDP/VM properties
+
+## Non-Application Directories (Reference Only)
+
+Everything below lives in this repo alongside the Mule app but is **not** part of it — none of it is built, packaged, or deployed by `mvn package`. Treat it as reference material only.
+
+### `docs/` — generated, human-facing documentation
+- `admin-guide/` — HTML admin guide (folder structure, job logs, adding a library, troubleshooting, etc.)
+- `onboarding-new-company-guide.md` — customer-facing walkthrough for setting up SharePoint for a new "company" (= document library — see the Terminology note under "Adding or Removing a Document Library" above)
+- `support-add-company-cloudhub-guide.md` — internal support runbook for adding the new library to `sharepoint.libraries` via Runtime Manager
+- `uat/` — UAT test plan (`uat-test-plan.md`) + scenario pages, incl. SharePoint site/library URLs and the manual trigger endpoint
+
+### `exchange-docs/`
+Anypoint Exchange asset-page scaffold (`home.md`). Currently an empty template artifact, not maintained.
+
+### `project/` and `r-genie/` — R-GENIE (Rapid Generation Engineering for Intelligent Environments)
+`r-genie/` is a Cursor-based AI agent framework for MuleSoft development (design → API spec → app → DataWeave → MUnit → readme → review agents, e.g. `03-01_Dataweave_Agent`). `project/` is its workspace: `input_XX_*`/`output_XX_*` folders per pipeline stage.
+
+- R-GENIE is designed for Cursor IDE, not Claude Code. Treat its agent markdown files (`r-genie/*/rules/*.mdc`) as reference documentation for MuleSoft patterns if useful, not as something to execute.
+- **`r-genie/` is READ-ONLY** — per `.cursor/rules/r-genie-protection.mdc`, never modify files under it. New R-GENIE work belongs in `project/input_XX_*`/`output_XX_*`, never inside `r-genie/{subsystem}/` (`.cursor/rules/workspace-organization.mdc`).
+- This read-only rule doesn't apply to `src/` — Mule application development is unrestricted and is the actual point of this repo.
+- Other `.cursor/rules/*.mdc` are minor and R-GENIE-specific: never `git push` without explicit confirmation, some root files (`.cursorignore`, `.vscode/**`, `.cursor/*.json`, `.git/config`) are write-protected by the Cursor sandbox, and there's a persona/date-context rule for the R-GENIE assistant. None of this affects normal Mule development in `src/`.
