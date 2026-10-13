@@ -306,8 +306,9 @@ All dependencies resolve via:
 2. Apply whatever policy you want enforced (e.g. Client ID Enforcement) to that instance.
 3. Set `api.triggerIngestId` in that environment's `{env}-properties.yaml` to the resulting numeric instance ID, replacing the `<REGISTER_IN_API_MANAGER_AND_REPLACE>` placeholder.
 - **This placeholder will fail app startup** (autodiscovery bootstrap error) if left in place on deploy/restart — the API instance must exist in API Manager *before* the app starts with a real `api.triggerIngestId`. This applies to every environment (dev/uat/prod alike), since the autodiscovery element in `global.xml` is unconditional, not prod-only.
-- Whoever/whatever needs to call `/trigger-ingest` manually will need client credentials issued against that API instance (if a Client ID Enforcement policy is applied) - typically sent as `client_id`/`client_secret` query params or `X-ANYPOINT-CLIENT-ID`/`X-ANYPOINT-CLIENT-SECRET` headers per MuleSoft's policy convention.
-- The main `/api/v1/*` API (`api.id` property) has no autodiscovery wired up at all currently - it's a separate, still-open item, not addressed by this change.
+- Prod's instance ID is registered (`2848167`); dev and uat still hold the placeholder.
+- The Client ID Enforcement policy is configured to read `#[attributes.headers['client_id']]` / `#[attributes.headers['client_secret']]`, so callers send **plain HTTP headers named exactly `client_id` and `client_secret`**, holding the credentials of a Client Application that has an approved Contract on that API instance (Exchange → My Applications, then API Manager → Contracts). These are not the app's own `anypoint.clientId`/`clientSecret` properties (those are for the IDP connector).
+- The main `/api/v1/*` API has no autodiscovery wired up at all currently (the old unused `api.id` property was removed) - it's a separate, still-open item. If added later, it needs its own per-environment instance ID property.
 
 ## Code Conventions
 
@@ -373,7 +374,7 @@ CustomLogMapper::logger({
 
 ## Important Notes
 
-- **`/trigger-ingest` autodiscovery placeholder**: `api.triggerIngestId` in every `{env}-properties.yaml` is currently `<REGISTER_IN_API_MANAGER_AND_REPLACE>` — the app **will fail to start** on the next deploy/restart of any environment until that environment's API instance is registered in API Manager and this placeholder is replaced with the real instance ID (see "Protecting `/trigger-ingest`" under Common Tasks)
+- **`/trigger-ingest` autodiscovery placeholder**: `api.triggerIngestId` in every `{env}-properties.yaml` is a real ID in `prod` (`2848167`) but still `<REGISTER_IN_API_MANAGER_AND_REPLACE>` in `dev`/`uat` — the app **will fail to start** on the next deploy/restart of those environments until their API instance is registered in API Manager and this placeholder is replaced with the real instance ID (see "Protecting `/trigger-ingest`" under Common Tasks)
 - **Server-relative URLs**: SharePoint connector requires absolute paths from site root (e.g., `/sites/MulesoftProjectSite/EKN/01-Inbound/...`)
 - **File isolation**: Moving files to Processing before IDP submission prevents duplicate processing on scheduler retries
 - **Multi-library correctness over serialization, not ordering**: `sharepoint-ingest-subflow` sweeps configured libraries sequentially, but the guarantee against mixing library outputs comes from each VM message carrying its own `documentLibrary`/`outputPath`/`processedPath`/`errorPath` — not from message ordering. This is what makes it safe to raise `numberOfConsumers` above 1 later for throughput without introducing a mixing risk.

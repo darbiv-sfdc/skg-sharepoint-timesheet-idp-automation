@@ -5,7 +5,6 @@ http:
 https:
   port: "8082"
 api:
-  id: "2699159"
   # API Manager instance ID for the standalone /trigger-ingest endpoint (see api-gateway:autodiscovery
   # in global.xml) - a separate "Basic Endpoint" API registration per environment, not a resource on
   # the main /api/v1/* RAML API. REPLACE with the real instance ID after registering it in API Manager

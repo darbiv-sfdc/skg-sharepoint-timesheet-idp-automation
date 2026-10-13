@@ -5,7 +5,6 @@ http:
 https:
   port: "8082"
 api:
-  id: "2699159"
   # API Manager instance ID for the standalone /trigger-ingest endpoint (see api-gateway:autodiscovery
   # in global.xml) - a separate "Basic Endpoint" API registration per environment, not a resource on
   # the main /api/v1/* RAML API.
@@ -24,9 +23,9 @@ idp:
 #SharePoint Folder Structure
 sharepoint:
     site:
-        url: "https://skgtechoffice.sharepoint.com/sites/MulesoftProjectSite"
+        url: "https://skgtechoffice.sharepoint.com/sites/IDP-Payroll"
         # Server-relative root of the site (prefix for absolute file paths used by file-move / file-add / file-get-content)
-        serverRelativePath: "/sites/MulesoftProjectSite"
+        serverRelativePath: "/sites/IDP-Payroll"
     tokenUrl: "https://login.microsoftonline.com/538f4f4e-ffdb-47b6-818d-cdb243067ad0/oauth2/v2.0/token"
     connection:
         clientId: "84b7131c-fd51-4331-a02a-68574b85ffc0"
@@ -56,7 +55,7 @@ sharepoint:
     # SharePoint list that receives one row per document-library run (see idp-job-logging-flow.xml)
     jobLogList:
         title: "Mule IDP Job Logs"
-        listId: "89ac4892-b04b-41be-a251-f30603af4dad"
+        listId: "5904497e-bd96-4cca-a329-bb52cd49846d"
 
 #Scheduler
 scheduler:
@@ -76,4 +75,4 @@ anypoint:
     clientSecret: "ab6C33B1400a4d5Da661e78483d1504d"
 
 log:
-  level: "INFO"
+  level: "DEBUG"
