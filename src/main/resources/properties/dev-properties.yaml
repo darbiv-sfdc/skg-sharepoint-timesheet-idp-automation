@@ -10,7 +10,7 @@ api:
   # the main /api/v1/* RAML API. REPLACE with the real instance ID after registering it in API Manager
   # for this environment - until then, this placeholder will make the app FAIL TO START (autodiscovery
   # bootstrap error) on next deploy/restart.
-  triggerIngestId: "<REGISTER_IN_API_MANAGER_AND_REPLACE>"
+  triggerIngestId: "2860106"
 
 #IDP Configuration
 idp:
@@ -73,8 +73,8 @@ vm:
 
 
 anypoint:
-    clientId: "7341fdfed4da4e9b9a9edec484d3c97d"
-    clientSecret: "A6de5f71E8884083BD77b6bFbcd3fd31"
+    clientId: "38e99df8ae244839a1796fa7dc67ec77"
+    clientSecret: "0c336A8bD71b44B4BC371A32cD4DB89f"
 
 log:
   level: "DEBUG"
