@@ -26,7 +26,8 @@
       "Bash(fd -H '^\\\\.cursorrules$|^copilot-instructions\\\\.md$' .)",
       "Bash(rg -n \"private\" src/main/mule/*.xml src/main/mule/**/*.xml)",
       "Read(//Users/darbiv/.m2/**)",
-      "Bash(sd *)"
+      "Bash(sd *)",
+      "Bash(unzip -p target/*-mule-application.jar META-INF/mule-artifact/mule-artifact.json)"
     ]
   }
 }

@@ -95,5 +95,5 @@ http://www.mulesoft.org/schema/mule/idp-timesheet-140 http://www.mulesoft.org/sc
 		</vm:queues>
 	</vm:config>
 	
-	<idp-timesheet-140:config name="IDP___Timesheet___1_4_0_Config" doc:name="IDP - Timesheet - 1.4.0 Config" doc:id="3c30f95b-398e-4161-bdbf-2024920b442f" property_host="${idp.host}" property_port="${idp.port}" property_protocol="${idp.protocol}" property_client-id="${anypoint.clientId}" property_client-secret="${anypoint.clientSecret}"/>
+	<idp-timesheet-140:config name="IDP___Timesheet___1_4_0_Config" doc:name="IDP - Timesheet - 1.4.0 Config" doc:id="3c30f95b-398e-4161-bdbf-2024920b442f" property_host="${idp.host}" property_port="${idp.port}" property_protocol="${idp.protocol}" property_client-id="${idp.connectedApp.clientId}" property_client-secret="${idp.connectedApp.clientSecret}"/>
 </mule>

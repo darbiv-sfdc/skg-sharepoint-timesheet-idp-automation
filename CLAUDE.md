@@ -11,7 +11,7 @@ This is a **MuleSoft 4 application** that automates timesheet processing using *
 3. Asynchronously polls IDP for completion using a persistent VM queue
 4. Flattens extracted data to CSV and writes results back to the file's own SharePoint document library
 
-**Runtime**: Mule 4.11.0 | **Java**: 17 (implied by the runtime; not pinned explicitly in `pom.xml`) | **Type**: Process API (Business Object layer)
+**Runtime**: Mule 4.11.0 minimum (`app.runtime`; prod deployed on 4.12.4) | **Java**: 17 (implied by the runtime; not pinned explicitly in `pom.xml`) | **Type**: Process API (Business Object layer)
 
 ## Architecture
 
@@ -277,7 +277,7 @@ All dependencies resolve via:
 - Submit endpoint: `idp-timesheet-140:postdocumentactionexecution` (multipart/form-data upload), called from `sharepoint-ingest-single-library-subflow`
 - Poll endpoint: `idp-timesheet-140:getdocumentactionexecution` (returns execution status and extracted fields), called from `subscriber-vm-idp-result-flow`
 - Action metadata controlled by `idp.action.id` and `idp.action.version` properties — currently **global**, shared by every document library; if a library ever needs a different IDP action, that would require carrying an action id/version through the VM message the same way `documentLibrary`/`outputPath`/etc. are carried today
-- Credentials: Uses Anypoint platform client credentials (`anypoint.clientId` and `anypoint.clientSecret`)
+- Credentials: the IDP connector uses a dedicated **Connected App** (scope: Document Actions → Execute Published Actions), configured as `idp.connectedApp.clientId` / `idp.connectedApp.clientSecret` (one app per environment: `dev-idp-conn-app`, `prod-idp-conn-app`). These are **not** the environment credentials used for API autodiscovery - see "Autodiscovery platform credentials" below
 - Namespace: `http://www.mulesoft.org/schema/mule/idp-timesheet-140`
 
 ### Adding or Removing a Document Library
@@ -307,6 +307,7 @@ All dependencies resolve via:
 3. Set `api.triggerIngestId` in that environment's `{env}-properties.yaml` to the resulting numeric instance ID, replacing the `<REGISTER_IN_API_MANAGER_AND_REPLACE>` placeholder.
 - **This placeholder will fail app startup** (autodiscovery bootstrap error) if left in place on deploy/restart — the API instance must exist in API Manager *before* the app starts with a real `api.triggerIngestId`. This applies to every environment (dev/uat/prod alike), since the autodiscovery element in `global.xml` is unconditional, not prod-only.
 - Prod (`2848167`) and dev (`2860106`) instance IDs are registered; uat still holds the placeholder.
+- **Autodiscovery platform credentials**: on CloudHub 2.0 the gatekeeper does NOT get credentials automatically. Without them the log shows `Client ID or Client Secret were not provided. API Platform client is DISABLED` then `API ApiKey{id='...'} is blocked (unavailable)`, the API Manager instance stays Unregistered, and `/trigger-ingest` is blocked. Set the **environment** client ID/secret (Access Management → Business Groups → Environments → <env>) as Runtime Manager properties `anypoint.platform.client_id` / `anypoint.platform.client_secret` (secret Protected) on each deployed app. They are deliberately kept out of the yaml files.
 - The Client ID Enforcement policy is configured to read `#[attributes.headers['client_id']]` / `#[attributes.headers['client_secret']]`, so callers send **plain HTTP headers named exactly `client_id` and `client_secret`**, holding the credentials of a Client Application that has an approved Contract on that API instance (Exchange → My Applications, then API Manager → Contracts). These are not the app's own `anypoint.clientId`/`clientSecret` properties (those are for the IDP connector).
 - The main `/api/v1/*` API has no autodiscovery wired up at all currently (the old unused `api.id` property was removed) - it's a separate, still-open item. If added later, it needs its own per-environment instance ID property.
 
@@ -383,9 +384,9 @@ CustomLogMapper::logger({
 - **Flag parameter**: `flag="1"` in SharePoint file-move operations enables overwrite behavior
 - **Secure properties syntax**: Encrypted values must use `![encrypted-value]` wrapper (not just base64 string)
 - **Property loading order**: `<secure-properties:config>` must be defined before connectors that reference `${secure::*}` properties in `global.xml`
-- **Committed plaintext credentials**: `src/main/resources/properties/dev-properties.yaml` currently has `anypoint.clientId`/`anypoint.clientSecret` checked in as plaintext (unlike `sharepoint.connection.keyStorePassword`, which correctly uses `${secure::*}`). Don't add further plaintext secrets there — flag it to the user rather than treating it as the pattern to follow
+- **Committed plaintext credentials**: `dev-`/`uat-`/`prod-properties.yaml` currently hold `idp.connectedApp.clientSecret` as plaintext (unlike `sharepoint.connection.keyStorePassword`, which correctly uses `${secure::*}`) - deliberate for now while the deployment is verified; the plan is to move them to the secure properties files. Don't add further plaintext secrets there — flag it to the user rather than treating it as the pattern to follow
 - **No Salesforce connector**: This is a pure IDP + SharePoint integration app; any Salesforce references are leftover template artifacts (cleaned up as of 2026-07-23)
-- **`dev-`, `uat-`, and `prod-properties.yaml` are populated**; `test-properties.yaml` is empty and `preprod-properties.yaml` only sets HTTP/HTTPS ports — deploying with `mule.env=test` or `mule.env=preprod` today would fail on missing SharePoint/IDP/VM properties. `uat`/`prod` share the same SharePoint site/library/job-log-list/classification config as `dev` (same tenant, same Azure AD app + keystore) — only `scheduler.initialState` (`started` for prod, `stopped` elsewhere), `log.level` (`INFO` for prod, `DEBUG` for dev/uat), and `anypoint.clientId`/`clientSecret` (distinct Anypoint connected-app credentials per environment) differ. The secure `sharepoint.connection.keyStorePassword` ciphertext is copied verbatim across `dev`/`uat`/`prod` secure-properties files — this only decrypts correctly if all three environments' CloudHub deployments are given the same `mule.secure.key` runtime property; verify on first `uat`/`prod` deploy
+- **`dev-`, `uat-`, and `prod-properties.yaml` are populated**; `test-properties.yaml` is empty and `preprod-properties.yaml` only sets HTTP/HTTPS ports — deploying with `mule.env=test` or `mule.env=preprod` today would fail on missing SharePoint/IDP/VM properties. `uat` shares dev's SharePoint site, job-log list and classification config (same tenant, same Azure AD app + keystore). `prod` uses its own SharePoint site (`/sites/IDP-Payroll`) and job-log list (`5904497e-bd96-4cca-a329-bb52cd49846d`), and is deployed on runtime 4.12.4 (4.13.0 failed with "Service is temporary unavailable"). Other per-environment differences: `scheduler.initialState` (`started` for prod, `stopped` elsewhere), `log.level` (currently `DEBUG` in all three; intended `INFO` for prod), and `idp.connectedApp.clientId`/`clientSecret` (distinct Connected App per environment). The secure `sharepoint.connection.keyStorePassword` ciphertext is copied verbatim across `dev`/`uat`/`prod` secure-properties files — this only decrypts correctly if all three environments' CloudHub deployments are given the same `mule.secure.key` runtime property; verify on first `uat`/`prod` deploy
 
 ## Non-Application Directories (Reference Only)
 

@@ -20,6 +20,14 @@ idp:
         version: "1.0.0"
         max_checks: "20"
 
+    # Connected App used by the IDP connector (scope: Document Actions -> Execute Published Actions).
+    # NOT the environment credentials - those are the anypoint.platform.client_id/client_secret
+    # Runtime Manager properties used by API autodiscovery (see below).
+    # TODO: move clientSecret to secure props once verified.
+    connectedApp:
+        clientId: "78137d9f7644407c992a3058d50079de"
+        clientSecret: "8a4Dd64d9B014E9282a3a8CE867Df85d"
+
 #SharePoint Folder Structure
 sharepoint:
     site:
@@ -70,9 +78,9 @@ vm:
         sleepMillis: "30000"
 
 
-anypoint:
-    clientId: "07d0850838c740578ee780351b5a2729"
-    clientSecret: "ab6C33B1400a4d5Da661e78483d1504d"
+# API autodiscovery (gatekeeper) needs the Production ENVIRONMENT client ID/secret (Access Management ->
+# Business Groups -> Environments), supplied as Runtime Manager properties anypoint.platform.client_id
+# and anypoint.platform.client_secret (secret Protected) - not set in this file.
 
 log:
   level: "DEBUG"
